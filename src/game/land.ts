@@ -1,0 +1,191 @@
+import { COSTE_INSTALACION, NIVEL_MAX, fmtMoney, roundMoney } from './economy';
+import { addMessage } from './market';
+import type { GameState } from './types';
+
+// Terreno del club: una cuadrícula de parcelas. El estadio ocupa 2x2 en el centro
+// y en el resto de parcelas propias se construyen instalaciones.
+
+export const LAND_SIZE = 8;
+const ESTADIO = [[3, 3], [4, 3], [3, 4], [4, 4]];
+
+/** Edificios que se pueden construir en una parcela (uno de cada tipo) */
+export type BuildingKind = 'entrenamiento' | 'cantera' | 'parking' | 'tienda' | 'bar' | 'medico' | 'ojeadores' | 'museo';
+
+export interface Parcel {
+  x: number;
+  y: number;
+  owned: boolean;
+  stadium?: boolean;
+  building?: BuildingKind;
+}
+
+export interface Land {
+  parcels: Parcel[];
+  bought: number; // parcelas compradas (encarece las siguientes)
+  levels: Partial<Record<BuildingKind, number>>; // niveles de los edificios nuevos
+}
+
+export interface BuildingInfo {
+  name: string;
+  icon: string;
+  help: string;
+  maxLevel: number;
+  /** coste de construir el nivel 1, 2, 3... */
+  cost: number[];
+}
+
+export const BUILDINGS: Record<BuildingKind, BuildingInfo> = {
+  entrenamiento: {
+    name: 'Ciudad deportiva', icon: '🏋️', maxLevel: NIVEL_MAX,
+    help: 'Los jugadores jóvenes mejoran más rápido.',
+    cost: [0, 0, ...COSTE_INSTALACION.slice(2)],
+  },
+  cantera: {
+    name: 'Residencia de cantera', icon: '🌱', maxLevel: NIVEL_MAX,
+    help: 'Salen juveniles mejores y con más potencial.',
+    cost: [0, 0, ...COSTE_INSTALACION.slice(2)],
+  },
+  parking: {
+    name: 'Aparcamiento', icon: '🅿️', maxLevel: 3,
+    help: 'Más facilidades para venir: +6% de asistencia por nivel.',
+    cost: [0, 30_000, 90_000, 250_000],
+  },
+  tienda: {
+    name: 'Tienda oficial', icon: '👕', maxLevel: 3,
+    help: 'Venta de camisetas: ingresos en cada partido en casa según tu afición.',
+    cost: [0, 25_000, 80_000, 220_000],
+  },
+  bar: {
+    name: 'Bar del estadio', icon: '🍺', maxLevel: 3,
+    help: 'Cada espectador gasta algo más: ingresos por partido en casa.',
+    cost: [0, 20_000, 65_000, 180_000],
+  },
+  medico: {
+    name: 'Centro médico', icon: '🩺', maxLevel: 3,
+    help: 'Los veteranos pierden nivel más despacio con la edad.',
+    cost: [0, 60_000, 160_000, 420_000],
+  },
+  ojeadores: {
+    name: 'Oficina de ojeadores', icon: '🔭', maxLevel: 3,
+    help: 'Tu director deportivo valora mejor a los jugadores.',
+    cost: [0, 50_000, 140_000, 360_000],
+  },
+  museo: {
+    name: 'Museo del club', icon: '🏛️', maxLevel: 3,
+    help: 'Aumenta la afición cada temporada y los ingresos de patrocinio.',
+    cost: [0, 80_000, 220_000, 550_000],
+  },
+};
+
+/** Mantenimiento anual: 6% de lo invertido en cada edificio */
+const MANTENIMIENTO = 0.06;
+
+export function newLand(): Land {
+  const parcels: Parcel[] = [];
+  for (let y = 0; y < LAND_SIZE; y++) {
+    for (let x = 0; x < LAND_SIZE; x++) {
+      const stadium = ESTADIO.some(([a, b]) => a === x && b === y);
+      parcels.push({ x, y, owned: stadium, stadium });
+    }
+  }
+  // de inicio, dos parcelas con la ciudad deportiva y la cantera
+  const p1 = parcels.find((p) => p.x === 2 && p.y === 3)!;
+  const p2 = parcels.find((p) => p.x === 5 && p.y === 4)!;
+  p1.owned = true;
+  p1.building = 'entrenamiento';
+  p2.owned = true;
+  p2.building = 'cantera';
+  return { parcels, bought: 0, levels: {} };
+}
+
+export function buildingLevel(s: GameState, k: BuildingKind) {
+  if (k === 'entrenamiento') return s.club.training;
+  if (k === 'cantera') return s.club.academy;
+  return s.club.land.levels[k] ?? 0;
+}
+
+export function parcelAt(s: GameState, x: number, y: number) {
+  return s.club.land.parcels.find((p) => p.x === x && p.y === y);
+}
+
+/** Solo se puede comprar terreno pegado al que ya tienes */
+export function canBuyParcel(s: GameState, p: Parcel) {
+  if (p.owned) return false;
+  return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => parcelAt(s, p.x + dx, p.y + dy)?.owned);
+}
+
+export function parcelCost(s: GameState, p: Parcel) {
+  // más caro cuanto más compras y cuanto más lejos del estadio
+  const dist = Math.abs(p.x - 3.5) + Math.abs(p.y - 3.5);
+  return roundMoney(15_000 * Math.pow(1.3, s.club.land.bought) * (0.8 + dist * 0.08));
+}
+
+export function buyParcel(s: GameState, x: number, y: number): string | undefined {
+  const p = parcelAt(s, x, y);
+  if (!p) return 'Esa parcela no existe.';
+  if (!canBuyParcel(s, p)) return 'Solo puedes comprar parcelas junto a tu terreno.';
+  const coste = parcelCost(s, p);
+  if (s.club.cash < coste) return 'No hay dinero suficiente.';
+  s.club.cash -= coste;
+  s.club.ledger.obras += coste;
+  p.owned = true;
+  s.club.land.bought++;
+}
+
+export function nextLevelCost(s: GameState, k: BuildingKind) {
+  const n = buildingLevel(s, k);
+  const info = BUILDINGS[k];
+  return n >= info.maxLevel ? null : info.cost[n + 1];
+}
+
+export function isBuilt(s: GameState, k: BuildingKind) {
+  return s.club.land.parcels.some((p) => p.building === k);
+}
+
+export function construct(s: GameState, k: BuildingKind, x: number, y: number): string | undefined {
+  const p = parcelAt(s, x, y);
+  if (!p || !p.owned || p.stadium || p.building) return 'Necesitas una parcela propia y libre.';
+  if (isBuilt(s, k)) return 'Ya tienes ese edificio.';
+  const coste = BUILDINGS[k].cost[1];
+  if (s.club.cash < coste) return 'No hay dinero suficiente.';
+  s.club.cash -= coste;
+  s.club.ledger.obras += coste;
+  p.building = k;
+  s.club.land.levels[k] = 1;
+  addMessage(s, { from: 'club', title: `${BUILDINGS[k].name} construido`, body: `${BUILDINGS[k].help}\nCoste: ${fmtMoney(coste)}.` });
+}
+
+export function upgrade(s: GameState, k: BuildingKind): string | undefined {
+  const coste = nextLevelCost(s, k);
+  if (coste === null) return 'Ya está al máximo.';
+  if (s.club.cash < coste) return 'No hay dinero suficiente.';
+  s.club.cash -= coste;
+  s.club.ledger.obras += coste;
+  if (k === 'entrenamiento') s.club.training++;
+  else if (k === 'cantera') s.club.academy++;
+  else s.club.land.levels[k] = (s.club.land.levels[k] ?? 0) + 1;
+}
+
+/** Coste anual de mantener todas las instalaciones */
+export function maintenancePerSeason(s: GameState) {
+  let total = 0;
+  for (const k of Object.keys(BUILDINGS) as BuildingKind[]) {
+    const n = buildingLevel(s, k);
+    const invertido = BUILDINGS[k].cost.slice(1, n + 1).reduce((a, b) => a + b, 0);
+    total += invertido * MANTENIMIENTO;
+  }
+  return roundMoney(total);
+}
+
+/** Ingresos comerciales de un partido en casa (tienda + bar) */
+const lvl = buildingLevel;
+
+export function commercialPerMatch(s: GameState, attendance: number, fans: number) {
+  return Math.round(fans * 0.45 * lvl(s, 'tienda') + attendance * 1.2 * lvl(s, 'bar'));
+}
+
+export const attendanceBonus = (s: GameState) => 1 + 0.06 * lvl(s, 'parking');
+export const sponsorBonus = (s: GameState) => 1 + 0.05 * lvl(s, 'museo');
+export const fansGrowthBonus = (s: GameState) => 1 + 0.025 * lvl(s, 'museo');
+export const scoutingFactor = (s: GameState) => 1 - 0.18 * lvl(s, 'ojeadores');
+export const agingFactor = (s: GameState) => 1 - 0.18 * lvl(s, 'medico');

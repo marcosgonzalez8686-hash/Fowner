@@ -1,4 +1,4 @@
-import { COSTE_INSTALACION, ESTADIO_COSTE_POR_ASIENTO, ESTADIO_JORNADAS_OBRA, NIVEL_MAX } from './economy';
+import { ESTADIO_COSTE_POR_ASIENTO, ESTADIO_JORNADAS_OBRA } from './economy';
 import { runDirector } from './director';
 import { addMessage } from './market';
 import type { GameState, Level, Task } from './types';
@@ -17,16 +17,6 @@ export function expandStadium(s: GameState, seats: number): string | undefined {
   s.club.ledger.obras += coste;
   s.club.works = { kind: 'estadio', matchdaysLeft: ESTADIO_JORNADAS_OBRA, amount: seats };
   addMessage(s, { from: 'club', title: 'Empiezan las obras del estadio', body: `+${seats} asientos. Estarán listas en ${ESTADIO_JORNADAS_OBRA} jornadas.` });
-}
-
-export function upgradeFacility(s: GameState, kind: 'training' | 'academy'): string | undefined {
-  const nivel = s.club[kind];
-  if (nivel >= NIVEL_MAX) return 'Ya está al máximo.';
-  const coste = COSTE_INSTALACION[nivel + 1];
-  if (s.club.cash < coste) return 'No hay dinero suficiente.';
-  s.club.cash -= coste;
-  s.club.ledger.obras += coste;
-  s.club[kind] = nivel + 1;
 }
 
 export function setDelegation(s: GameState, task: Task, level: Level) {

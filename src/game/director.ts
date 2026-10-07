@@ -6,6 +6,7 @@ import {
 import { FORMACION } from './match';
 import { gauss } from './rng';
 import { ownerTitle } from './identity';
+import { scoutingFactor } from './land';
 import type { Director, GameState, Level, Player, Pos, Proposal, Task } from './types';
 
 export const TASK_LABEL: Record<Task, string> = {
@@ -42,8 +43,8 @@ const MAX_POS: Record<Pos, number> = { POR: 3, DEF: 8, MED: 8, DEL: 5 };
 export const levelOf = (s: GameState, t: Task): Level => (s.club.director ? s.club.delegation[t] : 'manual');
 
 /** El director valora con más o menos acierto según su calidad */
-function perceived(d: Director, p: Player) {
-  return p.ovr + gauss(0, (6 - d.stars) * 1.3);
+function perceived(s: GameState, d: Director, p: Player) {
+  return p.ovr + gauss(0, (6 - d.stars) * 1.3 * scoutingFactor(s));
 }
 
 function starters(squad: Player[], pos: Pos) {
@@ -147,7 +148,7 @@ function doSignings(s: GameState, maxOps: number) {
       const fee = roundMoney(askingPrice(p) * rebaja);
       const salary = roundMoney(askingSalary(s, p) * rebaja);
       if (fee > presupuesto || salary > margenSalarial) continue;
-      const perc = perceived(d, p);
+      const perc = perceived(s, d, p);
       if (necesitaHueco ? perc < objetivo - 8 : perc < listón + 2) continue;
       const score = scoreSigning(d, p, fee + salary, perc);
       if (!mejor || score > mejor.score) mejor = { p, fee, salary, score, perc };
@@ -241,7 +242,7 @@ function doYouth(s: GameState) {
   for (const y of myYouth(s)) {
     if (alreadyProposed(s, y.id)) continue;
     const exigencia = d.style === 'cantera' ? 10 : 4;
-    const vale = perceived(d, y) >= objetivo - 6 || y.pot >= objetivo + exigencia;
+    const vale = perceived(s, d, y) >= objetivo - 6 || y.pot >= objetivo + exigencia;
     if (vale && squad.length < 26) {
       act(s, 'cantera', { kind: 'cantera', playerId: y.id }, `subir a ${y.name} (${y.pos}, ${y.ovr})`,
         `Juvenil de ${y.age} años, media ${y.ovr} y potencial ${y.pot}. Creo que puede aportar.`);

@@ -8,6 +8,9 @@ import { addMessage, myTeam, mySquad, myYouth, teamById, wageBill } from './mark
 import { bestEleven, computeStandings, form, simulate } from './match';
 import { chance, clamp, gauss, rand, randInt } from './rng';
 import type { GameState, MatchResult, Player, Team } from './types';
+import {
+  agingFactor, attendanceBonus, commercialPerMatch, fansGrowthBonus, maintenancePerSeason, sponsorBonus,
+} from './land';
 
 export const creditLimit = (s: GameState) => {
   const d = myTeam(s).division;
@@ -16,7 +19,7 @@ export const creditLimit = (s: GameState) => {
 
 export const sponsorFor = (s: GameState) => {
   const t = myTeam(s);
-  return roundMoney(DIV_SPONSOR[t.division] * clamp(0.6 + 0.4 * (t.fans / DIV_FANS[t.division]), 0.5, 2));
+  return roundMoney(DIV_SPONSOR[t.division] * clamp(0.6 + 0.4 * (t.fans / DIV_FANS[t.division]), 0.5, 2) * sponsorBonus(s));
 };
 
 /** Asistencia esperada a un partido en casa */
@@ -26,7 +29,7 @@ export function expectedAttendance(s: GameState) {
   const precio = clamp(1.6 - 0.6 * (s.club.ticketPrice / ref), 0.15, 1.6);
   const racha = form(t.id, s.fixtures[t.division]);
   const animo = 1 + racha.reduce((a, r) => a + (r === 'G' ? 0.04 : r === 'P' ? -0.04 : 0), 0);
-  return Math.round(Math.min(s.club.capacity, t.fans * precio * animo));
+  return Math.round(Math.min(s.club.capacity, t.fans * precio * animo * attendanceBonus(s)));
 }
 
 export function startSeason(s: GameState) {
@@ -65,8 +68,10 @@ export function playMatchday(s: GameState) {
       if (f.home === mio.id) {
         r.attendance = expectedAttendance(s);
         const ingreso = r.attendance * s.club.ticketPrice;
-        s.club.cash += ingreso;
+        const comercial = commercialPerMatch(s, r.attendance, mio.fans);
+        s.club.cash += ingreso + comercial;
         s.club.ledger.taquilla += ingreso;
+        s.club.ledger.comercial += comercial;
       }
       if (d === mio.division) s.lastResults.push(r);
       // la afición crece o baja con los resultados
@@ -86,7 +91,9 @@ export function playMatchday(s: GameState) {
   const patro = Math.round(sponsorFor(s) / MATCHDAYS);
   const sal = Math.round(wageBill(s) / MATCHDAYS);
   const dd = c.director ? Math.round(c.director.salary / MATCHDAYS) : 0;
-  c.cash += tv + patro - sal - dd;
+  const mant = Math.round(maintenancePerSeason(s) / MATCHDAYS);
+  c.cash += tv + patro - sal - dd - mant;
+  c.ledger.mantenimiento += mant;
   c.ledger.tv += tv;
   c.ledger.patrocinio += patro;
   c.ledger.salarios += sal;
@@ -98,6 +105,7 @@ export function playMatchday(s: GameState) {
   }
 
   s.matchday++;
+  c.cashLog.push(c.cash);
 
   // avisos de calendario
   if (s.matchday === 18) {
@@ -159,7 +167,7 @@ function finishWorks(s: GameState) {
 }
 
 /** Evolución de un jugador al cambiar de temporada */
-function develop(p: Player, training: number) {
+function develop(p: Player, training: number, aging = 1) {
   p.age++;
   if (p.age <= 24) {
     const crece = Math.max(0, p.pot - p.ovr) * rand(0.15, 0.4) * (0.75 + training * 0.1);
@@ -167,7 +175,7 @@ function develop(p: Player, training: number) {
   } else if (p.age <= 29) {
     p.ovr = clamp(p.ovr + randInt(-1, 1), 20, p.pot);
   } else {
-    p.ovr = Math.max(20, Math.round(p.ovr - rand(0, 2) - (p.age - 30) * 0.6));
+    p.ovr = Math.max(20, Math.round(p.ovr - (rand(0, 2) + (p.age - 30) * 0.6) * aging));
   }
   p.pot = Math.max(p.pot, p.ovr);
 }
@@ -198,13 +206,14 @@ export function endSeason(s: GameState) {
   }
   // la afición tiende a la media de su categoría
   for (const t of s.teams) t.fans = Math.round(t.fans * 0.85 + DIV_FANS[t.division] * 0.15 * rand(0.7, 1.3));
+  mio.fans = Math.round(mio.fans * fansGrowthBonus(s));
 
   // 2. jugadores: edad, evolución, retiradas y contratos
   const seVan: Player[] = [];
   const retirados: Player[] = [];
   s.players = s.players.filter((p) => {
     const esMio = p.teamId === mio.id;
-    develop(p, esMio ? s.club.training : 2.5);
+    develop(p, esMio ? s.club.training : 2.5, esMio ? agingFactor(s) : 1);
     if (p.age >= 35 && chance(0.5 + (p.age - 35) * 0.2)) {
       if (esMio) retirados.push(p);
       return false;
@@ -273,7 +282,9 @@ export function endSeason(s: GameState) {
   // 6. economía y nueva temporada
   const l = s.club.ledger;
   s.club.lastLedger = l;
+  s.club.seasonLog.push({ season: s.season, division: divAntes, ledger: l, cashEnd: s.club.cash });
   s.club.ledger = emptyLedger();
+  s.club.cashLog = [s.club.cash];
   if (s.club.works) finishWorks(s);
   s.season++;
   s.matchday = 0;

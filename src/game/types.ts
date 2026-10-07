@@ -1,4 +1,5 @@
 import type { Identity } from './identity';
+import type { Land } from './land';
 
 export type Pos = 'POR' | 'DEF' | 'MED' | 'DEL';
 
@@ -83,6 +84,8 @@ export interface Ledger {
   salarios: number;
   director: number;
   obras: number;
+  comercial: number; // tienda y bar
+  mantenimiento: number; // instalaciones
 }
 
 export interface Club {
@@ -100,6 +103,9 @@ export interface Club {
   works: { kind: 'estadio' | 'training' | 'academy'; matchdaysLeft: number; amount: number } | null;
   ledger: Ledger; // temporada actual
   lastLedger: Ledger | null;
+  land: Land;
+  cashLog: number[]; // caja al empezar la temporada y tras cada jornada
+  seasonLog: { season: number; division: number; ledger: Ledger; cashEnd: number }[];
 }
 
 export interface MatchResult {

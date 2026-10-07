@@ -4,6 +4,7 @@ import {
 import { roundRobin } from './match';
 import { clubName, personName, shortName, townNames } from './names';
 import { clamp, gauss, pick, rand, randInt } from './rng';
+import { newLand } from './land';
 import { defaultIdentity, ownerTitle, type Identity } from './identity';
 import type { DDStyle, Director, GameState, Player, Pos, Team } from './types';
 
@@ -122,6 +123,9 @@ export function newGame(clubNameInput: string, identityInput?: Identity): GameSt
     works: null,
     ledger: emptyLedger(),
     lastLedger: null,
+    land: newLand(),
+    cashLog: [120_000],
+    seasonLog: [],
   };
 
   // agentes libres iniciales

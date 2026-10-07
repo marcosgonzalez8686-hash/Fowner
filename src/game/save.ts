@@ -1,6 +1,8 @@
 import { DIVISION_NAMES } from './economy';
 import { SAVE_VERSION } from './generate';
+import { emptyLedger } from './economy';
 import { defaultIdentity, type Crest } from './identity';
+import { newLand } from './land';
 import type { GameState } from './types';
 
 export const SLOTS = [1, 2, 3] as const;
@@ -68,14 +70,24 @@ export function listSlots(): { slot: Slot; meta: SlotMeta | null }[] {
   });
 }
 
+/** Completa partidas guardadas con versiones anteriores del juego */
+function migrate(s: GameState) {
+  const c = s.club;
+  if (!c.identity) c.identity = defaultIdentity(s.teams.find((t) => t.id === c.teamId)?.name);
+  if (!c.land) c.land = newLand();
+  if (!c.cashLog) c.cashLog = [c.cash];
+  if (!c.seasonLog) c.seasonLog = [];
+  c.ledger = { ...emptyLedger(), ...c.ledger };
+  if (c.lastLedger) c.lastLedger = { ...emptyLedger(), ...c.lastLedger };
+}
+
 export function loadGame(slot: Slot): GameState | null {
   try {
     const raw = localStorage.getItem(gameKey(slot));
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
     if (s.version !== SAVE_VERSION) return null;
-    // partidas anteriores a la identidad del club
-    if (!s.club.identity) s.club.identity = defaultIdentity(s.teams.find((t) => t.id === s.club.teamId)?.name);
+    migrate(s);
     return s;
   } catch {
     return null;

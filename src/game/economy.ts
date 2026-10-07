@@ -29,6 +29,7 @@ export const COSTE_INSTALACION = [0, 0, 60_000, 250_000, 900_000, 3_000_000];
 
 export const emptyLedger = (): Ledger => ({
   taquilla: 0, tv: 0, patrocinio: 0, traspasosIn: 0, traspasosOut: 0, salarios: 0, director: 0, obras: 0,
+  comercial: 0, mantenimiento: 0,
 });
 
 /** Valor de mercado orientativo de un jugador */
@@ -62,5 +63,5 @@ export function fmtMoney(v: number) {
   return `${s}${Math.round(a)} €`;
 }
 
-export const ledgerIncome = (l: Ledger) => l.taquilla + l.tv + l.patrocinio + l.traspasosIn;
-export const ledgerExpense = (l: Ledger) => l.traspasosOut + l.salarios + l.director + l.obras;
+export const ledgerIncome = (l: Ledger) => l.taquilla + l.tv + l.patrocinio + l.traspasosIn + (l.comercial ?? 0);
+export const ledgerExpense = (l: Ledger) => l.traspasosOut + l.salarios + l.director + l.obras + (l.mantenimiento ?? 0);
