@@ -38,7 +38,7 @@ export function generateOffers(s: GameState, max: number) {
   if (activas >= MAX_ACTIVAS) return;
   const nivel = DIV_LEVEL[myTeam(s).division];
   const candidatos = [...mySquad(s)]
-    .filter((p) => !s.incomingOffers.some((o) => o.playerId === p.id) && (p.injury ?? 0) < 5)
+    .filter((p) => !s.incomingOffers.some((o) => o.playerId === p.id) && (p.injury ?? 0) < 5 && !p.retiring)
     .sort((a, b) => b.ovr - a.ovr)
     .slice(0, 8);
   let nuevas = 0;

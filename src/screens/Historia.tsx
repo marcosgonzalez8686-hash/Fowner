@@ -3,6 +3,7 @@ import type { ScreenProps } from '../App';
 import Crest from '../components/Crest';
 import { DIVISION_NAMES, DIVISIONS, TEAMS_PER_DIV } from '../game/economy';
 import { pyramidRank, type SeasonRecord } from '../game/history';
+import { LEGEND_APPS } from '../game/aging';
 import { Card } from '../ui';
 
 const MEDALLA = (nombre: string) => (nombre.startsWith('Liga') ? '🥇' : '🏆');
@@ -169,6 +170,32 @@ export default function Historia({ s }: ScreenProps) {
           </tbody>
         </table>
       </Card>
+
+      {(rec.retired?.length ?? 0) > 0 && (
+        <Card title="🎖️ Retirados en el club">
+          <table className="table">
+            <thead>
+              <tr>
+                <th className="left">Jugador</th>
+                <th>Temp.</th>
+                <th>PJ</th>
+                <th>Goles</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...rec.retired!].reverse().map((x, i) => (
+                <tr key={i}>
+                  <td className="left">{x.tribute ? '🎖️ ' : ''}{x.name} <span className="muted small">{x.pos} · {x.age} años</span></td>
+                  <td>T{x.season}</td>
+                  <td>{x.apps}</td>
+                  <td>{x.goals}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="small muted">🎖️ Con partido homenaje ({LEGEND_APPS} partidos o más en el club).</p>
+        </Card>
+      )}
 
       <Card title="⭐ Leyendas del club">
         <div className="legends">

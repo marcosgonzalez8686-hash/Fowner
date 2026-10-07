@@ -38,6 +38,7 @@ export interface Records {
   bigWin?: MatchMark;
   bigLoss?: MatchMark;
   attendance?: { season: number; value: number; rival: string };
+  retired?: { name: string; pos: string; season: number; age: number; apps: number; goals: number; tribute: boolean }[]; // retirados en el club
 }
 
 export const emptyRecords = (): Records => ({ seasons: [], players: {}, current: {} });

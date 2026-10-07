@@ -27,6 +27,8 @@ export interface Player {
   injury?: number; // jornadas que le quedan de baja
   form?: number[]; // últimas notas en partidos (como mucho 5, la más reciente al final)
   season?: { apps: number; goals: number; assists: number; ratingSum: number }; // esta temporada
+  retiring?: boolean; // ha anunciado que se retira al acabar la temporada
+  persuaded?: boolean; // ya se intentó convencerle de seguir
   signedSeason?: number; // temporada en la que llegó al club del jugador
 }
 
@@ -134,6 +136,7 @@ export interface Club {
   satLog: { season: number; matchday: number; delta: number; text: string }[];
   trophies: { season: number; name: string }[];
   records: Records;
+  retireCheck?: number; // temporada en la que los veteranos ya decidieron si se retiran
   staff: Partial<Record<Role, Staff>>;
   sponsors: Partial<Record<SponsorSlot, SponsorContract>>;
   cashLog: number[]; // caja al empezar la temporada y tras cada jornada

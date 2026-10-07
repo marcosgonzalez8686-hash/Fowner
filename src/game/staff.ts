@@ -105,6 +105,7 @@ export function hireStaff(s: GameState, role: Role, id: number): string | undefi
   if (!c) return 'Ese candidato ya no está disponible.';
   if (s.club.staff[role]) fireStaff(s, role);
   s.club.staff[role] = c;
+  if (c.trait === 'Leyenda del club') changeSatisfaction(s, 2, `${c.name} vuelve al club`);
   if (role === 'entrenador') {
     c.confidence = 60;
     c.warned = false;

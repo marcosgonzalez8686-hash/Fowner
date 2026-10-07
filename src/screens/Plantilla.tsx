@@ -13,6 +13,7 @@ import { Card, Ovr, Segmented, Sheet } from '../ui';
 import { moraleLabel } from '../game/morale';
 import { seasonAverage } from '../game/history';
 import { FormStrip, RatingBadge } from '../components/Rating';
+import { PEAK, TREND_TEXT, persuadeVeteran, trendOf } from '../game/aging';
 
 const POS_NAME: Record<Pos, string> = { POR: 'Porteros', DEF: 'Defensas', MED: 'Centrocampistas', DEL: 'Delanteros' };
 
@@ -87,7 +88,8 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
                   {p.name}
                   <small>
                     {(p.injury ?? 0) > 0 && <b className="neg">Lesionado {p.injury} j. · </b>}
-                    {p.age} años · {fmtMoney(p.salary)} · {p.contract <= 1 ? <b className="warn">acaba contrato</b> : `${p.contract} temp.`}
+                    {p.retiring && <b className="warn">👴 se retira · </b>}
+                    {p.age} años {TREND_TEXT[trendOf(p)].icon} · {fmtMoney(p.salary)} · {p.contract <= 1 ? <b className="warn">acaba contrato</b> : `${p.contract} temp.`}
                   </small>
                   {p.form?.length ? (
                     <small className="form-line">
@@ -108,7 +110,25 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
             {sel.pos} · {sel.age} años · media {sel.ovr} · potencial {sel.pot}
             <br />
             Cobra {fmtMoney(sel.salary)}/temp. · contrato: {sel.contract} temp.
+            <br />
+            {TREND_TEXT[trendOf(sel)].icon} Está {TREND_TEXT[trendOf(sel)].text}
+            {trendOf(sel) !== 'crece' && ` (un ${sel.pos === 'POR' ? 'portero' : sel.pos === 'DEF' ? 'defensa' : sel.pos === 'MED' ? 'centrocampista' : 'delantero'} aguanta hasta los ${PEAK[sel.pos]})`}
           </p>
+          {sel.retiring && (
+            <div className="hint warn-bg">
+              👴 Ha anunciado que se retira al acabar la temporada.
+              {!sel.persuaded ? (
+                <button
+                  className="btn full"
+                  onClick={() => run(() => update((g) => persuadeVeteran(g, sel.id)), '')}
+                >
+                  💬 Intentar convencerle de seguir un año más
+                </button>
+              ) : (
+                <div className="small">Ya intentaste convencerle.</div>
+              )}
+            </div>
+          )}
 
           <h4>Esta temporada</h4>
           {sel.season?.apps ? (
@@ -125,19 +145,23 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
             <p className="small muted">Aún no ha jugado esta temporada.</p>
           )}
 
-          <h4>Renovar</h4>
-          <p className="small">Pide {fmtMoney(renewSalary(sel))}/temp.</p>
-          <Segmented
-            value={anos}
-            onChange={setAnos}
-            options={['1', '2', '3', '4'].map((v) => ({ value: v, label: `${v} año${v === '1' ? '' : 's'}` }))}
-          />
-          <button
-            className="btn primary full"
-            onClick={() => run(() => update((g) => renewPlayer(g, sel.id, renewSalary(sel), Number(anos)).error), 'Renovado')}
-          >
-            Renovar
-          </button>
+          {!sel.retiring && (
+            <>
+              <h4>Renovar</h4>
+              <p className="small">Pide {fmtMoney(renewSalary(sel))}/temp.</p>
+              <Segmented
+                value={anos}
+                onChange={setAnos}
+                options={['1', '2', '3', '4'].map((v) => ({ value: v, label: `${v} año${v === '1' ? '' : 's'}` }))}
+              />
+              <button
+                className="btn primary full"
+                onClick={() => run(() => update((g) => renewPlayer(g, sel.id, renewSalary(sel), Number(anos)).error), 'Renovado')}
+              >
+                Renovar
+              </button>
+            </>
+          )}
 
           <h4>Vender</h4>
           {marketOpen(s) ? (

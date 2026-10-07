@@ -6,6 +6,7 @@ import { expireProposals, levelOf, runDirector } from './director';
 import { buildAllFixtures, makeDirectors, makePlayer } from './generate';
 import { addMessage, myTeam, mySquad, myYouth, teamById, wageBill } from './market';
 import { bestEleven, chooseStyle, computeStandings, simulate, type Formation } from './match';
+import { announceRetirements, develop, farewells, retireChance } from './aging';
 import { coachAfterMatch, coachEndSeason, ourPlan, ourTactics } from './coach';
 import { chance, clamp, gauss, rand, randInt } from './rng';
 import type { GameState, MatchResult, Player, Standing, Team } from './types';
@@ -192,6 +193,7 @@ export function playMatchday(s: GameState) {
   c.cashLog.push(c.cash);
 
   // avisos de calendario
+  if (s.matchday === MATCHDAYS - 10) announceRetirements(s);
   if (s.matchday === 18) {
     addMessage(s, { from: 'liga', title: 'Se abre el mercado de invierno', body: 'Podrás fichar y vender durante las próximas 3 jornadas.' });
   }
@@ -262,17 +264,12 @@ function finishWorks(s: GameState) {
 }
 
 /** Evolución de un jugador al cambiar de temporada */
-function develop(p: Player, training: number, aging = 1, growth = 1) {
-  p.age++;
-  if (p.age <= 24) {
-    const crece = Math.max(0, p.pot - p.ovr) * rand(0.15, 0.4) * (0.75 + training * 0.1) * growth;
-    p.ovr = Math.min(p.pot, Math.round(p.ovr + crece));
-  } else if (p.age <= 29) {
-    p.ovr = clamp(p.ovr + randInt(-1, 1), 20, p.pot);
-  } else {
-    p.ovr = Math.max(20, Math.round(p.ovr - (rand(0, 2) + (p.age - 30) * 0.6) * aging));
-  }
-  p.pot = Math.max(p.pot, p.ovr);
+/** "↑ Ana (+3), Luis (+2) · ↓ Pepe (−4)": los que más suben y bajan */
+function resumenEvolucion(ev: { name: string; d: number }[]) {
+  const fmt = (x: { name: string; d: number }) => `${x.name} (${x.d > 0 ? '+' : '−'}${Math.abs(x.d)})`;
+  const suben = ev.filter((x) => x.d > 0).sort((a, b) => b.d - a.d).slice(0, 3);
+  const bajan = ev.filter((x) => x.d < 0).sort((a, b) => a.d - b.d).slice(0, 3);
+  return [suben.length ? `↑ ${suben.map(fmt).join(', ')}` : '', bajan.length ? `↓ ${bajan.map(fmt).join(', ')}` : ''].filter(Boolean).join(' · ');
 }
 
 export function endSeason(s: GameState) {
@@ -315,13 +312,18 @@ export function endSeason(s: GameState) {
   // 2. jugadores: edad, evolución, retiradas y contratos
   const seVan: Player[] = [];
   const retirados: Player[] = [];
+  const evolucion: { name: string; d: number }[] = [];
+  announceRetirements(s); // por si no se hizo durante la liga
   s.players = s.players.filter((p) => {
     const esMio = p.teamId === mio.id;
-    develop(p, esMio ? s.club.training : 2.5, esMio ? agingFactor(s) * staffAgingFactor(s) : 1, esMio ? youthGrowthBonus(s) : 1);
-    if (p.age >= 35 && chance(0.5 + (p.age - 35) * 0.2)) {
+    // los nuestros avisan antes; el resto decide ahora
+    if (esMio ? p.retiring : chance(retireChance(p))) {
       if (esMio) retirados.push(p);
       return false;
     }
+    const antes = p.ovr;
+    develop(p, esMio ? s.club.training : 2.5, esMio ? agingFactor(s) * staffAgingFactor(s) : 1, esMio ? youthGrowthBonus(s) : 1);
+    if (esMio && !p.youth && p.ovr !== antes) evolucion.push({ name: p.name, d: p.ovr - antes });
     if (p.teamId === null) return p.age < 34 || chance(0.3);
     p.contract--;
     if (p.contract <= 0) {
@@ -402,6 +404,7 @@ export function endSeason(s: GameState) {
   seasonTicketsNewSeason(s, mio.division !== divAntes);
   refreshInvestorOffers(s);
   s.staffMarket = makeStaffCandidates(s, mio.division);
+  farewells(s, retirados);
   s.pendingEvent = undefined;
   sponsorsEndSeason(s);
   scoutDiscoveries(s, () => {
@@ -423,6 +426,7 @@ export function endSeason(s: GameState) {
       `Ingresos: ${fmtMoney(ledgerIncome(l))} · Gastos: ${fmtMoney(ledgerExpense(l))} · Resultado: ${fmtMoney(ledgerIncome(l) - ledgerExpense(l))}\n` +
       (seVan.length ? `\nSe van libres: ${seVan.map((p) => p.name).join(', ')}.` : '') +
       (retirados.length ? `\nSe retiran: ${retirados.map((p) => p.name).join(', ')}.` : '') +
+      (evolucion.length ? `\n\nEvolución de la plantilla: ${resumenEvolucion(evolucion)}` : '') +
       `\n\nLlegan ${canteranos.length} juveniles de la cantera. ` +
       (levelOf(s, 'cantera') === 'manual' ? 'Decide en Plantilla a quién subes antes de empezar la liga.' : 'El director deportivo los está valorando.'),
   });
