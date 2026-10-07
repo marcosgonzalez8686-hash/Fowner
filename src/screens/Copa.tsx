@@ -7,6 +7,7 @@ import { rivalCrest } from '../game/identity';
 import { teamById } from '../game/market';
 import type { GameState } from '../game/types';
 import { Card } from '../ui';
+import { TeamLink } from '../nav/context';
 import { CONT_AFTER, CONT_ENTRY, CONT_NAME, CONT_PRIZE, CONT_ROUNDS, FLAG, SUPER_NAME, SUPER_PRIZE } from '../game/continental';
 import type { CupTie } from '../game/cup';
 
@@ -68,7 +69,7 @@ function Equipo({ s, id, ganador }: { s: GameState; id: number; ganador?: number
   return (
     <span className={`cup-team${mio ? ' me' : ''}${ganador !== undefined && ganador !== id ? ' out' : ''}`}>
       <Crest c={mio ? s.club.identity.crest : rivalCrest(t.id, t.short)} size={18} />
-      <span className="cup-name">{t.name}</span>
+      <span className="cup-name"><TeamLink id={mio ? undefined : t.id}>{t.name}</TeamLink></span>
       <small>{t.country ? FLAG[t.country] : `${t.division + 1}ª`}</small>
     </span>
   );

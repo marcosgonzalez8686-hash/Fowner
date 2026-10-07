@@ -5,6 +5,7 @@ import { DIVISION_NAMES, DIVISIONS, TEAMS_PER_DIV } from '../game/economy';
 import { pyramidRank, type SeasonRecord } from '../game/history';
 import { LEGEND_APPS } from '../game/aging';
 import { Card } from '../ui';
+import { PlayerLink } from '../nav/context';
 
 const MEDALLA = (nombre: string) => (nombre.startsWith('Liga') ? '🥇' : '🏆');
 
@@ -63,6 +64,7 @@ export default function Historia({ s }: ScreenProps) {
   const rec = c.records;
   const temporadas = [...rec.seasons].reverse();
   const jugadores = Object.entries(rec.players).map(([id, v]) => ({ id: Number(id), ...v }));
+  const vivos = new Set(s.players.map((p) => p.id));
   const enClub = new Set(s.players.filter((p) => p.teamId === c.teamId).map((p) => p.id));
   const goleadores = [...jugadores].filter((x) => x.goals > 0).sort((a, b) => b.goals - a.goals).slice(0, 10);
   const presencias = [...jugadores].sort((a, b) => b.apps - a.apps).slice(0, 10);
@@ -205,7 +207,7 @@ export default function Historia({ s }: ScreenProps) {
             <ol className="rank">
               {goleadores.map((x) => (
                 <li key={x.id}>
-                  <span>{x.name}{enClub.has(x.id) ? '' : ' ·'}</span>
+                  <span><PlayerLink id={vivos.has(x.id) ? x.id : undefined}>{x.name}</PlayerLink>{enClub.has(x.id) ? '' : ' ·'}</span>
                   <b>{x.goals}</b>
                 </li>
               ))}
@@ -217,7 +219,7 @@ export default function Historia({ s }: ScreenProps) {
             <ol className="rank">
               {presencias.map((x) => (
                 <li key={x.id}>
-                  <span>{x.name}{enClub.has(x.id) ? '' : ' ·'}</span>
+                  <span><PlayerLink id={vivos.has(x.id) ? x.id : undefined}>{x.name}</PlayerLink>{enClub.has(x.id) ? '' : ' ·'}</span>
                   <b>{x.apps}</b>
                 </li>
               ))}

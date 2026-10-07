@@ -5,6 +5,7 @@ import type { GameState } from '../game/types';
 import { Sheet } from '../ui';
 import Crest from './Crest';
 import { RatingBadge } from './Rating';
+import { PlayerLink, TeamLink, useNav } from '../nav/context';
 
 const FILAS: { k: keyof SideStats; label: string; pct?: boolean }[] = [
   { k: 'possession', label: 'Posesión', pct: true },
@@ -33,12 +34,16 @@ export default function MatchSummary({ s, r, onClose }: { s: GameState; r: Match
     titulo = ganamosPen ? '¡Pasamos en los penaltis!' : 'Fuera en los penaltis';
   }
 
+  const { openPlayer } = useNav();
+  // nombre del evento → jugador de la alineación de ese lado
+  const idDe = (side: 'home' | 'away', nombre: string) => r.lineups?.[side].find((x) => x.name === nombre.replace(/\s*\(.*\)$/, ''))?.id;
+
   return (
     <Sheet title={`${r.label ?? `Jornada ${r.matchday}`} · ${titulo}`} onClose={onClose}>
       <div className="scoreboard">
         <div className={r.home === mio ? 'me' : ''}>
           <Crest c={crest(r.home)} size={46} />
-          <span>{team(r.home).name}</span>
+          <span><TeamLink id={r.home}>{team(r.home).name}</TeamLink></span>
         </div>
         <div className="big-score">
           {r.hg} - {r.ag}
@@ -46,7 +51,7 @@ export default function MatchSummary({ s, r, onClose }: { s: GameState; r: Match
         </div>
         <div className={r.away === mio ? 'me' : ''}>
           <Crest c={crest(r.away)} size={46} />
-          <span>{team(r.away).name}</span>
+          <span><TeamLink id={r.away}>{team(r.away).name}</TeamLink></span>
         </div>
       </div>
 
@@ -56,8 +61,8 @@ export default function MatchSummary({ s, r, onClose }: { s: GameState; r: Match
             <li key={i} className={e.side}>
               <span className="min">{e.min}'</span>
               <span>
-                {ICONO[e.type]} <b>{e.player}</b>
-                {e.assist && <small className="muted"> (asist. {e.assist})</small>}
+                {ICONO[e.type]} <b><PlayerLink id={e.pid ?? idDe(e.side, e.player)}>{e.player}</PlayerLink></b>
+                {e.assist && <small className="muted"> (asist. <PlayerLink id={idDe(e.side, e.assist)}>{e.assist}</PlayerLink>)</small>}
               </span>
             </li>
           ))}
@@ -86,7 +91,7 @@ export default function MatchSummary({ s, r, onClose }: { s: GameState; r: Match
                   return (
                     <div key={p.id} className={`rating-row${p.name === r.mvp.name ? ' mvp' : ''}`}>
                       <span className="pos-mini">{p.pos}</span>
-                      <span className="rating-name">
+                      <span className="rating-name" onClick={() => openPlayer(p.id)} role="button" tabIndex={0}>
                         {p.name.split(' ').slice(1).join(' ') || p.name}
                         {goles > 0 && ` ${'⚽'.repeat(goles)}`}
                         {tarjeta && (tarjeta.type === 'roja' ? ' 🟥' : ' 🟨')}

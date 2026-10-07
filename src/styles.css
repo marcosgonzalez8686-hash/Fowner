@@ -514,3 +514,11 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .forecast-legend { display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
 .keys { margin: 4px 0 8px; padding-left: 0; list-style: none; display: grid; gap: 4px; }
 .keys li { font-size: 0.85rem; line-height: 1.35; }
+
+/* enlaces a fichas de jugadores y equipos */
+.inline-link { background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; text-align: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: 2px; }
+.inline-link:hover, .inline-link:focus-visible { color: var(--brand-2); }
+.msg-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+.badge.dot { min-width: 9px; width: 9px; height: 9px; padding: 0; top: 6px; right: calc(50% - 16px); background: var(--brand-2); }
+.rating-name[role='button'], .pitch-player[role='button'] { cursor: pointer; }
+.sheet-bg.top { z-index: 50; }

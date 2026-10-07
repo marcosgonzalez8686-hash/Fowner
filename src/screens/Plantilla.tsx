@@ -1,28 +1,25 @@
-import { useState } from 'react';
 import type { ScreenProps } from '../App';
 import { levelOf } from '../game/director';
-import { DIV_LEVEL, fmtMoney, roundMoney } from '../game/economy';
+import { DIV_LEVEL, fmtMoney } from '../game/economy';
 import {
-  marketOpen, myTeam, mySquad, myYouth, promoteYouth, releasePlayer, renewPlayer, renewSalary, sellPlayer, sellPrice,
-  teamById, wageBill,
+  myTeam, mySquad, myYouth, promoteYouth, releasePlayer, teamById, wageBill,
 } from '../game/market';
 import { FORMACION } from '../game/match';
 import { coachOf, ourPlan, ourShape, tacticsLabel } from '../game/coach';
-import type { Player, Pos } from '../game/types';
-import { Card, Ovr, Segmented, Sheet } from '../ui';
+import type { Pos } from '../game/types';
+import { Card, Ovr } from '../ui';
 import { moraleLabel } from '../game/morale';
-import { seasonAverage } from '../game/history';
-import { FormStrip, RatingBadge } from '../components/Rating';
-import { PlayerTags, ProfileDetail } from '../components/Traits';
-import { LOAN_GROWTH_APPS, loanOut, loanTarget, loanedOut } from '../game/loans';
+import { FormStrip } from '../components/Rating';
+import { PlayerTags } from '../components/Traits';
+import { useNav } from '../nav/context';
+import { loanedOut } from '../game/loans';
 import { fitOf } from '../game/traits';
-import { PEAK, TREND_TEXT, persuadeVeteran, trendOf } from '../game/aging';
+import { TREND_TEXT, trendOf } from '../game/aging';
 
 const POS_NAME: Record<Pos, string> = { POR: 'Porteros', DEF: 'Defensas', MED: 'Centrocampistas', DEL: 'Delanteros' };
 
 export default function Plantilla({ s, update, notify }: ScreenProps) {
-  const [sel, setSel] = useState<Player | null>(null);
-  const [anos, setAnos] = useState('2');
+  const { openPlayer } = useNav();
   const squad = mySquad(s);
   const youth = myYouth(s);
   const nivel = DIV_LEVEL[myTeam(s).division];
@@ -30,13 +27,10 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
   const forma = ourShape(s);
   const faltan = (Object.keys(forma) as Pos[]).filter((pos) => squad.filter((p) => p.pos === pos && !p.youth).length < forma[pos]);
   const titulares = new Set(xi.map((p) => p.id));
-  const cedidoA = Boolean(sel?.loan && sel.loan.from !== s.club.teamId);
-  const destino = sel && !sel.loan ? loanTarget(s, sel) : undefined;
 
   const run = (fn: () => string | undefined | void, ok: string) => {
     const err = fn();
     notify(err ?? ok);
-    setSel(null);
   };
 
   return (
@@ -93,7 +87,7 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
             .filter((p) => p.pos === pos)
             .sort((a, b) => b.ovr - a.ovr)
             .map((p) => (
-              <button key={p.id} className="player as-btn" onClick={() => { setSel(p); setAnos(p.age >= 31 ? '1' : '2'); }}>
+              <button key={p.id} className="player as-btn" onClick={() => openPlayer(p.id)}>
                 <span className="pos">{(p.injury ?? 0) > 0 ? '🤕' : titulares.has(p.id) ? '⭐' : ''}</span>
                 <span className="name">
                   {p.name}
@@ -120,121 +114,19 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
       {loanedOut(s).length > 0 && (
         <Card title="🔁 Cedidos en otros clubes">
           {loanedOut(s).map((p) => (
-            <div key={p.id} className="player">
+            <button key={p.id} className="player as-btn" onClick={() => openPlayer(p.id)}>
               <span className="pos">{p.pos}</span>
               <span className="name">
                 {p.name}
                 <small>{teamById(s, p.teamId)?.name} ({(teamById(s, p.teamId)?.division ?? 0) + 1}ª) · {p.loan!.apps} partidos · {p.age} años</small>
               </span>
               <Ovr v={p.ovr} base={nivel} />
-            </div>
+            </button>
           ))}
           <p className="small muted">Vuelven al acabar la temporada.</p>
         </Card>
       )}
 
-      {sel && (
-        <Sheet title={sel.name} onClose={() => setSel(null)}>
-          <p className="muted">
-            {sel.pos} · {sel.age} años · media {sel.ovr} · potencial {sel.pot}
-            <br />
-            Cobra {fmtMoney(sel.salary)}/temp. · contrato: {sel.contract} temp.
-            <br />
-            {TREND_TEXT[trendOf(sel)].icon} Está {TREND_TEXT[trendOf(sel)].text}
-            {trendOf(sel) !== 'crece' && ` (un ${sel.pos === 'POR' ? 'portero' : sel.pos === 'DEF' ? 'defensa' : sel.pos === 'MED' ? 'centrocampista' : 'delantero'} aguanta hasta los ${PEAK[sel.pos]})`}
-          </p>
-          {sel.retiring && (
-            <div className="hint warn-bg">
-              👴 Ha anunciado que se retira al acabar la temporada.
-              {!sel.persuaded ? (
-                <button
-                  className="btn full"
-                  onClick={() => run(() => update((g) => persuadeVeteran(g, sel.id)), '')}
-                >
-                  💬 Intentar convencerle de seguir un año más
-                </button>
-              ) : (
-                <div className="small">Ya intentaste convencerle.</div>
-              )}
-            </div>
-          )}
-
-          <ProfileDetail s={s} p={sel} />
-
-          <h4>Esta temporada</h4>
-          {sel.season?.apps ? (
-            <>
-              <div className="kpis">
-                <div><b>{sel.season.apps}</b><span>partidos</span></div>
-                <div><b>{sel.season.goals}</b><span>goles</span></div>
-                <div><b>{sel.season.assists}</b><span>asistencias</span></div>
-                <div><b><RatingBadge v={seasonAverage(sel)!} /></b><span>nota media</span></div>
-              </div>
-              <p className="small">Últimas notas: <FormStrip form={sel.form} /></p>
-            </>
-          ) : (
-            <p className="small muted">Aún no ha jugado esta temporada.</p>
-          )}
-
-          {cedidoA ? (
-            <p className="hint">🔁 Cedido por el {teamById(s, sel.loan!.from)?.name} hasta final de temporada. Luego vuelve a su club.</p>
-          ) : (
-            <>
-              {!sel.retiring && (
-                <>
-                  <h4>Renovar</h4>
-                  <p className="small">Pide {fmtMoney(renewSalary(sel))}/temp.</p>
-                  <Segmented
-                    value={anos}
-                    onChange={setAnos}
-                    options={['1', '2', '3', '4'].map((v) => ({ value: v, label: `${v} año${v === '1' ? '' : 's'}` }))}
-                  />
-                  <button
-                    className="btn primary full"
-                    onClick={() => run(() => update((g) => renewPlayer(g, sel.id, renewSalary(sel), Number(anos)).error), 'Renovado')}
-                  >
-                    Renovar
-                  </button>
-                </>
-              )}
-
-              <h4>Vender</h4>
-              {marketOpen(s) ? (
-                <button
-                  className="btn full"
-                  onClick={() => run(() => update((g) => sellPlayer(g, sel.id, sellPrice(sel)).error), `Vendido por ${fmtMoney(sellPrice(sel))}`)}
-                >
-                  Aceptar oferta de {fmtMoney(sellPrice(sel))}
-                </button>
-              ) : (
-                <p className="small muted">El mercado está cerrado.</p>
-              )}
-
-              <h4>Rescindir</h4>
-              <button
-                className="btn danger full"
-                onClick={() => run(() => update((g) => releasePlayer(g, sel.id).error), `${sel.name} queda libre`)}
-              >
-                Rescindir (cuesta {fmtMoney(roundMoney((sel.salary * Math.max(sel.contract, 1)) / 2))})
-              </button>
-
-              <h4>Ceder</h4>
-              {marketOpen(s) && destino ? (
-                <>
-                  <p className="small muted">
-                    Una temporada en el {destino.team.name} ({destino.division + 1}ª), que paga su ficha. Si tiene 23 años o menos y juega {LOAN_GROWTH_APPS} partidos o más, vuelve mejor.
-                  </p>
-                  <button className="btn full" onClick={() => run(() => update((g) => loanOut(g, sel.id)), '')}>
-                    🔁 Ceder al {destino.team.name}
-                  </button>
-                </>
-              ) : (
-                <p className="small muted">{marketOpen(s) ? 'Nadie lo quiere cedido.' : 'Solo con el mercado abierto.'}</p>
-              )}
-            </>
-          )}
-        </Sheet>
-      )}
     </>
   );
 }

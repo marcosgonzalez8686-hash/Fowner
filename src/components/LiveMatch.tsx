@@ -5,6 +5,7 @@ import { STYLES } from '../game/match';
 import type { MatchEvent, MatchReport } from '../game/report';
 import type { GameState } from '../game/types';
 import Crest from './Crest';
+import { useBack } from '../nav/back';
 
 // Partido "en directo": repite el informe del motor minuto a minuto con narración.
 
@@ -39,6 +40,8 @@ const ICONO: Record<MatchEvent['type'], string> = { gol: '⚽', ocasion: '🎯',
 
 export default function LiveMatch({ s, r, onStats, onClose }: { s: GameState; r: MatchReport; onStats: () => void; onClose: () => void }) {
   const [min, setMin] = useState(0);
+  // atrás durante el partido: se salta al final y se cierra
+  useBack(onClose);
   const [vel, setVel] = useState<1 | 3>(1);
   const feedRef = useRef<HTMLDivElement>(null);
   const home = teamById(s, r.home)!;

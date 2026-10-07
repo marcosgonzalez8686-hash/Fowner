@@ -2,13 +2,12 @@ import { useMemo, useState } from 'react';
 import type { ScreenProps } from '../App';
 import { levelOf } from '../game/director';
 import { DIV_LEVEL, fmtMoney } from '../game/economy';
-import { askingPrice, askingSalary, buyPlayer, marketOpen, myTeam, teamById, willJoin } from '../game/market';
-import type { Player, Pos } from '../game/types';
-import { Card, Ovr, Segmented, Sheet } from '../ui';
+import { askingPrice, marketOpen, myTeam, teamById, willJoin } from '../game/market';
+import type { Pos } from '../game/types';
+import { Card, Ovr } from '../ui';
 import OffersCard from '../components/OffersCard';
-import { PlayerTags, ProfileDetail } from '../components/Traits';
-import { requestReport, shownPot } from '../game/scouting';
-import { MAX_LOANS_IN, loanAnswer, loanFee, loanIn } from '../game/loans';
+import { PlayerTags } from '../components/Traits';
+import { useNav } from '../nav/context';
 
 type Filtro = 'TODOS' | Pos;
 
@@ -16,8 +15,7 @@ export default function Mercado({ s, update, notify }: ScreenProps) {
   const [pos, setPos] = useState<Filtro>('TODOS');
   const [soloAsequibles, setSoloAsequibles] = useState(true);
   const [libres, setLibres] = useState(false);
-  const [sel, setSel] = useState<Player | null>(null);
-  const [anos, setAnos] = useState('2');
+  const { openPlayer } = useNav();
   const nivel = DIV_LEVEL[myTeam(s).division];
 
   const lista = useMemo(() => {
@@ -59,7 +57,7 @@ export default function Mercado({ s, update, notify }: ScreenProps) {
       <Card>
         {lista.length === 0 && <p className="muted">No hay jugadores con estos filtros.</p>}
         {lista.map((p) => (
-          <button key={p.id} className="player as-btn" onClick={() => { setSel(p); setAnos(p.age <= 24 ? '3' : '2'); }}>
+          <button key={p.id} className="player as-btn" onClick={() => openPlayer(p.id)}>
             <span className="pos">{p.pos}</span>
             <span className="name">
               {p.name}
@@ -73,60 +71,6 @@ export default function Mercado({ s, update, notify }: ScreenProps) {
         ))}
       </Card>
 
-      {sel && (
-        <Sheet title={sel.name} onClose={() => setSel(null)}>
-          <p className="muted">
-            {sel.pos} · {sel.age} años · media {sel.ovr} · potencial {shownPot(s, sel)}
-            <br />
-            {sel.teamId === null ? 'Agente libre' : teamById(s, sel.teamId)!.name}
-          </p>
-          <ProfileDetail s={s} p={sel} fichaje onReport={() => notify(update((g) => requestReport(g, sel.id)) ?? '')} />
-          <div className="kpis">
-            <div><b>{fmtMoney(askingPrice(sel))}</b><span>traspaso</span></div>
-            <div><b>{fmtMoney(askingSalary(s, sel))}</b><span>ficha/temp.</span></div>
-          </div>
-          <h4>Duración del contrato</h4>
-          <Segmented
-            value={anos}
-            onChange={setAnos}
-            options={['1', '2', '3', '4'].map((v) => ({ value: v, label: `${v} año${v === '1' ? '' : 's'}` }))}
-          />
-          <button
-            className="btn primary full"
-            onClick={() => {
-              const err = update((g) => buyPlayer(g, sel.id, askingPrice(sel), askingSalary(s, sel), Number(anos)).error);
-              notify(err ?? `¡${sel.name} es nuevo jugador del club!`);
-              setSel(null);
-            }}
-          >
-            Fichar
-          </button>
-          {sel.teamId !== null && (() => {
-            const r = loanAnswer(s, sel);
-            return (
-              <>
-                <h4>Cesión</h4>
-                {r.ok ? (
-                  <>
-                    <p className="small muted">Hasta final de temporada. Cuota {fmtMoney(loanFee(sel))} y pagas su ficha ({fmtMoney(sel.salary)}). Máximo {MAX_LOANS_IN} cedidos.</p>
-                    <button
-                      className="btn full"
-                      onClick={() => {
-                        notify(update((g) => loanIn(g, sel.id)) ?? '');
-                        setSel(null);
-                      }}
-                    >
-                      🔁 Pedir cedido
-                    </button>
-                  </>
-                ) : (
-                  <p className="small muted">{r.reason}</p>
-                )}
-              </>
-            );
-          })()}
-        </Sheet>
-      )}
     </>
   );
 }

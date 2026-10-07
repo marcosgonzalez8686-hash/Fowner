@@ -6,6 +6,7 @@ import { computeStandings } from '../game/match';
 import { Card, Segmented } from '../ui';
 import { RatingBadge } from '../components/Rating';
 import { leaders } from '../game/stats';
+import { PlayerLink, TeamLink } from '../nav/context';
 import type { GameState } from '../game/types';
 
 /** Ranking individual: nombre, equipo y cifra (los nuestros resaltados) */
@@ -16,7 +17,7 @@ function Ranking({ s, filas, valor }: { s: GameState; filas: { id: number; name:
       {filas.map((x, i) => (
         <li key={x.id} className={x.t === s.club.teamId ? 'me' : ''}>
           <span>
-            {x.name} <small className="muted">{teamById(s, x.t)?.short}</small>
+            <PlayerLink id={x.id}>{x.name}</PlayerLink> <small className="muted">{teamById(s, x.t)?.short}</small>
           </span>
           <b>{valor(i)}</b>
         </li>
@@ -39,7 +40,7 @@ function Estadisticas({ s, div }: { s: GameState; div: number }) {
             {once.xi.map((x) => (
               <div key={x.id} className={`rating-row${x.t === s.club.teamId ? ' mvp' : ''}`}>
                 <span className="pos-mini">{x.pos}</span>
-                <span className="rating-name">{x.name} <small className="muted">{teamById(s, x.t)?.short}</small></span>
+                <span className="rating-name"><PlayerLink id={x.id}>{x.name}</PlayerLink> <small className="muted">{teamById(s, x.t)?.short}</small></span>
                 <RatingBadge v={x.rating} />
               </div>
             ))}
@@ -101,7 +102,7 @@ export default function Liga({ s }: ScreenProps) {
               return (
                 <tr key={r.teamId} className={`${zona} ${t.id === mia.id ? 'me' : ''}`}>
                   <td>{i + 1}</td>
-                  <td className="left">{t.name}</td>
+                  <td className="left"><TeamLink id={t.id}>{t.name}</TeamLink></td>
                   <td>{r.pj}</td>
                   <td>{r.gf - r.gc > 0 ? '+' : ''}{r.gf - r.gc}</td>
                   <td><b>{r.pts}</b></td>

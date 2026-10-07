@@ -24,6 +24,11 @@ import Historia from './screens/Historia';
 import Identidad from './screens/Identidad';
 import Tabs from './screens/Tabs';
 import Start from './screens/Start';
+import PlayerSheet from './components/PlayerSheet';
+import TeamSheet from './components/TeamSheet';
+import { NavContext } from './nav/context';
+import { pushBack } from './nav/back';
+import { tabAlerts } from './nav/alerts';
 
 export type Update = (fn: (s: GameState) => string | void) => string | void;
 
@@ -54,6 +59,9 @@ export default function App() {
   const [sub, setSub] = useState<Record<TabId, string>>(DEFAULT_SUB);
   const [toast, setToast] = useState<string | null>(null);
   const [panel, setPanel] = useState<'bandeja' | 'menu' | null>(null);
+  // fichas abiertas desde cualquier pantalla
+  // se apilan: desde la ficha de un equipo se abre la de un jugador y al cerrarla se vuelve al equipo
+  const [fichas, setFichas] = useState<{ kind: 'player' | 'team'; id: number }[]>([]);
 
   // Todas las acciones trabajan sobre una copia y la guardan en el móvil
   const update: Update = useCallback(
@@ -85,6 +93,7 @@ export default function App() {
     setState(s);
     setTab('inicio');
     setSub(DEFAULT_SUB);
+    setFichas([]);
   };
 
   if (!state || !slot) {
@@ -110,18 +119,41 @@ export default function App() {
   const team = myTeam(state);
   const pendientes = pendingCount(state);
   const sinLeer = unreadCount(state);
+  // cada cambio de pantalla se puede deshacer con el botón atrás del móvil
+  const recordar = () => {
+    const antes = { tab, sub };
+    pushBack(() => {
+      setTab(antes.tab);
+      setSub(antes.sub);
+      window.scrollTo(0, 0);
+    });
+  };
   const go = (t: TabId, subTab?: string) => {
+    if (t !== tab || (subTab && subTab !== sub[t])) recordar();
+    setFichas([]);
+    setPanel(null);
     setTab(t);
     if (subTab) setSub((x) => ({ ...x, [t]: subTab }));
     window.scrollTo(0, 0);
   };
+  const nav = {
+    go,
+    openPlayer: (id: number) => setFichas((f) => [...f, { kind: 'player' as const, id }]),
+    openTeam: (id: number) => (id === state.club.teamId ? go('equipo', 'plantilla') : setFichas((f) => [...f, { kind: 'team' as const, id }])),
+  };
   const props = { s: state, update, notify: setToast, go };
+  const avisos = tabAlerts(state);
   const subProps = <T extends string>(t: TabId) => ({
     value: sub[t] as T,
-    onChange: (v: T) => setSub((x) => ({ ...x, [t]: v })),
+    onChange: (v: T) => {
+      if (v !== sub[t]) recordar();
+      setSub((x) => ({ ...x, [t]: v }));
+    },
   });
+  const conAviso = (label: string, n: number | undefined) => (n ? `${label} (${n})` : label);
 
   return (
+    <NavContext.Provider value={nav}>
     <div className="app">
       <header className="top">
         <div className="top-left">
@@ -139,7 +171,7 @@ export default function App() {
             <div className="sub">Caja</div>
             <Money v={state.club.cash} />
           </div>
-          <button className="menu-btn" onClick={() => setPanel('bandeja')} aria-label={`Bandeja, ${sinLeer} sin leer`}>
+          <button className="menu-btn" onClick={() => setPanel('bandeja')} aria-label={`Bandeja, ${sinLeer} importantes sin leer`}>
             📬
             {sinLeer > 0 && <span className="badge small-badge">{sinLeer > 99 ? '99+' : sinLeer}</span>}
           </button>
@@ -175,8 +207,8 @@ export default function App() {
               <Tabs
                 {...subProps('equipo')}
                 options={[
-                  { value: 'plantilla', label: '👕 Plantilla' },
-                  { value: 'mercado', label: marketOpen(state) ? '🔁 Mercado' : '🔒 Mercado' },
+                  { value: 'plantilla', label: conAviso('👕 Plantilla', avisos.sub.plantilla) },
+                  { value: 'mercado', label: conAviso(marketOpen(state) ? '🔁 Mercado' : '🔒 Mercado', avisos.sub.mercado) },
                   { value: 'liga', label: '📊 Liga' },
                   { value: 'copa', label: '🏆 Copas' },
                 ]}
@@ -193,7 +225,7 @@ export default function App() {
                 {...subProps('direccion')}
                 options={[
                   { value: 'director', label: '💼 Director' },
-                  { value: 'empleados', label: '👔 Empleados' },
+                  { value: 'empleados', label: conAviso('👔 Empleados', avisos.sub.empleados) },
                   { value: 'presupuestos', label: '💸 Presupuesto' },
                 ]}
               >
@@ -208,9 +240,9 @@ export default function App() {
                 {...subProps('finanzas')}
                 options={[
                   { value: 'resumen', label: '📈 Resumen' },
-                  { value: 'patrocinadores', label: '🤝 Patrocinio' },
+                  { value: 'patrocinadores', label: conAviso('🤝 Patrocinio', avisos.sub.patrocinadores) },
                   { value: 'entradas', label: '🎟️ Entradas' },
-                  { value: 'banca', label: '🏦 Banca' },
+                  { value: 'banca', label: conAviso('🏦 Banca', avisos.sub.banca) },
                 ]}
               >
                 {sub.finanzas === 'resumen' && <Resumen {...props} />}
@@ -241,6 +273,12 @@ export default function App() {
       {toast && <div className="toast" role="status">{toast}</div>}
 
       {panel === 'bandeja' && <Bandeja s={state} update={update} onClose={() => setPanel(null)} />}
+      {fichas.map((f, i) => {
+        const cerrar = () => setFichas((x) => x.slice(0, i));
+        return f.kind === 'player'
+          ? <PlayerSheet key={`${i}-${f.id}`} s={state} update={update} notify={setToast} id={f.id} onClose={cerrar} />
+          : <TeamSheet key={`${i}-${f.id}`} s={state} id={f.id} onClose={cerrar} />;
+      })}
       {panel === 'menu' && (
         <Sheet title="Menú" onClose={() => setPanel(null)}>
           <p className="small muted">
@@ -269,10 +307,13 @@ export default function App() {
             <span className="ico" aria-hidden>{t.icon}</span>
             <span>{t.label}</span>
             {t.id === 'inicio' && pendientes > 0 && <span className="badge">{pendientes}</span>}
+            {t.id !== 'inicio' && avisos.tab[t.id] ? <span className="badge">{avisos.tab[t.id]}</span> : null}
+            {t.id !== 'inicio' && !avisos.tab[t.id] && avisos.dot[t.id] ? <span className="badge dot" aria-label="novedades" /> : null}
           </button>
         ))}
       </nav>
     </div>
+    </NavContext.Provider>
   );
 }
 

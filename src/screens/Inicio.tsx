@@ -19,6 +19,7 @@ import Previa, { type MatchSetup } from '../components/Previa';
 import LiveMatch from '../components/LiveMatch';
 import { levelOf } from '../game/director';
 import { ROUND_NAMES, myCupMatchDue, myTie, playCupRound } from '../game/cup';
+import { TeamLink } from '../nav/context';
 import { CONT_NAME, CONT_ROUNDS, FLAG, SUPER_NAME, myContDue, myContTie, mySuperDue, playContinentalRound, playSupercopa } from '../game/continental';
 import { seasonTicketForecast } from '../game/tickets';
 import { fmtMoney } from '../game/economy';
@@ -75,7 +76,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const ellos = prox && (
     <div>
       <Crest c={rivalCrest(prox.rival.id, prox.rival.short)} size={44} />
-      <div>{prox.rival.name}</div>
+      <div><TeamLink id={prox.rival.id}>{prox.rival.name}</TeamLink></div>
     </div>
   );
 
@@ -183,7 +184,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
           const rival = teamById(s, especial.rivalId)!;
           const local = especial.home === null ? t.id : especial.home;
           const yo = <div className="me"><Crest c={s.club.identity.crest} size={44} /><div>{t.name}</div></div>;
-          const el = <div><Crest c={rivalCrest(rival.id, rival.short)} size={44} /><div>{rival.name}</div></div>;
+          const el = <div><Crest c={rivalCrest(rival.id, rival.short)} size={44} /><div><TeamLink id={rival.id}>{rival.name}</TeamLink></div></div>;
           return (
             <>
               <div className="match-head">
@@ -227,8 +228,8 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
               <button className="link" onClick={() => go('equipo', 'copa')}>Cuadro ›</button>
             </div>
             <div className="versus">
-              {tieCopa.home === rivalCopa.id ? <><div><Crest c={rivalCrest(rivalCopa.id, rivalCopa.short)} size={44} /><div>{rivalCopa.name}</div></div><div className="vs">vs</div><div className="me"><Crest c={s.club.identity.crest} size={44} /><div>{t.name}</div></div></>
-                : <><div className="me"><Crest c={s.club.identity.crest} size={44} /><div>{t.name}</div></div><div className="vs">vs</div><div><Crest c={rivalCrest(rivalCopa.id, rivalCopa.short)} size={44} /><div>{rivalCopa.name}</div></div></>}
+              {tieCopa.home === rivalCopa.id ? <><div><Crest c={rivalCrest(rivalCopa.id, rivalCopa.short)} size={44} /><div><TeamLink id={rivalCopa.id}>{rivalCopa.name}</TeamLink></div></div><div className="vs">vs</div><div className="me"><Crest c={s.club.identity.crest} size={44} /><div>{t.name}</div></div></>
+                : <><div className="me"><Crest c={s.club.identity.crest} size={44} /><div>{t.name}</div></div><div className="vs">vs</div><div><Crest c={rivalCrest(rivalCopa.id, rivalCopa.short)} size={44} /><div><TeamLink id={rivalCopa.id}>{rivalCopa.name}</TeamLink></div></div></>}
             </div>
             <p className="muted center small">
               Partido entre semana · {rivalCopa.name} juega en {rivalCopa.division + 1}ª división ·{' '}
@@ -287,7 +288,10 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
       </Card>
 
       {plantilla.length < 18 && s.phase !== 'fin' && (
-        <button className="hint warn-bg as-btn full-w" onClick={() => go('direccion', 'presupuestos')}>
+        <button
+          className="hint warn-bg as-btn full-w"
+          onClick={() => (s.club.director && levelOf(s, 'fichajes') !== 'manual' ? go('direccion', 'presupuestos') : go('equipo', 'mercado'))}
+        >
           ⚠️ Plantilla corta: solo {plantilla.length} jugadores.{' '}
           {s.club.director && levelOf(s, 'fichajes') !== 'manual'
             ? 'El director necesita más presupuesto o tope salarial para completarla ›'
@@ -365,9 +369,9 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
               const mine = r.home === t.id || r.away === t.id;
               return (
                 <li key={i} className={mine ? 'me' : ''}>
-                  <span className="h">{teamById(s, r.home)!.name}</span>
+                  <span className="h"><TeamLink id={r.home}>{teamById(s, r.home)!.name}</TeamLink></span>
                   <span className="score">{r.hg} - {r.ag}</span>
-                  <span className="a">{teamById(s, r.away)!.name}</span>
+                  <span className="a"><TeamLink id={r.away}>{teamById(s, r.away)!.name}</TeamLink></span>
                   {mine && r.attendance !== undefined && (
                     <span className="att">👥 {r.attendance.toLocaleString('es-ES')} espectadores · {s.club.identity.stadium}</span>
                   )}

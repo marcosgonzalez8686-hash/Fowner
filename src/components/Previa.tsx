@@ -5,6 +5,8 @@ import { moraleBonus, moraleLabel } from '../game/morale';
 import { staffMatchBonus } from '../game/staff';
 import type { GameState, Player } from '../game/types';
 import Crest from './Crest';
+import { useBack } from '../nav/back';
+import { TeamLink, useNav } from '../nav/context';
 import { FLAG } from '../game/continental';
 import { preMatchKeys, winProbs } from '../game/insights';
 import { coachOf, ourPlan, ourTactics } from '../game/coach';
@@ -22,6 +24,7 @@ const apellido = (n: string) => n.split(' ').slice(1).join(' ') || n;
 
 /** Once dibujado sobre medio campo, por líneas */
 function Pitch({ xi, flip }: { xi: Player[]; flip?: boolean }) {
+  const { openPlayer } = useNav();
   const lineas = flip ? [...LINEAS].reverse() : LINEAS;
   return (
     <div className="pitch">
@@ -31,7 +34,7 @@ function Pitch({ xi, flip }: { xi: Player[]; flip?: boolean }) {
         return (
           <div key={pos} className="pitch-row">
             {deEsa.map((p) => (
-              <span key={p.id} className={`pitch-player pos-${p.pos}`}>
+              <span key={p.id} className={`pitch-player pos-${p.pos}`} onClick={() => openPlayer(p.id)} role="button" tabIndex={0}>
                 <b>{p.ovr}</b>
                 <small>{apellido(p.name)}</small>
               </span>
@@ -59,6 +62,7 @@ function teamInfo({ s, id, rivalId, home, neutral }: { s: GameState; id: number;
 export default function Previa({ s, setup, onPlay, onSkip, onClose }: {
   s: GameState; setup: MatchSetup; onPlay: () => void; onSkip: () => void; onClose: () => void;
 }) {
+  useBack(onClose);
   const h = teamInfo({ s, id: setup.homeId, rivalId: setup.awayId, home: true, neutral: setup.neutral });
   const a = teamInfo({ s, id: setup.awayId, rivalId: setup.homeId, home: false, neutral: setup.neutral });
   const crest = (x: ReturnType<typeof teamInfo>) => (x.mio ? s.club.identity.crest : rivalCrest(x.t.id, x.t.short));
@@ -87,13 +91,13 @@ export default function Previa({ s, setup, onPlay, onSkip, onClose }: {
         <div className="scoreboard">
           <div className={h.mio ? 'me' : ''}>
             <Crest c={crest(h)} size={52} />
-            <span>{h.t.name}</span>
+            <span><TeamLink id={h.mio ? undefined : h.t.id}>{h.t.name}</TeamLink></span>
             <small className="muted">{h.t.country ? `${FLAG[h.t.country] ?? ''} ${h.t.country}` : `${h.t.division + 1}ª división`}</small>
           </div>
           <div className="vs">vs</div>
           <div className={a.mio ? 'me' : ''}>
             <Crest c={crest(a)} size={52} />
-            <span>{a.t.name}</span>
+            <span><TeamLink id={a.mio ? undefined : a.t.id}>{a.t.name}</TeamLink></span>
             <small className="muted">{a.t.country ? `${FLAG[a.t.country] ?? ''} ${a.t.country}` : `${a.t.division + 1}ª división`}</small>
           </div>
         </div>

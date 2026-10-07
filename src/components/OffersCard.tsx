@@ -1,6 +1,7 @@
 import type { Update } from '../App';
 import { levelOf } from '../game/director';
 import { fmtMoney, playerValue } from '../game/economy';
+import { PlayerLink } from '../nav/context';
 import { teamById } from '../game/market';
 import { acceptOffer, counterOffer, directorAdvice, rejectOffer } from '../game/offers';
 import type { GameState } from '../game/types';
@@ -31,7 +32,7 @@ export default function OffersCard({ s, update, notify }: { s: GameState; update
         return (
           <div key={o.id} className="offer">
             <div className="offer-head">
-              <b>{p.name}</b>
+              <b><PlayerLink id={p.id}>{p.name}</PlayerLink></b>
               <Ovr v={p.ovr} />
             </div>
             <div className="small muted">

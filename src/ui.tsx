@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { fmtMoney } from './game/economy';
+import { useBack } from './nav/back';
 
 export const Money = ({ v, sign }: { v: number; sign?: boolean }) => (
   <span className={sign ? (v < 0 ? 'neg' : 'pos') : v < 0 ? 'neg' : undefined}>
@@ -45,9 +46,10 @@ export function Segmented<T extends string>(props: {
   );
 }
 
-export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function Sheet({ title, onClose, children, top }: { title: string; onClose: () => void; children: ReactNode; top?: boolean }) {
+  useBack(onClose);
   return (
-    <div className="sheet-bg" onClick={onClose}>
+    <div className={`sheet-bg${top ? ' top' : ''}`} onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={title}>
         <div className="sheet-head">
           <h3>{title}</h3>
