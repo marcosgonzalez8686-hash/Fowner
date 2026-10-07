@@ -7,6 +7,7 @@ import type { PendingEvent } from './events';
 import type { Objective } from './fans';
 import type { Cup } from './cup';
 import type { SeasonTickets } from './tickets';
+import type { BankState } from './bank';
 
 export type Pos = 'POR' | 'DEF' | 'MED' | 'DEL';
 
@@ -98,6 +99,10 @@ export interface Ledger {
   personal: number; // empleados, multas y otros gastos
   copa: number; // premios de Copa
   abonos: number; // campaña de abonos
+  financiacion: number; // dinero recibido de préstamos e inversores
+  cuotas: number; // capital devuelto de préstamos
+  intereses: number; // intereses y comisiones de préstamos
+  inversores: number; // reparto de beneficios y recompras a inversores
 }
 
 export interface Club {
@@ -106,6 +111,7 @@ export interface Club {
   cash: number;
   ticketPrice: number;
   seasonTickets: SeasonTickets;
+  bank: BankState;
   capacity: number;
   training: number; // nivel 1-5
   academy: number; // nivel 1-5

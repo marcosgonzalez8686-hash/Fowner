@@ -18,6 +18,7 @@ import Empleados from './screens/Empleados';
 import Presupuestos from './screens/Presupuestos';
 import Resumen from './screens/Resumen';
 import Entradas from './screens/Entradas';
+import Banca from './screens/Banca';
 import Instalaciones from './screens/Instalaciones';
 import Tabs from './screens/Tabs';
 import Start from './screens/Start';
@@ -207,11 +208,13 @@ export default function App() {
                   { value: 'resumen', label: '📈 Resumen' },
                   { value: 'patrocinadores', label: '🤝 Patrocinio' },
                   { value: 'entradas', label: '🎟️ Entradas' },
+                  { value: 'banca', label: '🏦 Banca' },
                 ]}
               >
                 {sub.finanzas === 'resumen' && <Resumen {...props} />}
                 {sub.finanzas === 'patrocinadores' && <Sponsors s={state} update={update} notify={setToast} />}
                 {sub.finanzas === 'entradas' && <Entradas {...props} />}
+                {sub.finanzas === 'banca' && <Banca {...props} />}
               </Tabs>
             )}
 

@@ -30,6 +30,8 @@ export function projectSeason(s: GameState): Projection {
     mantenimiento: maintenancePerSeason(s) / MATCHDAYS,
     personal: staffWages(s) / MATCHDAYS,
   };
+  // préstamos: cuotas pendientes jornada a jornada
+  const prestamos = s.club.bank.loans.map((l) => ({ ...l }));
   let caja = s.club.cash;
   // en pretemporada todavía falta cobrar la campaña de abonos
   if (s.phase === 'pretemporada') {
@@ -54,6 +56,16 @@ export function projectSeason(s: GameState): Projection {
       pending.taquilla += taquilla;
       pending.comercial += comercial;
       delta += taquilla + comercial;
+    }
+    for (const l of prestamos) {
+      if (l.paymentsLeft <= 0 || l.principalLeft <= 0) continue;
+      const interes = l.principalLeft * (l.rate / MATCHDAYS);
+      const cuota = Math.min(l.payment, l.principalLeft + interes);
+      l.principalLeft -= cuota - interes;
+      l.paymentsLeft--;
+      pending.cuotas += cuota - interes;
+      pending.intereses += interes;
+      delta -= cuota;
     }
     caja += delta;
     cashPath.push(Math.round(caja));

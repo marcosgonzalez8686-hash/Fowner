@@ -7,6 +7,7 @@ import { makeStaffCandidates } from './staff';
 import { migrateSponsors } from './sponsor';
 import { newCup } from './cup';
 import { defaultSeasonTickets } from './tickets';
+import { emptyBank, refreshInvestorOffers } from './bank';
 import type { GameState } from './types';
 
 export const SLOTS = [1, 2, 3] as const;
@@ -88,6 +89,10 @@ function migrate(s: GameState) {
   if (!c.trophies) c.trophies = [];
   if (!s.cup) s.cup = newCup(s);
   if (!c.seasonTickets) c.seasonTickets = defaultSeasonTickets(s);
+  if (!c.bank) {
+    c.bank = emptyBank();
+    refreshInvestorOffers(s);
+  }
   // partida a mitad de temporada sin objetivo: se le pone uno moderado
   if (s.phase !== 'pretemporada' && !c.objective) c.objective = 'mitad';
   if (c.staffBudget === undefined) c.staffBudget = 25_000;

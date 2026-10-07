@@ -15,6 +15,7 @@ import {
 import { refreshSponsorOffers, sponsorFixed, sponsorPerWin, sponsorsEndSeason } from './sponsor';
 import { maybeCreateEvent } from './events';
 import { cupRoundDue, newCup, playCupRound, stillIn } from './cup';
+import { payDividends, payLoans, refreshInvestorOffers } from './bank';
 import { leagueAttendance, seasonTicketFansGrowth, seasonTicketLoyalty, seasonTicketsNewSeason, sellSeasonTickets } from './tickets';
 import { healOneMatchday, injuryName, isInjured, moraleAfterMatch, moraleBonus, resetSeasonMorale, rollInjuries } from './morale';
 import { changeSatisfaction, fansGrowthSatisfaction, satisfactionAfterMatch, satisfactionEndSeason } from './fans';
@@ -155,6 +156,7 @@ export function playMatchday(s: GameState) {
   c.cash += tv + patro - sal - dd - mant - pers;
   c.ledger.mantenimiento += mant;
   c.ledger.personal += pers;
+  payLoans(s);
 
   // prima del patrocinador por victoria
   const nuestro = s.fixtures[mio.division][md].find((f) => f.home === mio.id || f.away === mio.id);
@@ -362,6 +364,7 @@ export function endSeason(s: GameState) {
   }
 
   // 6. economía y nueva temporada
+  payDividends(s);
   const l = s.club.ledger;
   s.club.lastLedger = l;
   s.club.seasonLog.push({ season: s.season, division: divAntes, ledger: l, cashEnd: s.club.cash });
@@ -375,6 +378,7 @@ export function endSeason(s: GameState) {
   s.directorsMarket = makeDirectors(s, mio.division);
   s.cup = newCup(s);
   seasonTicketsNewSeason(s, mio.division !== divAntes);
+  refreshInvestorOffers(s);
   s.staffMarket = makeStaffCandidates(s, mio.division);
   s.pendingEvent = undefined;
   sponsorsEndSeason(s);

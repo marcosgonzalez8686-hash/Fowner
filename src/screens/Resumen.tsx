@@ -6,6 +6,7 @@ import { maintenancePerSeason } from '../game/land';
 import { wageBill } from '../game/market';
 import { creditLimit, expectedAttendance } from '../game/season';
 import type { Ledger } from '../game/types';
+import { operatingResult } from '../game/bank';
 import { Card, Money } from '../ui';
 
 const LINEAS: { k: keyof Ledger; label: string; gasto?: boolean }[] = [
@@ -22,6 +23,14 @@ const LINEAS: { k: keyof Ledger; label: string; gasto?: boolean }[] = [
   { k: 'personal', label: 'Empleados y otros', gasto: true },
   { k: 'traspasosOut', label: 'Fichajes', gasto: true },
   { k: 'obras', label: 'Obras y terrenos', gasto: true },
+  { k: 'intereses', label: 'Intereses', gasto: true },
+];
+
+/** Movimientos de financiación: no son ingresos ni gastos de la actividad del club */
+const FINANCIACION: { k: keyof Ledger; label: string; gasto?: boolean }[] = [
+  { k: 'financiacion', label: 'Préstamos e inversores recibidos' },
+  { k: 'cuotas', label: 'Devolución de préstamos', gasto: true },
+  { k: 'inversores', label: 'Pagos a inversores', gasto: true },
 ];
 
 function Cuentas({ l }: { l: Ledger }) {
@@ -35,9 +44,21 @@ function Cuentas({ l }: { l: Ledger }) {
           </tr>
         ))}
         <tr className="total">
-          <td className="left">Resultado</td>
-          <td><Money v={ledgerIncome(l) - ledgerExpense(l)} sign /></td>
+          <td className="left">Resultado de la actividad</td>
+          <td><Money v={operatingResult(l)} sign /></td>
         </tr>
+        {FINANCIACION.filter((x) => l[x.k]).map((x) => (
+          <tr key={x.k}>
+            <td className="left">{x.label}</td>
+            <td><Money v={x.gasto ? -l[x.k] : l[x.k]} /></td>
+          </tr>
+        ))}
+        {FINANCIACION.some((x) => l[x.k]) && (
+          <tr className="total">
+            <td className="left">Variación de caja</td>
+            <td><Money v={ledgerIncome(l) - ledgerExpense(l)} sign /></td>
+          </tr>
+        )}
       </tbody>
     </table>
   );
@@ -48,14 +69,14 @@ export default function Resumen({ s }: ScreenProps) {
   const prev = projectSeason(s);
   const p = prev.pending;
   const ingresosPrev = p.taquilla + p.comercial + p.tv + p.patrocinio + p.abonos;
-  const gastosPrev = p.salarios + p.director + p.mantenimiento + p.personal;
+  const gastosPrev = p.salarios + p.director + p.mantenimiento + p.personal + p.cuotas + p.intereses;
   const restantes = s.phase === 'fin' ? 0 : MATCHDAYS - s.matchday;
   const ocupacion = expectedAttendance(s);
   const barras: BarItem[] = LINEAS.map((x) => ({ label: x.label, value: c.ledger[x.k], kind: x.gasto ? 'out' : 'in' }));
   const historico = c.seasonLog.map((h) => ({
     label: `T${h.season}`,
     sub: `${h.division + 1}ª div.`,
-    value: ledgerIncome(h.ledger) - ledgerExpense(h.ledger),
+    value: operatingResult(h.ledger),
   }));
 
   return (
@@ -94,6 +115,9 @@ export default function Resumen({ s }: ScreenProps) {
             <tr><td className="left">Director deportivo</td><td><Money v={-p.director} /></td></tr>
             <tr><td className="left">Mantenimiento</td><td><Money v={-p.mantenimiento} /></td></tr>
             <tr><td className="left">Empleados</td><td><Money v={-p.personal} /></td></tr>
+            {p.cuotas + p.intereses > 0 && (
+              <tr><td className="left">Cuotas de préstamos</td><td><Money v={-(p.cuotas + p.intereses)} /></td></tr>
+            )}
             <tr className="total"><td className="left">Balance previsto</td><td><Money v={ingresosPrev - gastosPrev} sign /></td></tr>
             <tr className="total"><td className="left">Caja al final</td><td><Money v={prev.cashEnd} /></td></tr>
           </tbody>
