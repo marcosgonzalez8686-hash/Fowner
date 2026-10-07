@@ -7,6 +7,7 @@ import { buildReport } from './report';
 import { recordMatch } from './history';
 import { chance, gauss, shuffle } from './rng';
 import { staffMatchBonus } from './staff';
+import { ourPlan, ourTactics } from './coach';
 import { cupAttendance } from './tickets';
 import type { GameState, Player } from './types';
 
@@ -124,8 +125,9 @@ export function playCupRound(s: GameState) {
   const extra = staffMatchBonus(s) + moraleBonus(s);
 
   for (const tie of s.cup.rounds[ronda]) {
-    const xiA = bestEleven(porEquipo.get(tie.a) ?? []);
-    const xiB = bestEleven(porEquipo.get(tie.b) ?? []);
+    const plan = (id: number) => (id === mio.id ? ourPlan(s, porEquipo.get(id) ?? []) : bestEleven(porEquipo.get(id) ?? []));
+    const xiA = plan(tie.a);
+    const xiB = plan(tie.b);
     const casaA = tie.home === tie.a ? 3 : 0;
     const casaB = tie.home === tie.b ? 3 : 0;
     // magia de Copa: a partido único las diferencias se acortan y el pequeño se crece en casa
@@ -134,8 +136,8 @@ export function playCupRound(s: GameState) {
     const media = (ra + rb) / 2;
     const fa = media + (ra - media) * 0.55 + casaA + gauss(0, 3);
     const fb = media + (rb - media) * 0.55 + casaB + gauss(0, 3);
-    const stA = chooseStyle(ra, rb, tie.home === tie.a);
-    const stB = chooseStyle(rb, ra, tie.home === tie.b);
+    const stA = tie.a === mio.id ? ourTactics(s).style : chooseStyle(ra, rb, tie.home === tie.a);
+    const stB = tie.b === mio.id ? ourTactics(s).style : chooseStyle(rb, ra, tie.home === tie.b);
     const { hg: ga, ag: gb } = simulate(fa, fb, stA, stB);
     tie.ga = ga;
     tie.gb = gb;

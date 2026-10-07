@@ -5,6 +5,7 @@ import {
 } from '../game/fans';
 import { myTeam, mySquad } from '../game/market';
 import { moraleLabel } from '../game/morale';
+import { coachOf, confidenceLabel } from '../game/coach';
 import type { GameState } from '../game/types';
 import { Card } from '../ui';
 
@@ -78,6 +79,14 @@ export default function FansCard({ s, goPlantilla }: { s: GameState; goPlantilla
     <Card title="📣 Afición y vestuario">
       <Meter value={s.club.satisfaction} label="Afición" emoji={sat.emoji} text={sat.text} />
       <Meter value={s.club.morale} label="Moral del vestuario" emoji={mor.emoji} text={mor.text} />
+      {coachOf(s) && (
+        <Meter
+          value={coachOf(s)!.confidence ?? 60}
+          label={`Confianza en ${coachOf(s)!.name}`}
+          emoji={confidenceLabel(coachOf(s)!.confidence ?? 60).emoji}
+          text={confidenceLabel(coachOf(s)!.confidence ?? 60).text}
+        />
+      )}
       {obj && (
         <p className="small">
           {OBJECTIVES[obj].icon} <b>Objetivo:</b> {objectiveText(obj, division)}

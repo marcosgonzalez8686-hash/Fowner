@@ -4,6 +4,8 @@ import { emptyLedger } from './economy';
 import { defaultIdentity, type Crest } from './identity';
 import { newLand } from './land';
 import { makeStaffCandidates } from './staff';
+import { ensureCoach } from './coach';
+import { bestEleven } from './match';
 import { migrateSponsors } from './sponsor';
 import { newCup } from './cup';
 import { emptyRecords } from './history';
@@ -105,6 +107,10 @@ function migrate(s: GameState) {
   if (c.staffBudget === undefined) c.staffBudget = 25_000;
   if (!c.delegation.empleados) c.delegation.empleados = 'manual';
   if (!s.staffMarket) s.staffMarket = makeStaffCandidates(s, s.teams.find((t) => t.id === c.teamId)!.division);
+  // entrenadores con sistema, estilo y contrato
+  // (el que ya estaba sigue con el sistema que mejor le iba a la plantilla)
+  if (c.staff.entrenador) ensureCoach(c.staff.entrenador, bestEleven(s.players.filter((p) => p.teamId === c.teamId)).formation);
+  for (const e of s.staffMarket.entrenador ?? []) ensureCoach(e);
   migrateSponsors(s);
   c.ledger = { ...emptyLedger(), ...c.ledger };
   if (c.lastLedger) c.lastLedger = { ...emptyLedger(), ...c.lastLedger };

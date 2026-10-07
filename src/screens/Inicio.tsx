@@ -4,6 +4,7 @@ import { executeProposal } from '../game/director';
 import { MATCHDAYS } from '../game/economy';
 import { marketOpen, myTeam, mySquad, myYouth, squadOf, teamById } from '../game/market';
 import { bestEleven, computeStandings, form } from '../game/match';
+import { ourPlan } from '../game/coach';
 import { endSeason, playMatchday, startSeason } from '../game/season';
 import type { GameState, Message } from '../game/types';
 import { Card } from '../ui';
@@ -45,7 +46,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const prox = copaAhora ? null : nextMatch(s);
   const tabla = computeStandings(s.teams.filter((x) => x.division === t.division).map((x) => x.id), s.fixtures[t.division]);
   const pos = tabla.findIndex((r) => r.teamId === t.id) + 1;
-  const mia = bestEleven(squadOf(s, t.id)).strength;
+  const mia = ourPlan(s).strength;
   const propuestas = s.messages.filter((m) => m.status === 'pendiente');
   const miUltimo = s.lastResults.find((r) => r.home === t.id || r.away === t.id);
   const faltaObjetivo = s.phase === 'pretemporada' && !s.club.objective;

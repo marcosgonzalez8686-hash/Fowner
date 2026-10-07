@@ -5,6 +5,7 @@ import { moraleBonus, moraleLabel } from '../game/morale';
 import { staffMatchBonus } from '../game/staff';
 import type { GameState, Player } from '../game/types';
 import Crest from './Crest';
+import { coachOf, ourPlan, ourTactics } from '../game/coach';
 
 export interface MatchSetup {
   comp: 'liga' | 'copa';
@@ -43,10 +44,12 @@ function Pitch({ xi, flip }: { xi: Player[]; flip?: boolean }) {
 function teamInfo({ s, id, rivalId, home, neutral }: { s: GameState; id: number; rivalId: number; home: boolean; neutral?: boolean }) {
   const t = teamById(s, id)!;
   const mio = id === s.club.teamId;
-  const plan = bestEleven(squadOf(s, id));
-  const rival = bestEleven(squadOf(s, rivalId));
+  // nuestro equipo juega con el sistema y el estilo del entrenador
+  const planDe = (x: number) => (x === s.club.teamId ? ourPlan(s, squadOf(s, x)) : bestEleven(squadOf(s, x)));
+  const plan = planDe(id);
+  const rival = planDe(rivalId);
   const extra = (x: number) => (x === s.club.teamId ? staffMatchBonus(s) + moraleBonus(s) : 0);
-  const estilo = chooseStyle(plan.strength + extra(id), rival.strength + extra(rivalId), home && !neutral);
+  const estilo = mio ? ourTactics(s).style : chooseStyle(plan.strength + extra(id), rival.strength + extra(rivalId), home && !neutral);
   const bajas = squadOf(s, id).filter((p) => (p.injury ?? 0) > 0);
   return { t, mio, plan, estilo, bajas };
 }
@@ -135,6 +138,7 @@ export default function Previa({ s, setup, onPlay, onSkip, onClose }: {
             <div key={x.t.id} className={`tactic${x.mio ? ' mine' : ''}`}>
               <b>{x.plan.formation as Formation}</b>
               <span>{STYLES[x.estilo].icon} {STYLES[x.estilo].label}</span>
+              {x.mio && <small className="muted">🧢 {coachOf(s)?.name ?? 'Sin entrenador: dirige el capitán'}</small>}
             </div>
           ))}
         </div>

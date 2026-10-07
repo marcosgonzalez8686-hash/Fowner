@@ -3,7 +3,8 @@ import {
   addMessage, askingPrice, askingSalary, buyPlayer, describeMoney, marketOpen, myTeam, mySquad, myYouth,
   promoteYouth, releasePlayer, renewPlayer, renewSalary, sellPlayer, sellPrice, wageBill, willJoin,
 } from './market';
-import { FORMACION } from './match';
+import { FORMACION, elevenFor } from './match';
+import { ourShape, tacticsLabel } from './coach';
 import { gauss } from './rng';
 import { ownerTitle } from './identity';
 import { scoutingFactor } from './land';
@@ -51,8 +52,8 @@ function perceived(s: GameState, d: Director, p: Player) {
   return p.ovr + gauss(0, (6 - d.stars) * 1.3 * scoutingFactor(s) * staffScoutFactor(s));
 }
 
-function starters(squad: Player[], pos: Pos) {
-  return squad.filter((p) => p.pos === pos).sort((a, b) => b.ovr - a.ovr).slice(0, FORMACION[pos]);
+function starters(squad: Player[], pos: Pos, forma: Record<Pos, number> = FORMACION) {
+  return squad.filter((p) => p.pos === pos).sort((a, b) => b.ovr - a.ovr).slice(0, forma[pos]);
 }
 
 function pendingFor(s: GameState, kind: Proposal['kind']) {
@@ -136,13 +137,13 @@ function doSignings(s: GameState, maxOps: number) {
       const n = squad.filter((p) => p.pos === ps).length;
       if (n < MIN_POS[ps]) { pos = ps; peor = -Infinity; break; }
       if (n >= MAX_POS[ps]) continue;
-      const tit = starters(squad, ps);
+      const tit = starters(squad, ps, ourShape(s));
       const minimo = tit.length ? tit[tit.length - 1].ovr : 0;
       if (minimo - objetivo < peor) { peor = minimo - objetivo; pos = ps; }
     }
     if (!pos) return;
-    const tit = starters(squad, pos);
-    const listón = tit.length >= FORMACION[pos] ? tit[tit.length - 1].ovr : 0;
+    const tit = starters(squad, pos, ourShape(s));
+    const listón = tit.length >= ourShape(s)[pos] ? tit[tit.length - 1].ovr : 0;
     const necesitaHueco = squad.filter((p) => p.pos === pos).length < MIN_POS[pos];
 
     const presupuesto = Math.min(s.club.transferBudget, s.club.cash);
@@ -204,7 +205,7 @@ function doSales(s: GameState) {
   }
   // 2. el ahorrador vende al veterano caro que no es titular
   if (!candidato && d.style === 'ahorrador') {
-    const titulares = new Set((Object.keys(FORMACION) as Pos[]).flatMap((pos) => starters(squad, pos).map((p) => p.id)));
+    const titulares = new Set((Object.keys(FORMACION) as Pos[]).flatMap((pos) => starters(squad, pos, ourShape(s)).map((p) => p.id)));
     candidato = squad.filter((p) => !titulares.has(p.id) && p.age >= 29 && p.signedSeason !== s.season).sort((a, b) => b.salary - a.salary)[0] ?? null;
     motivo = 'Cobra mucho para no ser titular.';
   }
@@ -290,6 +291,9 @@ function doStaff(s: GameState) {
       { kind: 'empleado', role, staffId: mejor.id },
       `${actual ? 'sustituir' : 'contratar'} ${ROLES[role].name.toLowerCase()}: ${mejor.name} (${mejor.stars}★)`,
       `${mejor.name}, ${mejor.stars} estrella(s). ${mejor.trait}. Sueldo: ${fmtMoney(mejor.salary)}/temporada.` +
+        (mejor.formation && mejor.style
+          ? `\nJuega ${tacticsLabel(mejor.formation, mejor.style)}: con su sistema nuestro once tendría ${elevenFor(mySquad(s), mejor.formation).strength.toFixed(1)} de media.`
+          : '') +
         (actual ? `\nSustituiría a ${actual.name} (${actual.stars}★), con indemnización.` : '') +
         `\nTras esto quedarían ${fmtMoney(Math.max(0, margen))} libres del tope de empleados.`,
     );

@@ -5,7 +5,8 @@ import {
 import { expireProposals, levelOf, runDirector } from './director';
 import { buildAllFixtures, makeDirectors, makePlayer } from './generate';
 import { addMessage, myTeam, mySquad, myYouth, teamById, wageBill } from './market';
-import { bestEleven, chooseStyle, computeStandings, simulate } from './match';
+import { bestEleven, chooseStyle, computeStandings, simulate, type Formation } from './match';
+import { coachAfterMatch, coachEndSeason, ourPlan, ourTactics } from './coach';
 import { chance, clamp, gauss, rand, randInt } from './rng';
 import type { GameState, MatchResult, Player, Standing, Team } from './types';
 import { recordMatch, recordSeason } from './history';
@@ -70,9 +71,10 @@ export function playMatchday(s: GameState) {
   }
   const extra = staffMatchBonus(s) + moraleBonus(s);
   // once titular de cada equipo (sin lesionados), calculado una sola vez por jornada
-  const onces = new Map<number, ReturnType<typeof bestEleven>>();
+  // nuestro once lo pone el entrenador con su sistema; los rivales, con el que mejor les va
+  const onces = new Map<number, { xi: Player[]; strength: number; formation: Formation }>();
   const once = (id: number) => {
-    if (!onces.has(id)) onces.set(id, bestEleven(porEquipo.get(id) ?? []));
+    if (!onces.has(id)) onces.set(id, id === s.club.teamId ? ourPlan(s, porEquipo.get(id) ?? []) : bestEleven(porEquipo.get(id) ?? []));
     return onces.get(id)!;
   };
   const fuerza = (id: number) => once(id).strength + (id === s.club.teamId ? extra : 0);
@@ -85,8 +87,9 @@ export function playMatchday(s: GameState) {
     for (const f of s.fixtures[d][md]) {
       // pequeño factor anímico aleatorio por partido
       // cada entrenador elige estilo según cómo ve el partido
-      const sh = chooseStyle(fuerza(f.home), fuerza(f.away), true);
-      const sa = chooseStyle(fuerza(f.away), fuerza(f.home), false);
+      // (el nuestro siempre juega a lo suyo)
+      const sh = f.home === s.club.teamId ? ourTactics(s).style : chooseStyle(fuerza(f.home), fuerza(f.away), true);
+      const sa = f.away === s.club.teamId ? ourTactics(s).style : chooseStyle(fuerza(f.away), fuerza(f.home), false);
       const fh = fuerza(f.home) + 2 + gauss(0, 2);
       const fa = fuerza(f.away) + gauss(0, 2);
       const { hg, ag } = simulate(fh, fa, sh, sa);
@@ -127,6 +130,7 @@ export function playMatchday(s: GameState) {
         const gc = casa ? ag : hg;
         moraleAfterMatch(s, gf, gc);
         satisfactionAfterMatch(s, gf, gc, casa);
+        coachAfterMatch(s, gf, gc);
       }
       // lesiones de los titulares de ambos equipos
       for (const id of [f.home, f.away]) {
@@ -306,6 +310,7 @@ export function endSeason(s: GameState) {
   mio.fans = Math.round(mio.fans * fansGrowthBonus(s) * marketingFansBonus(s) * fansGrowthSatisfaction(s) * seasonTicketFansGrowth(s));
   const fuerzanVenta = satisfactionEndSeason(s, miPos, divAntes, mio.division);
   resetSeasonMorale(s);
+  coachEndSeason(s);
 
   // 2. jugadores: edad, evolución, retiradas y contratos
   const seVan: Player[] = [];

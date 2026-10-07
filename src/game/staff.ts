@@ -1,7 +1,10 @@
 import { MATCHDAYS, fmtMoney, roundMoney } from './economy';
 import { addMessage } from './market';
 import { personName } from './names';
-import { rand, shuffle } from './rng';
+import { changeSatisfaction } from './fans';
+import type { Formation, Style } from './match';
+import { changeMorale } from './morale';
+import { pick, rand, randInt, shuffle } from './rng';
 import type { GameState } from './types';
 
 // Empleados del club. Cada puesto tiene un efecto en el juego que crece con la calidad (1-5 estrellas).
@@ -15,6 +18,12 @@ export interface Staff {
   stars: number;
   salary: number; // € por temporada
   trait: string; // detalle de personalidad, solo decorativo
+  // solo el entrenador:
+  formation?: Formation; // su sistema favorito: es el que juega el equipo
+  style?: Style; // su estilo de juego
+  contract?: number; // temporadas que le quedan (incluida la actual)
+  confidence?: number; // confianza de la grada y el club, 0-100
+  warned?: boolean; // ya se avisó de que la grada pide su cabeza
 }
 
 export interface RoleInfo {
@@ -58,6 +67,14 @@ export function makeStaffCandidates(s: GameState, division: number): Record<Role
         stars,
         salary: roundMoney(BASE[division] * ROLES[role].pay * Math.pow(1.85, stars - 1) * rand(0.9, 1.1)),
         trait: rasgos[i],
+        ...(role === 'entrenador'
+          ? {
+              formation: pick(['4-4-2', '4-4-2', '4-3-3', '4-3-3', '4-5-1', '5-3-2', '3-5-2'] as Formation[]),
+              style: pick(['equilibrado', 'equilibrado', 'ofensivo', 'defensivo', 'contraataque'] as Style[]),
+              contract: randInt(1, 3),
+              confidence: 60,
+            }
+          : {}),
       };
     });
   }
@@ -88,19 +105,35 @@ export function hireStaff(s: GameState, role: Role, id: number): string | undefi
   if (!c) return 'Ese candidato ya no está disponible.';
   if (s.club.staff[role]) fireStaff(s, role);
   s.club.staff[role] = c;
+  if (role === 'entrenador') {
+    c.confidence = 60;
+    c.warned = false;
+    // a mitad de temporada, el cambio de entrenador da un empujón al vestuario
+    if (s.phase === 'temporada' && s.matchday > 0) changeMorale(s, 6);
+  }
   s.staffMarket[role] = s.staffMarket[role].filter((x) => x.id !== id);
   addMessage(s, { from: 'club', title: `${c.name}, nuevo ${ROLES[role].name.toLowerCase()}`, body: `${c.trait}. Sueldo: ${fmtMoney(c.salary)}/temporada.` });
+}
+
+/**
+ * Indemnización por despido: al entrenador se le paga lo que le queda de contrato;
+ * al resto, la mitad de lo que le queda de temporada.
+ */
+export function coachSeverance(s: GameState, e: Staff) {
+  const restante = s.phase === 'temporada' ? 1 - s.matchday / MATCHDAYS : 1;
+  if (e.role === 'entrenador' && e.contract) return roundMoney(e.salary * (restante + Math.max(0, e.contract - 1)));
+  return roundMoney((e.salary * restante) / 2);
 }
 
 export function fireStaff(s: GameState, role: Role) {
   const e = s.club.staff[role];
   if (!e) return;
-  // indemnización: la mitad de lo que le queda de temporada
-  const restante = s.phase === 'temporada' ? 1 - s.matchday / MATCHDAYS : 1;
-  const coste = roundMoney((e.salary * restante) / 2);
+  const coste = coachSeverance(s, e);
   s.club.cash -= coste;
   s.club.ledger.personal += coste;
   delete s.club.staff[role];
+  // si la grada ya pedía su cabeza, la destitución se celebra
+  if (role === 'entrenador' && (e.confidence ?? 60) < 30) changeSatisfaction(s, 3, `Destitución de ${e.name}`);
   addMessage(s, { from: 'club', title: `Despedido ${e.name}`, body: `${ROLES[role].name}. Indemnización: ${fmtMoney(coste)}.` });
 }
 

@@ -42,6 +42,8 @@ for (let temp = 0; temp < temporadas && !s.gameOver; temp++) {
   );
   const copa = s.cup.rounds.findIndex((r) => r.some((t) => (t.a === s.club.teamId || t.b === s.club.teamId) && t.winner !== s.club.teamId));
   console.log('   copa:', copa === -1 ? 'CAMPEÓN' : `eliminado en ${ROUND_NAMES[copa]}`, '| campeón', s.teams.find((t) => t.id === s.cup.champion)?.name, '| premios', s.club.ledger.copa);
+  const ent = s.club.staff.entrenador;
+  console.log('   entrenador:', ent ? `${ent.name} ${ent.stars}★ ${ent.formation} ${ent.style} · contrato ${ent.contract} · confianza ${ent.confidence}` : 'ninguno');
   endSeason(s);
   // firma la oferta intermedia de cada espacio libre
   for (const [slot, ofertas] of Object.entries(s.sponsorOffers)) if (ofertas?.length) signOffer(s, slot as SponsorSlot, ofertas[1].id);

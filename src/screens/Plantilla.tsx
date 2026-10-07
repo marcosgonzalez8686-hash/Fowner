@@ -6,7 +6,8 @@ import {
   marketOpen, myTeam, mySquad, myYouth, promoteYouth, releasePlayer, renewPlayer, renewSalary, sellPlayer, sellPrice,
   wageBill,
 } from '../game/market';
-import { FORMACION, bestEleven } from '../game/match';
+import { FORMACION } from '../game/match';
+import { coachOf, ourPlan, ourShape, tacticsLabel } from '../game/coach';
 import type { Player, Pos } from '../game/types';
 import { Card, Ovr, Segmented, Sheet } from '../ui';
 import { moraleLabel } from '../game/morale';
@@ -21,7 +22,9 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
   const squad = mySquad(s);
   const youth = myYouth(s);
   const nivel = DIV_LEVEL[myTeam(s).division];
-  const { xi, strength } = bestEleven(squad);
+  const { xi, strength, formation, style } = ourPlan(s, squad);
+  const forma = ourShape(s);
+  const faltan = (Object.keys(forma) as Pos[]).filter((pos) => squad.filter((p) => p.pos === pos && !p.youth).length < forma[pos]);
   const titulares = new Set(xi.map((p) => p.id));
 
   const run = (fn: () => string | undefined | void, ok: string) => {
@@ -41,6 +44,15 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
           <div><b>{moraleLabel(s.club.morale).emoji} {s.club.morale}</b><span>moral del vestuario</span></div>
           <div><b>{squad.filter((p) => (p.injury ?? 0) > 0).length}</b><span>lesionados</span></div>
         </div>
+        <p className="small">
+          🧢 <b>{tacticsLabel(formation, style)}</b>
+          <span className="muted"> · {coachOf(s) ? `el sistema de ${coachOf(s)!.name}` : 'sin entrenador, el capitán tira de lo clásico'}</span>
+        </p>
+        {faltan.length > 0 && (
+          <p className="hint warn-bg small">
+            ⚠️ Para su {formation} faltan jugadores en: {faltan.map((pos) => POS_NAME[pos].toLowerCase()).join(', ')}. Juegan fuera de posición y rinden menos.
+          </p>
+        )}
         <p className="small muted">⭐ titular · 🤕 lesionado (no juega hasta recuperarse)</p>
       </Card>
 
@@ -64,7 +76,7 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
       )}
 
       {(Object.keys(FORMACION) as Pos[]).map((pos) => (
-        <Card key={pos} title={POS_NAME[pos]}>
+        <Card key={pos} title={`${POS_NAME[pos]} · ${forma[pos]} en el once`}>
           {squad
             .filter((p) => p.pos === pos)
             .sort((a, b) => b.ovr - a.ovr)
