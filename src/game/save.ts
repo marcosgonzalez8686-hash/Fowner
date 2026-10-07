@@ -88,6 +88,7 @@ function migrate(s: GameState) {
   if (!c.satLog) c.satLog = [];
   if (!c.trophies) c.trophies = [];
   if (!s.cup) s.cup = newCup(s);
+  if (!s.incomingOffers) s.incomingOffers = [];
   if (!c.seasonTickets) c.seasonTickets = defaultSeasonTickets(s);
   if (!c.bank) {
     c.bank = emptyBank();

@@ -13,6 +13,7 @@ import KitView from '../components/KitView';
 import { rivalCrest } from '../game/identity';
 import { resolveEvent } from '../game/events';
 import { SlotOffers } from '../components/Sponsors';
+import OffersCard from '../components/OffersCard';
 import { ROUND_NAMES, myCupMatchDue, myTie, playCupRound } from '../game/cup';
 import { seasonTicketForecast } from '../game/tickets';
 import { fmtMoney } from '../game/economy';
@@ -30,7 +31,7 @@ function nextMatch(s: GameState) {
 export function pendingCount(s: GameState) {
   const faltaCamiseta = !s.club.sponsors.camiseta && Boolean(s.sponsorOffers.camiseta?.length);
   const faltaObjetivo = s.phase === 'pretemporada' && !s.club.objective;
-  return (s.pendingEvent ? 1 : 0) + s.messages.filter((m) => m.status === 'pendiente').length + (faltaCamiseta ? 1 : 0) + (faltaObjetivo ? 1 : 0);
+  return (s.pendingEvent ? 1 : 0) + s.messages.filter((m) => m.status === 'pendiente').length + (faltaCamiseta ? 1 : 0) + (faltaObjetivo ? 1 : 0) + s.incomingOffers.length;
 }
 
 export default function Inicio({ s, update, notify, go }: ScreenProps) {
@@ -46,7 +47,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const propuestas = s.messages.filter((m) => m.status === 'pendiente');
   const miUltimo = s.lastResults.find((r) => r.home === t.id || r.away === t.id);
   const faltaObjetivo = s.phase === 'pretemporada' && !s.club.objective;
-  const hayPendientes = Boolean(s.pendingEvent) || propuestas.length > 0 || faltaCamiseta || ofertasPendientes > 0 || faltaObjetivo;
+  const hayPendientes = Boolean(s.pendingEvent) || propuestas.length > 0 || faltaCamiseta || ofertasPendientes > 0 || faltaObjetivo || s.incomingOffers.length > 0;
 
   const nosotros = prox && (
     <div className="me">
@@ -253,6 +254,8 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
           ))}
         </Card>
       )}
+
+      <OffersCard s={s} update={update} notify={notify} />
 
       {ofertasPendientes > 0 && (
         <button className="hint as-btn full-w" onClick={() => go('finanzas', 'patrocinadores')}>

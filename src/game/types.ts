@@ -8,6 +8,7 @@ import type { Objective } from './fans';
 import type { Cup } from './cup';
 import type { SeasonTickets } from './tickets';
 import type { BankState } from './bank';
+import type { IncomingOffer } from './offers';
 
 export type Pos = 'POR' | 'DEF' | 'MED' | 'DEL';
 
@@ -158,6 +159,7 @@ export interface GameState {
   sponsorOffers: Partial<Record<SponsorSlot, SponsorContract[]>>;
   pendingEvent?: PendingEvent;
   cup: Cup;
+  incomingOffers: IncomingOffer[];
   lastEventKey?: string;
   messages: Message[];
   history: { season: number; division: number; position: number }[];

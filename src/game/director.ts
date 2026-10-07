@@ -7,6 +7,7 @@ import { FORMACION } from './match';
 import { gauss } from './rng';
 import { ownerTitle } from './identity';
 import { scoutingFactor } from './land';
+import { directorHandlesOffers } from './offers';
 import { ROLES, ROLE_ORDER, hireStaff, staffScoutFactor, staffWages, type Role, type Staff } from './staff';
 import type { Director, GameState, Level, Player, Pos, Proposal, Task } from './types';
 
@@ -306,6 +307,7 @@ export function runDirector(s: GameState, moment: DirectorMoment) {
   if (!s.club.director || s.gameOver) return;
   if (levelOf(s, 'cantera') !== 'manual' && s.phase === 'pretemporada') doYouth(s);
   if (marketOpen(s)) {
+    directorHandlesOffers(s, levelOf(s, 'ventas'));
     if (levelOf(s, 'ventas') !== 'manual') doSales(s);
     if (levelOf(s, 'fichajes') !== 'manual') doSignings(s, moment === 'jornada' ? 1 : 3);
   }

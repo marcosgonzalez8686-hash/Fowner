@@ -10,6 +10,7 @@ import { refreshSponsorOffers } from './sponsor';
 import { newCup } from './cup';
 import { defaultSeasonTickets } from './tickets';
 import { emptyBank, refreshInvestorOffers } from './bank';
+import { generateOffers } from './offers';
 import { defaultIdentity, ownerTitle, type Identity } from './identity';
 import type { Level, Task } from './types';
 import { STYLE_LABEL, runDirector } from './director';
@@ -90,6 +91,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
     directorsMarket: [],
     staffMarket: {} as GameState['staffMarket'],
     sponsorOffers: {},
+    incomingOffers: [],
     cup: null as unknown as GameState['cup'],
     messages: [],
     history: [],
@@ -184,6 +186,9 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
       'Antes de empezar, firma un patrocinador de camiseta (aquí en Inicio) y contrata a tus empleados (Dirección → Empleados): sin entrenador el equipo rinde peor.',
     read: false,
   });
+  // primeras ofertas por nuestros jugadores en la pretemporada
+  generateOffers(s, 2);
+
   // director deportivo elegido al crear la partida
   if (opts.director) {
     const d = { ...opts.director, id: newId(s) };
