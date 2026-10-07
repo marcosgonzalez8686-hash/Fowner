@@ -94,7 +94,7 @@ const TEMPLATES: Template[] = [
       const pago = roundMoney(e * 0.12);
       return {
         title: 'Quieren alquilar el estadio para un concierto',
-        body: `Una promotora ofrece dinero por usar el ${s.club.identity.stadium} un fin de semana sin partido.`,
+        body: `Una promotora ofrece dinero por usar «${s.club.identity.stadium}» un fin de semana sin partido.`,
         options: [
           { label: 'Alquilarlo', hint: `+${fmtMoney(pago)}, el césped puede sufrir` },
           { label: 'Rechazar', hint: 'No pasa nada' },

@@ -164,7 +164,7 @@ function doSignings(s: GameState, maxOps: number) {
       if (necesitaHueco) {
         warnOnce(s, `Necesito margen para fichar un ${pos}`,
           `Nos faltan jugadores en ${pos} y con el presupuesto (${fmtMoney(s.club.transferBudget)}) y el tope salarial ` +
-          `(${fmtMoney(s.club.wageCap)}, ahora usamos ${fmtMoney(wageBill(s))}) no encuentro a nadie. Súbelos en Club.`);
+          `(${fmtMoney(s.club.wageCap)}, ahora usamos ${fmtMoney(wageBill(s))}) no encuentro a nadie. Súbelos en Dirección → Presupuestos.`);
       }
       return;
     }
@@ -295,7 +295,7 @@ function doStaff(s: GameState) {
   }
   if (sinCubrir.length) {
     warnOnce(s, 'No llego para cubrir todos los puestos',
-      `Con el tope de salarios de empleados (${fmtMoney(s.club.staffBudget)}) no puedo contratar: ${sinCubrir.join(', ')}. Si quieres, súbelo en Club → Finanzas.`);
+      `Con el tope de salarios de empleados (${fmtMoney(s.club.staffBudget)}) no puedo contratar: ${sinCubrir.join(', ')}. Si quieres, súbelo en Dirección → Presupuestos.`);
   }
 }
 
@@ -336,7 +336,7 @@ export function hireDirector(s: GameState, id: number) {
   addMessage(s, {
     from: 'director',
     title: `${d.name} es el nuevo director deportivo`,
-    body: `Encantado, ${ownerTitle(s.club.identity)}. Mi estilo: ${STYLE_LABEL[d.style].toLowerCase()}. Dime qué tareas me encargas en la pestaña Director.`,
+    body: `Encantado, ${ownerTitle(s.club.identity)}. Mi estilo: ${STYLE_LABEL[d.style].toLowerCase()}. Dime qué tareas me encargas en Dirección → Director.`,
   });
   runDirector(s, 'cambio');
 }

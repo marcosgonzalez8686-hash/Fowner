@@ -21,7 +21,7 @@ export default function Empleados({ s, update, notify }: ScreenProps) {
         <p className="small muted">
           {s.club.director && s.club.delegation.empleados !== 'manual'
             ? `Tu director deportivo se encarga de contratar (${s.club.delegation.empleados === 'auto' ? 'automático' : 'te lo propone'}) con un tope de ${fmtMoney(s.club.staffBudget)}/temp. Puedes contratar tú igualmente.`
-            : 'Contratas tú. Si quieres, delega esta tarea en el director deportivo (pestaña Director).'}
+            : 'Contratas tú. Si quieres, delega esta tarea en el director deportivo (Dirección → Director).'}
         </p>
       </Card>
 

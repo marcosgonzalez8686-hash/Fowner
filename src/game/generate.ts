@@ -163,12 +163,12 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
     from: 'club',
     title: `¡Bienvenido, ${ownerTitle(identity)}!`,
     body:
-      `Acabas de comprar el ${nombre}. Jugamos en el ${identity.stadium}, estamos en la Liga Comarcal y la caja está justa.\n\n` +
+      `Acabas de comprar el ${nombre}. Jugamos en «${identity.stadium}», estamos en la Liga Comarcal y la caja está justa.\n\n` +
       'De momento solo tenemos el campo: no hay gradas y caben unas 600 personas de pie. ' +
-      'En Club → Instalaciones puedes construir gradas, comprar terreno y levantar nuevas instalaciones.\n\n' +
-      'Puedes llevarlo todo tú o contratar un director deportivo (pestaña Director) y decidir qué tareas le delegas: ' +
+      'En Instalaciones puedes construir gradas, comprar terreno y levantar nuevas instalaciones.\n\n' +
+      'Puedes llevarlo todo tú o contratar un director deportivo (Dirección) y decidir qué tareas le delegas: ' +
       'fichajes, ventas, renovaciones y cantera. Cada una puede estar en Manual, Propone y apruebas, o Automático.\n\n' +
-      'Antes de empezar, firma un patrocinador de camiseta (Club → Finanzas) y contrata a tus empleados (Club → Empleados): sin entrenador el equipo rinde peor.',
+      'Antes de empezar, firma un patrocinador de camiseta (aquí en Inicio) y contrata a tus empleados (Dirección → Empleados): sin entrenador el equipo rinde peor.',
     read: false,
   });
   // director deportivo elegido al crear la partida
@@ -180,7 +180,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
       from: 'director',
       title: `${d.name} se incorpora como director deportivo`,
       body: `Encantado, ${ownerTitle(identity)}. Mi estilo: ${STYLE_LABEL[d.style].toLowerCase()}. ` +
-        'Ya estoy trabajando en lo que me has encargado; puedes cambiarlo cuando quieras en la pestaña Director.',
+        'Ya estoy trabajando en lo que me has encargado; puedes cambiarlo cuando quieras en Dirección.',
     });
     runDirector(s, 'cambio');
   }

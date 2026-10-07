@@ -1,15 +1,12 @@
 import type { ScreenProps } from '../App';
 import { CashChart, ConceptBars, SeasonResults, type BarItem } from '../components/Charts';
-import { setBudgets, setTicketPrice } from '../game/club';
-import { DIV_PRICE, DIVISION_NAMES, MATCHDAYS, fmtMoney, ledgerExpense, ledgerIncome } from '../game/economy';
+import { DIVISION_NAMES, MATCHDAYS, fmtMoney, ledgerExpense, ledgerIncome } from '../game/economy';
 import { projectSeason } from '../game/finance';
 import { maintenancePerSeason } from '../game/land';
-import { myTeam, wageBill } from '../game/market';
+import { wageBill } from '../game/market';
 import { creditLimit, expectedAttendance } from '../game/season';
-import Sponsors from '../components/Sponsors';
-import { staffWages } from '../game/staff';
 import type { Ledger } from '../game/types';
-import { Card, Money, Stepper } from '../ui';
+import { Card, Money } from '../ui';
 
 const LINEAS: { k: keyof Ledger; label: string; gasto?: boolean }[] = [
   { k: 'taquilla', label: 'Taquilla' },
@@ -44,8 +41,7 @@ function Cuentas({ l }: { l: Ledger }) {
   );
 }
 
-export default function Finanzas({ s, update, notify, onMenu, onDelete }: ScreenProps & { onMenu: () => void; onDelete: () => void }) {
-  const t = myTeam(s);
+export default function Resumen({ s }: ScreenProps) {
   const c = s.club;
   const prev = projectSeason(s);
   const p = prev.pending;
@@ -70,8 +66,6 @@ export default function Finanzas({ s, update, notify, onMenu, onDelete }: Screen
           <div><b>{fmtMoney(creditLimit(s))}</b><span>deuda máxima</span></div>
         </div>
       </Card>
-
-      <Sponsors s={s} update={update} notify={notify} />
 
       <Card title="📈 Caja de la temporada">
         <CashChart real={c.cashLog} forecast={prev.cashPath} total={MATCHDAYS} />
@@ -136,55 +130,6 @@ export default function Finanzas({ s, update, notify, onMenu, onDelete }: Screen
         </Card>
       )}
 
-      <Card title="🎟️ Entradas">
-        <Stepper value={c.ticketPrice} step={1} min={1} format={(v) => `${v} €`} onChange={(v) => update((g) => setTicketPrice(g, v))} />
-        <p className="small muted center">
-          Precio de referencia en esta categoría: {DIV_PRICE[t.division]} €. Asistencia esperada: {ocupacion.toLocaleString('es-ES')} de{' '}
-          {c.capacity.toLocaleString('es-ES')} ({fmtMoney(ocupacion * c.ticketPrice)} por partido).
-        </p>
-        <p className="small muted center">
-          Afición: {t.fans.toLocaleString('es-ES')} personas
-        </p>
-      </Card>
-
-      <Card title="💼 Límites para el director deportivo">
-        <p className="small muted">Lo que puede gastar si tiene delegados los fichajes, las renovaciones o los empleados.</p>
-        <h4>Presupuesto de fichajes</h4>
-        <Stepper
-          value={c.transferBudget}
-          step={Math.max(5000, Math.round(c.cash / 20 / 5000) * 5000)}
-          format={fmtMoney}
-          onChange={(v) => update((g) => setBudgets(g, v, g.club.wageCap))}
-        />
-        <h4>Tope de masa salarial</h4>
-        <Stepper
-          value={c.wageCap}
-          step={Math.max(5000, Math.round(c.wageCap / 20 / 5000) * 5000)}
-          format={fmtMoney}
-          onChange={(v) => update((g) => setBudgets(g, g.club.transferBudget, v))}
-        />
-        <p className="small muted center">Salarios actuales de la plantilla: {fmtMoney(wageBill(s))}/temp.</p>
-        <h4>Tope de salarios de empleados</h4>
-        <Stepper
-          value={c.staffBudget}
-          step={Math.max(2000, Math.round(c.staffBudget / 10 / 1000) * 1000)}
-          format={fmtMoney}
-          onChange={(v) => update((g) => setBudgets(g, g.club.transferBudget, g.club.wageCap, v))}
-        />
-        <p className="small muted center">Sueldos actuales de empleados: {fmtMoney(staffWages(s))}/temp.</p>
-      </Card>
-
-      <button className="btn full" onClick={onMenu}>
-        Volver al menú de partidas
-      </button>
-      <button
-        className="btn danger full"
-        onClick={() => {
-          if (confirm('¿Seguro? Se borrará esta partida y no se puede deshacer.')) onDelete();
-        }}
-      >
-        Vender el club (borrar esta partida)
-      </button>
     </>
   );
 }

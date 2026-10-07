@@ -180,7 +180,7 @@ export default function NewGame({ onCancel, onCreate }: Props) {
                   { value: 'auto', label: 'Todo él' },
                 ]}
               />
-              <p className="small muted">Luego puedes ajustarlo tarea por tarea en la pestaña Director.</p>
+              <p className="small muted">Luego puedes ajustarlo tarea por tarea en Dirección.</p>
             </>
           )}
         </>

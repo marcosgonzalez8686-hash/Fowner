@@ -194,7 +194,7 @@ function finishWorks(s: GameState) {
   const w = s.club.works!;
   if (w.kind === 'estadio') {
     s.club.capacity += w.amount;
-    addMessage(s, { from: 'club', title: 'Obras del estadio terminadas', body: `Nuevo aforo del ${s.club.identity.stadium}: ${s.club.capacity.toLocaleString('es-ES')} espectadores.` });
+    addMessage(s, { from: 'club', title: 'Obras del estadio terminadas', body: `Nuevo aforo de «${s.club.identity.stadium}»: ${s.club.capacity.toLocaleString('es-ES')} espectadores.` });
   }
   s.club.works = null;
   // con gradas nuevas, el nombre del estadio ya se puede patrocinar

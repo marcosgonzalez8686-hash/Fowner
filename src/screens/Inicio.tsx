@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { ScreenProps } from '../App';
 import { executeProposal } from '../game/director';
 import { MATCHDAYS } from '../game/economy';
-import { marketOpen, myTeam, squadOf, teamById } from '../game/market';
+import { marketOpen, myTeam, mySquad, myYouth, squadOf, teamById } from '../game/market';
 import { bestEleven, computeStandings, form } from '../game/match';
 import { endSeason, playMatchday, startSeason } from '../game/season';
 import type { GameState, Message } from '../game/types';
@@ -14,8 +14,6 @@ import { rivalCrest } from '../game/identity';
 import { resolveEvent } from '../game/events';
 import { SlotOffers } from '../components/Sponsors';
 
-const FROM_ICON: Record<Message['from'], string> = { director: '💼', club: '🏛️', liga: '🏆', prensa: '📰' };
-
 function nextMatch(s: GameState) {
   const t = myTeam(s);
   if (s.phase !== 'temporada') return null;
@@ -24,19 +22,24 @@ function nextMatch(s: GameState) {
   return { casa: f.home === t.id, rival: teamById(s, rivalId)! };
 }
 
+/** Número de decisiones pendientes (para el aviso de la pestaña) */
+export function pendingCount(s: GameState) {
+  const faltaCamiseta = !s.club.sponsors.camiseta && Boolean(s.sponsorOffers.camiseta?.length);
+  return (s.pendingEvent ? 1 : 0) + s.messages.filter((m) => m.status === 'pendiente').length + (faltaCamiseta ? 1 : 0);
+}
+
 export default function Inicio({ s, update, notify, go }: ScreenProps) {
-  const [abierto, setAbierto] = useState<number | null>(null);
   const [verResumen, setVerResumen] = useState(false);
   const faltaCamiseta = !s.club.sponsors.camiseta && Boolean(s.sponsorOffers.camiseta?.length);
-  const ofertasPendientes = Object.values(s.sponsorOffers).filter((o) => o?.length).length;
+  const ofertasPendientes = Object.entries(s.sponsorOffers).filter(([k, o]) => o?.length && k !== 'camiseta').length;
   const t = myTeam(s);
   const prox = nextMatch(s);
   const tabla = computeStandings(s.teams.filter((x) => x.division === t.division).map((x) => x.id), s.fixtures[t.division]);
   const pos = tabla.findIndex((r) => r.teamId === t.id) + 1;
   const mia = bestEleven(squadOf(s, t.id)).strength;
-  const pendientes = s.messages.filter((m) => m.status === 'pendiente');
-  const resto = s.messages.filter((m) => m.status !== 'pendiente').slice(0, 25);
+  const propuestas = s.messages.filter((m) => m.status === 'pendiente');
   const miUltimo = s.lastResults.find((r) => r.home === t.id || r.away === t.id);
+  const hayPendientes = Boolean(s.pendingEvent) || propuestas.length > 0 || faltaCamiseta || ofertasPendientes > 0;
 
   const nosotros = prox && (
     <div className="me">
@@ -72,20 +75,44 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
     notify(err ? `No se pudo: ${err}` : aprobar ? 'Aprobado' : 'Rechazado');
   };
 
+  // lista de tareas de pretemporada
+  const plantilla = mySquad(s);
+  const tareas = [
+    { ok: !faltaCamiseta, texto: 'Firmar patrocinador de camiseta', obligatoria: true, ir: undefined },
+    { ok: Boolean(s.club.staff.entrenador), texto: 'Contratar entrenador', obligatoria: false, ir: () => go('direccion', 'empleados') },
+    {
+      ok: plantilla.length >= 18 && plantilla.some((p) => p.pos === 'POR'),
+      texto: `Plantilla completa (${plantilla.length} jugadores)`,
+      obligatoria: false,
+      ir: () => go('equipo', 'plantilla'),
+    },
+    ...(myYouth(s).length
+      ? [{ ok: false, texto: `Decidir ${myYouth(s).length} juvenil(es) de la cantera`, obligatoria: false, ir: () => go('equipo', 'plantilla') }]
+      : []),
+    { ok: Boolean(s.club.director), texto: 'Director deportivo (opcional)', obligatoria: false, ir: () => go('direccion', 'director') },
+  ];
+
   return (
     <>
       <Card>
         {s.phase === 'pretemporada' && (
           <>
             <h2>Pretemporada {s.season}</h2>
-            <p className="muted">
-              Mercado abierto. Ficha, decide la cantera y ajusta el club antes de empezar.
-            </p>
-            {!s.club.staff.entrenador && (
-              <p className="hint warn-bg">⚠️ No tienes entrenador. Contrátalo en Club → Empleados.</p>
-            )}
+            <p className="muted small">Mercado abierto. Prepara el club antes de empezar:</p>
+            <ul className="checklist">
+              {tareas.map((x) => (
+                <li key={x.texto} className={x.ok ? 'ok' : x.obligatoria ? 'must' : ''}>
+                  <span className="check">{x.ok ? '✅' : x.obligatoria ? '❗' : '⬜'}</span>
+                  {x.ir && !x.ok ? (
+                    <button className="link" onClick={x.ir}>{x.texto} ›</button>
+                  ) : (
+                    <span>{x.texto}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
             <button
-              className="btn primary big"
+              className="btn primary big full"
               disabled={faltaCamiseta}
               onClick={() => {
                 const err = update((g) => startSeason(g));
@@ -94,14 +121,13 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
             >
               Empezar temporada
             </button>
-            {faltaCamiseta && <p className="small muted">Primero firma un patrocinador de camiseta ↓</p>}
           </>
         )}
         {prox && (
           <>
             <div className="match-head">
               <span className="muted">Jornada {s.matchday + 1} de {MATCHDAYS}</span>
-              <span className="muted">{pos}º en la liga</span>
+              <button className="link" onClick={() => go('equipo', 'liga')}>{pos}º en la liga ›</button>
             </div>
             <div className="versus">
               {prox.casa ? nosotros : ellos}
@@ -111,7 +137,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
             <div className="kit-line">
               <KitView k={prox.casa ? s.club.identity.home : s.club.identity.away} size={26} />
               <span className="muted small">
-                {prox.casa ? `En casa, en el ${s.club.identity.stadium}, con la titular` : 'Fuera de casa, con la suplente'}
+                {prox.casa ? `En casa (${s.club.identity.stadium}), con la titular` : 'Fuera de casa, con la suplente'}
               </span>
             </div>
             <p className="muted center">
@@ -124,7 +150,9 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
               </button>
             </div>
             {s.pendingEvent && <p className="small muted center">Decide antes qué hacer con el asunto de esta semana ↓</p>}
-            {marketOpen(s) && <p className="hint">🔁 Mercado de invierno abierto</p>}
+            {marketOpen(s) && (
+              <button className="hint as-btn full-w mt" onClick={() => go('equipo', 'mercado')}>🔁 Mercado de invierno abierto ›</button>
+            )}
           </>
         )}
         {s.phase === 'fin' && (
@@ -137,6 +165,8 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
           </>
         )}
       </Card>
+
+      {hayPendientes && <h3 className="section-title">📌 Pendiente de decidir</h3>}
 
       {s.pendingEvent && (
         <Card title={`${s.pendingEvent.icon} Esta semana`}>
@@ -160,24 +190,38 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
         </Card>
       )}
 
-      {s.phase === 'pretemporada' && faltaCamiseta && (
+      {faltaCamiseta && (
         <Card title="👕 Patrocinador de camiseta">
           <p className="small muted">
             Tres empresas quieren poner su nombre en tu camiseta. Elige una para poder empezar la temporada.
-            El resto de patrocinios están en Club → Finanzas.
           </p>
           <SlotOffers s={s} slot="camiseta" update={update} notify={notify} />
         </Card>
       )}
 
-      {ofertasPendientes > 0 && !faltaCamiseta && (
-        <button className="hint as-btn full-w" onClick={() => go('club')}>
-          🤝 Tienes {ofertasPendientes} espacio(s) con ofertas de patrocinio sin firmar. Ver en Club → Finanzas ›
+      {propuestas.length > 0 && (
+        <Card title={`💼 Propuestas del director (${propuestas.length})`}>
+          {propuestas.map((m) => (
+            <div key={m.id} className="msg pending">
+              <div className="msg-title">{m.title.replace(/^Propuesta: /, '')}</div>
+              <p className="pre">{m.body}</p>
+              <div className="row">
+                <button className="btn primary grow" onClick={() => responder(m, true)}>Aprobar</button>
+                <button className="btn grow" onClick={() => responder(m, false)}>Rechazar</button>
+              </div>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {ofertasPendientes > 0 && (
+        <button className="hint as-btn full-w" onClick={() => go('finanzas', 'patrocinadores')}>
+          🤝 {ofertasPendientes} espacio(s) con ofertas de patrocinio sin firmar · Ver en Finanzas ›
         </button>
       )}
 
       {miUltimo && (
-        <Card title={`Resultados jornada ${s.matchday}`} right={<button className="link" onClick={() => go('liga')}>Clasificación</button>}>
+        <Card title={`Resultados jornada ${s.matchday}`} right={<button className="link" onClick={() => go('equipo', 'liga')}>Clasificación</button>}>
           {s.lastReport && s.lastReport.matchday === s.matchday && (
             <button className="btn full mb" onClick={() => setVerResumen(true)}>📋 Ver resumen de nuestro partido</button>
           )}
@@ -190,7 +234,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
                   <span className="score">{r.hg} - {r.ag}</span>
                   <span className="a">{teamById(s, r.away)!.name}</span>
                   {mine && r.attendance !== undefined && (
-                    <span className="att">👥 {r.attendance.toLocaleString('es-ES')} espectadores en el {s.club.identity.stadium}</span>
+                    <span className="att">👥 {r.attendance.toLocaleString('es-ES')} espectadores · {s.club.identity.stadium}</span>
                   )}
                 </li>
               );
@@ -199,41 +243,6 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
         </Card>
       )}
 
-      {pendientes.length > 0 && (
-        <Card title={`Pendiente de tu decisión (${pendientes.length})`}>
-          {pendientes.map((m) => (
-            <div key={m.id} className="msg pending">
-              <div className="msg-title">💼 {m.title.replace(/^Propuesta: /, '')}</div>
-              <p className="pre">{m.body}</p>
-              <div className="row">
-                <button className="btn primary grow" onClick={() => responder(m, true)}>Aprobar</button>
-                <button className="btn grow" onClick={() => responder(m, false)}>Rechazar</button>
-              </div>
-            </div>
-          ))}
-        </Card>
-      )}
-
-      <Card title="Bandeja">
-        {resto.length === 0 && <p className="muted">Sin mensajes.</p>}
-        {resto.map((m) => (
-          <div key={m.id} className={`msg${m.read ? '' : ' unread'}`}>
-            <button
-              className="msg-title as-btn"
-              onClick={() => {
-                setAbierto(abierto === m.id ? null : m.id);
-                if (!m.read) update((g) => { g.messages.find((x) => x.id === m.id)!.read = true; });
-              }}
-            >
-              <span>{FROM_ICON[m.from]} {m.title}</span>
-              <span className="muted small">
-                {m.status && m.status !== 'pendiente' ? `${m.status} · ` : ''}T{m.season} J{m.matchday}
-              </span>
-            </button>
-            {abierto === m.id && <p className="pre">{m.body}</p>}
-          </div>
-        ))}
-      </Card>
       {verResumen && s.lastReport && <MatchSummary s={s} r={s.lastReport} onClose={() => setVerResumen(false)} />}
     </>
   );

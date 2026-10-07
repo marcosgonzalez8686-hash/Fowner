@@ -147,7 +147,7 @@ export function refreshSponsorOffers(s: GameState) {
     addMessage(s, {
       from: 'club',
       title: 'Nuevas ofertas de patrocinio',
-      body: `Hay ofertas para: ${nuevos.map((x) => SLOTS[x].name.toLowerCase()).join(', ')}.\nElígelas en Club → Finanzas → Patrocinadores.`,
+      body: `Hay ofertas para: ${nuevos.map((x) => SLOTS[x].name.toLowerCase()).join(', ')}.\nElígelas en Finanzas → Patrocinadores.`,
     });
   }
 }

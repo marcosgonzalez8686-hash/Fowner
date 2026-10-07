@@ -63,7 +63,7 @@ export default function DirectorScreen({ s, update, notify }: ScreenProps) {
           <button className="btn small grow" disabled={!d} onClick={() => update((g) => setAllDelegation(g, 'propone'))}>Todo propone</button>
           <button className="btn small grow" disabled={!d} onClick={() => update((g) => setAllDelegation(g, 'auto'))}>Todo auto</button>
         </div>
-        <p className="small muted">Sus límites de gasto se fijan en Club → Límites para el director deportivo.</p>
+        <p className="small muted">Sus límites de gasto se fijan en Dirección → Presupuestos.</p>
       </Card>
 
       <Card title={d ? 'Otros candidatos' : 'Candidatos disponibles'}>
