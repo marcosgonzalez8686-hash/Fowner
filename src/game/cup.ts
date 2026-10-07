@@ -9,6 +9,7 @@ import { chance, gauss, shuffle } from './rng';
 import { staffMatchBonus } from './staff';
 import { ourPlan, ourTactics } from './coach';
 import { cupAttendance } from './tickets';
+import { matchKeys } from './insights';
 import type { GameState, Player } from './types';
 
 // Copa: eliminatoria a partido único entre 64 equipos, jugada entre semana.
@@ -149,7 +150,7 @@ export function playCupRound(s: GameState) {
     }
 
     if (tie.a === mio.id || tie.b === mio.id) {
-      ourMatch(s, tie, ronda, xiA.xi, xiB.xi, fa, fb, { formation: xiA.formation, style: stA }, { formation: xiB.formation, style: stB });
+      ourMatch(s, tie, ronda, xiA.xi, xiB.xi, fa, fb, { formation: xiA.formation, style: stA }, { formation: xiB.formation, style: stB }, ra, rb);
     }
   }
 
@@ -182,7 +183,7 @@ export function playCupRound(s: GameState) {
 
 type Plan = { formation: Formation; style: Style };
 
-function ourMatch(s: GameState, tie: CupTie, ronda: number, xiA: Player[], xiB: Player[], fa: number, fb: number, ta: Plan, tb: Plan) {
+function ourMatch(s: GameState, tie: CupTie, ronda: number, xiA: Player[], xiB: Player[], fa: number, fb: number, ta: Plan, tb: Plan, ra: number, rb: number) {
   const mio = myTeam(s);
   const somosA = tie.a === mio.id;
   const rival = teamById(s, somosA ? tie.b : tie.a)!;
@@ -190,6 +191,7 @@ function ourMatch(s: GameState, tie: CupTie, ronda: number, xiA: Player[], xiB: 
   const gc = somosA ? tie.gb! : tie.ga!;
   const ganamos = tie.winner === mio.id;
   const local = tie.home === null ? tie.a : tie.home;
+  const gesta = rival.division < mio.division;
 
   // informe del partido para el resumen
   const rep = buildReport(
@@ -220,10 +222,21 @@ function ourMatch(s: GameState, tie: CupTie, ronda: number, xiA: Player[], xiB: 
     rep.events.push({ min: 15 + Math.floor(Math.random() * 74), side: local === mio.id ? 'home' : 'away', type: 'lesion', player: `${p.name} (${p.injury} j.)` });
     addMessage(s, { from: 'club', title: `🤕 ${p.name} se lesiona en Copa`, body: `${injuryName(p.injury!)}: ${p.injury} jornada(s) de baja.` });
   }
+  rep.keys = matchKeys(s, {
+    gf, gc,
+    ours: somosA ? ra : rb,
+    rival: somosA ? rb : ra,
+    oursDay: somosA ? ra : rb,
+    rivalDay: somosA ? rb : ra,
+    home: tie.home === null ? null : tie.home === mio.id,
+    rivalStyle: somosA ? tb.style : ta.style,
+    xi: somosA ? xiA : xiB,
+  });
+  // en Copa las diferencias se acortan: a partido único todo puede pasar
+  if (gesta) rep.keys.push('🏆 Magia de Copa: a partido único, la diferencia de categoría pesa menos.');
   s.lastReport = rep;
   recordMatch(s, rep, somosA ? xiA : xiB);
 
-  const gesta = rival.division < mio.division;
   const marcador = `${gf}-${gc}${tie.pens ? ` (penaltis ${somosA ? tie.pens : tie.pens.split('-').reverse().join('-')})` : ''}`;
   if (ganamos) {
     const premio = ROUND_PRIZE[ronda];

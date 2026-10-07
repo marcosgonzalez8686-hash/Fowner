@@ -64,6 +64,15 @@ export default function MatchSummary({ s, r, onClose }: { s: GameState; r: Match
         </ul>
       )}
 
+      {r.keys?.length ? (
+        <>
+          <h4>🔎 Claves del partido</h4>
+          <ul className="keys">
+            {r.keys.map((k, i) => <li key={i}>{k}</li>)}
+          </ul>
+        </>
+      ) : null}
+
       {r.lineups && (
         <>
           <h4>Notas de los jugadores</h4>

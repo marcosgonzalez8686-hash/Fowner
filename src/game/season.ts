@@ -7,6 +7,7 @@ import { buildAllFixtures, makeDirectors, makePlayer } from './generate';
 import { addMessage, myTeam, mySquad, myYouth, teamById, wageBill } from './market';
 import { bestEleven, chooseStyle, computeStandings, simulate, type Formation } from './match';
 import { conflictAfterMatch, newIdols } from './traits';
+import { matchKeys } from './insights';
 import { contDue, myContDue, mySuperDue, newContinental, newSupercopa, playContinentalRound, playSupercopa, superDue } from './continental';
 import { returnLoans } from './loans';
 import { markKnown, scoutingNewSeason } from './scouting';
@@ -144,10 +145,21 @@ export function playMatchday(s: GameState) {
           rep.abonados = r.abonados;
           rep.revenue = (r.attendance - (r.abonados ?? 0)) * s.club.ticketPrice + commercialPerMatch(s, r.attendance, mio.fans);
         }
+        const casa = f.home === mio.id;
+        rep.keys = matchKeys(s, {
+          gf: casa ? hg : ag,
+          gc: casa ? ag : hg,
+          ours: fuerza(mio.id),
+          rival: fuerza(casa ? f.away : f.home),
+          oursDay: casa ? fh - 2 : fa,
+          rivalDay: casa ? fa : fh - 2,
+          home: casa,
+          rivalStyle: casa ? sa : sh,
+          xi: once(mio.id).xi,
+        });
         s.lastReport = rep;
         recordMatch(s, rep, once(mio.id).xi);
         // moral y afición reaccionan a nuestro resultado
-        const casa = f.home === mio.id;
         const gf = casa ? hg : ag;
         const gc = casa ? ag : hg;
         moraleAfterMatch(s, gf, gc);

@@ -504,3 +504,13 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .tags { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 2px; font-size: 0.72rem; color: var(--muted); }
 .tags span + span { margin-left: 0; }
 .rank li.me > span, .rank li.me > b { color: var(--brand-2); font-weight: 700; }
+
+/* pronóstico y claves del partido */
+.forecast { display: flex; height: 12px; border-radius: 6px; overflow: hidden; gap: 2px; margin: 4px 0; }
+.forecast i { display: block; height: 100%; }
+.forecast .w { background: #2f9e5b; }
+.forecast .d { background: #8a8f98; }
+.forecast .l { background: #c94a3a; }
+.forecast-legend { display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+.keys { margin: 4px 0 8px; padding-left: 0; list-style: none; display: grid; gap: 4px; }
+.keys li { font-size: 0.85rem; line-height: 1.35; }

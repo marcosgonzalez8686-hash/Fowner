@@ -17,6 +17,7 @@ import { SlotOffers } from '../components/Sponsors';
 import OffersCard from '../components/OffersCard';
 import Previa, { type MatchSetup } from '../components/Previa';
 import LiveMatch from '../components/LiveMatch';
+import { levelOf } from '../game/director';
 import { ROUND_NAMES, myCupMatchDue, myTie, playCupRound } from '../game/cup';
 import { CONT_NAME, CONT_ROUNDS, FLAG, SUPER_NAME, myContDue, myContTie, mySuperDue, playContinentalRound, playSupercopa } from '../game/continental';
 import { seasonTicketForecast } from '../game/tickets';
@@ -284,6 +285,15 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
           </>
         )}
       </Card>
+
+      {plantilla.length < 18 && s.phase !== 'fin' && (
+        <button className="hint warn-bg as-btn full-w" onClick={() => go('direccion', 'presupuestos')}>
+          ⚠️ Plantilla corta: solo {plantilla.length} jugadores.{' '}
+          {s.club.director && levelOf(s, 'fichajes') !== 'manual'
+            ? 'El director necesita más presupuesto o tope salarial para completarla ›'
+            : 'Ficha en el Mercado o sube juveniles ›'}
+        </button>
+      )}
 
       {hayPendientes && <h3 className="section-title">📌 Pendiente de decidir</h3>}
 

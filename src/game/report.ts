@@ -39,6 +39,7 @@ export interface MatchReport {
   mvp: { name: string; side: 'home' | 'away'; rating: number };
   plans?: { home: TeamPlan; away: TeamPlan };
   lineups?: { home: LineupPlayer[]; away: LineupPlayer[] }; // titulares con su nota
+  keys?: string[]; // claves del partido (solo los nuestros)
   attendance?: number;
   revenue?: number;
   label?: string; // p. ej. "Copa · Octavos"

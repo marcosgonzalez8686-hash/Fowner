@@ -6,6 +6,7 @@ import { staffMatchBonus } from '../game/staff';
 import type { GameState, Player } from '../game/types';
 import Crest from './Crest';
 import { FLAG } from '../game/continental';
+import { preMatchKeys, winProbs } from '../game/insights';
 import { coachOf, ourPlan, ourTactics } from '../game/coach';
 
 export interface MatchSetup {
@@ -126,6 +127,31 @@ export default function Previa({ s, setup, onPlay, onSkip, onClose }: {
           </div>
           <span>{a.plan.strength.toFixed(1)}</span>
         </div>
+        {nuestro && (() => {
+          const rival = nuestro === h ? a : h;
+          const casa = setup.neutral ? 0 : nuestro === h ? 2 : -2;
+          const pr = winProbs(nuestro.plan.strength + staffMatchBonus(s) + moraleBonus(s) + casa, rival.plan.strength, nuestro.estilo, rival.estilo);
+          const pct = (x: number) => Math.round(x * 100);
+          const claves = preMatchKeys(s, nuestro.plan.xi);
+          return (
+            <>
+              <h4>Pronóstico</h4>
+              <div className="forecast" role="img" aria-label={`Victoria ${pct(pr.win)}%, empate ${pct(pr.draw)}%, derrota ${pct(pr.loss)}%`}>
+                <i className="w" style={{ width: `${pr.win * 100}%` }} />
+                <i className="d" style={{ width: `${pr.draw * 100}%` }} />
+                <i className="l" style={{ width: `${pr.loss * 100}%` }} />
+              </div>
+              <div className="forecast-legend small">
+                <span>✅ Ganar {pct(pr.win)}%</span><span>🤝 Empate {pct(pr.draw)}%</span><span>❌ Perder {pct(pr.loss)}%</span>
+              </div>
+              {claves.length > 0 && (
+                <ul className="keys small">
+                  {claves.map((k, i) => <li key={i}>{k}</li>)}
+                </ul>
+              )}
+            </>
+          );
+        })()}
         {nuestro && (
           <p className="small muted center">
             Moral del vestuario: {moraleLabel(s.club.morale).emoji} {moraleLabel(s.club.morale).text}

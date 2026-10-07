@@ -45,6 +45,8 @@ export const STYLE_LABEL: Record<Director['style'], string> = {
 /** Mínimos y máximos por posición que maneja el director */
 const MIN_POS: Record<Pos, number> = { POR: 2, DEF: 6, MED: 6, DEL: 4 };
 const MAX_POS: Record<Pos, number> = { POR: 3, DEF: 8, MED: 8, DEL: 5 };
+/** Plantilla mínima que el director intenta mantener (por debajo, ficha aunque sea un fondo de armario) */
+export const SQUAD_SAFE = 20;
 
 export const levelOf = (s: GameState, t: Task): Level => (s.club.director ? s.club.delegation[t] : 'manual');
 
@@ -85,6 +87,8 @@ export function executeProposal(s: GameState, pr: Proposal): string | undefined 
       break;
     case 'vender':
       r = sellPlayer(s, pr.playerId, pr.fee, pr.toTeamId);
+      // la mitad de lo ingresado vuelve al presupuesto de fichajes para reponer
+      if (r.ok) s.club.transferBudget += Math.round(pr.fee / 2);
       break;
     case 'renovar':
       r = renewPlayer(s, pr.playerId, pr.salary, pr.years);
@@ -137,7 +141,9 @@ function doSignings(s: GameState, maxOps: number) {
   const d = s.club.director!;
   if (pendingFor(s, 'fichar').length >= 2) return;
   let ops = 0;
-  for (let intento = 0; intento < maxOps; intento++) {
+  // con la plantilla corta hace las operaciones que hagan falta para llegar al mínimo
+  const limite = maxOps + Math.max(0, SQUAD_SAFE - mySquad(s).length);
+  for (let intento = 0; intento < limite; intento++) {
     const squad = mySquad(s);
     if (squad.length >= 26) return;
     // posición con más necesidad: primero huecos, luego el titular más flojo respecto a la categoría
@@ -152,13 +158,23 @@ function doSignings(s: GameState, maxOps: number) {
       const minimo = tit.length ? tit[tit.length - 1].ovr : 0;
       if (minimo - objetivo < peor) { peor = minimo - objetivo; pos = ps; }
     }
+    // con la plantilla corta se cubre la línea con menos jugadores respecto a su mínimo
+    const corta = squad.length < SQUAD_SAFE;
+    if (corta && peor !== -Infinity) {
+      pos = (Object.keys(MIN_POS) as Pos[]).sort(
+        (a, b) => squad.filter((p) => p.pos === a).length / MIN_POS[a] - squad.filter((p) => p.pos === b).length / MIN_POS[b],
+      )[0];
+    }
     if (!pos) return;
     const tit = starters(squad, pos, ourShape(s));
     const listón = tit.length >= ourShape(s)[pos] ? tit[tit.length - 1].ovr : 0;
-    const necesitaHueco = squad.filter((p) => p.pos === pos).length < MIN_POS[pos];
+    const necesitaHueco = corta || squad.filter((p) => p.pos === pos).length < MIN_POS[pos];
 
     const presupuesto = Math.min(s.club.transferBudget, s.club.cash);
-    const margenSalarial = s.club.wageCap - wageBill(s);
+    // en una emergencia (menos de 18) puede pasarse un 10% del tope salarial
+    // si la masa salarial ya pasa del tope, al menos puede traer jugadores baratos para completar
+    const barato = roundMoney(s.club.wageCap * 0.03);
+    const margenSalarial = Math.max(s.club.wageCap * (squad.length < 18 ? 1.1 : 1) - wageBill(s), corta ? barato : 0);
     const rebaja = 1 - d.stars * 0.03;
 
     let mejor: { p: Player; fee: number; salary: number; score: number; perc: number } | null = null;
@@ -178,6 +194,7 @@ function doSignings(s: GameState, maxOps: number) {
     if (!mejor) {
       if (necesitaHueco) {
         warnOnce(s, `Necesito margen para fichar un ${pos}`,
+          (corta ? `Solo tenemos ${squad.length} jugadores (quiero al menos ${SQUAD_SAFE}). ` : '') +
           `Nos faltan jugadores en ${pos} y con el presupuesto (${fmtMoney(s.club.transferBudget)}) y el tope salarial ` +
           `(${fmtMoney(s.club.wageCap)}, ahora usamos ${fmtMoney(wageBill(s))}) no encuentro a nadie. Súbelos en Dirección → Presupuestos.`);
       }
@@ -193,10 +210,10 @@ function doSignings(s: GameState, maxOps: number) {
       describeProfile(s, p) +
         `${describeMoney(fee, salary)}, ${years} temporada(s).\n` +
         `Yo le veo un nivel de ${Math.round(perc)}. ` +
-        (necesitaHueco ? `Nos faltan jugadores en ${pos}.` : `Creo que mejora a nuestro titular más flojo en ${pos} (${listón}).`),
+        (corta ? `La plantilla está corta (${squad.length}): reforzamos ${pos}.` : necesitaHueco ? `Nos faltan jugadores en ${pos}.` : `Creo que mejora a nuestro titular más flojo en ${pos} (${listón}).`),
     );
     if (levelOf(s, 'fichajes') === 'propone') return;
-    if (++ops >= maxOps) return;
+    if (++ops >= limite) return;
   }
 }
 
@@ -204,7 +221,7 @@ function doSales(s: GameState) {
   const d = s.club.director!;
   if (pendingFor(s, 'vender').length >= 2) return;
   const squad = mySquad(s).filter((p) => !p.loan); // los cedidos no son nuestros
-  if (squad.length <= 18) return;
+  if (squad.length <= SQUAD_SAFE) return;
   let candidato: Player | null = null;
   let motivo = '';
   // 1. excedentes en alguna posición

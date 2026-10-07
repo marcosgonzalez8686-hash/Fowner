@@ -10,6 +10,7 @@ import { gauss, pick, rand, shuffle } from './rng';
 import { staffMatchBonus } from './staff';
 import { ourPlan, ourTactics } from './coach';
 import { cupAttendance } from './tickets';
+import { matchKeys } from './insights';
 import { penalties, type CupTie } from './cup';
 import type { GameState, Player, Team } from './types';
 
@@ -247,6 +248,17 @@ function playTie(s: GameState, tie: CupTie, label: string, atractivo: number) {
     rep.events.push({ min: 15 + Math.floor(Math.random() * 74), side: local === mio.id ? 'home' : 'away', type: 'lesion', player: `${p.name} (${p.injury} j.)` });
     addMessage(s, { from: 'club', title: `🤕 ${p.name} se lesiona`, body: `${injuryName(p.injury!)}: ${p.injury} jornada(s) de baja.` });
   }
+  rep.keys = matchKeys(s, {
+    gf: somosA ? ga : gb,
+    gc: somosA ? gb : ga,
+    ours: somosA ? ra : rb,
+    rival: somosA ? rb : ra,
+    oursDay: (somosA ? fa : fb) - (tie.home === mio.id ? 2 : 0),
+    rivalDay: (somosA ? fb : fa) - (tie.home !== null && tie.home !== mio.id ? 2 : 0),
+    home: tie.home === null ? null : tie.home === mio.id,
+    rivalStyle: somosA ? stB : stA,
+    xi: nuestros,
+  });
   s.lastReport = rep;
   recordMatch(s, rep, nuestros);
 }

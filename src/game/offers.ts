@@ -141,7 +141,7 @@ export function directorAdvice(s: GameState, o: IncomingOffer): { action: 'acept
   const valor = playerValue(p);
   const clave = top3(s).has(p.id);
   const ratio = o.fee / valor;
-  if (mySquad(s).length <= 18) return { action: 'rechazar', text: 'Nos quedaríamos cortos de plantilla.' };
+  if (mySquad(s).length <= 20) return { action: 'rechazar', text: 'Nos quedaríamos cortos de plantilla.' };
   if (ratio >= (clave ? 1.4 : 1.1)) return { action: 'aceptar', text: `Es una gran oferta (${Math.round(ratio * 100)}% de su valor).` };
   if (ratio >= (clave ? 1.0 : 0.85) && o.rounds === 0) return { action: 'pedir', text: 'Pidamos un 15% más: creo que pueden subir.' };
   return { action: 'rechazar', text: clave ? 'Es de nuestros mejores: así no se vende.' : 'Se queda corta para lo que vale.' };
