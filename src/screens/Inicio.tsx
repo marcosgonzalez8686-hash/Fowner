@@ -357,15 +357,30 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
         </button>
       )}
 
-      {s.phase !== 'pretemporada' && <FansCard s={s} goPlantilla={() => go('equipo', 'plantilla')} />}
+      {s.phase !== 'pretemporada' && <FansCard s={s} goPlantilla={() => go('equipo', 'plantilla')} goEmpleados={() => go('direccion', 'empleados')} />}
 
       {miUltimo && (
         <Card title={`Resultados jornada ${s.matchday}`} right={<button className="link" onClick={() => go('equipo', 'liga')}>Clasificación</button>}>
           {s.lastReport && s.lastReport.matchday === s.matchday && (
             <button className="btn full mb" onClick={() => setVerResumen(true)}>📋 Ver resumen de nuestro partido</button>
           )}
+          {/* nuestro partido siempre a la vista; el resto de la jornada, plegado */}
           <ul className="results">
-            {s.lastResults.map((r, i) => {
+            {s.lastResults.filter((r) => r.home === t.id || r.away === t.id).map((r, i) => (
+              <li key={i} className="me">
+                <span className="h"><TeamLink id={r.home}>{teamById(s, r.home)!.name}</TeamLink></span>
+                <span className="score">{r.hg} - {r.ag}</span>
+                <span className="a"><TeamLink id={r.away}>{teamById(s, r.away)!.name}</TeamLink></span>
+                {r.attendance !== undefined && (
+                  <span className="att">👥 {r.attendance.toLocaleString('es-ES')} espectadores · {s.club.identity.stadium}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+          <details>
+            <summary>Resto de la jornada</summary>
+          <ul className="results">
+            {s.lastResults.filter((r) => r.home !== t.id && r.away !== t.id).map((r, i) => {
               const mine = r.home === t.id || r.away === t.id;
               return (
                 <li key={i} className={mine ? 'me' : ''}>
@@ -379,6 +394,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
               );
             })}
           </ul>
+          </details>
         </Card>
       )}
 

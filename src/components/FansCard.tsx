@@ -66,7 +66,7 @@ function Meter({ value, label, emoji, text }: { value: number; label: string; em
 }
 
 /** Estado de la afición, el vestuario y el objetivo */
-export default function FansCard({ s, goPlantilla }: { s: GameState; goPlantilla: () => void }) {
+export default function FansCard({ s, goPlantilla, goEmpleados }: { s: GameState; goPlantilla: () => void; goEmpleados: () => void }) {
   const sat = satisfactionLabel(s.club.satisfaction);
   const mor = moraleLabel(s.club.morale);
   const lesionados = mySquad(s).filter((p) => (p.injury ?? 0) > 0);
@@ -75,8 +75,34 @@ export default function FansCard({ s, goPlantilla }: { s: GameState; goPlantilla
   const pos = s.phase === 'temporada' && s.matchday > 0 ? currentPosition(s) : null;
   const objetivoPos = obj ? objectiveTarget(obj, division) : null;
 
+  const coach = coachOf(s);
+  const conf = coach?.confidence ?? 60;
+  const lejos = pos !== null && objetivoPos !== null && pos > objetivoPos + 3;
+  // de un vistazo: cada dato en una ficha; en rojo lo que pide atención
+  const fichas: { ico: string; valor: string; label: string; mal: boolean; onClick?: () => void }[] = [
+    { ico: sat.emoji, valor: `${Math.round(s.club.satisfaction)}`, label: 'afición', mal: s.club.satisfaction < 30 },
+    { ico: mor.emoji, valor: `${Math.round(s.club.morale)}`, label: 'moral', mal: s.club.morale < 30 },
+    coach
+      ? { ico: confidenceLabel(conf).emoji, valor: `${Math.round(conf)}`, label: 'entrenador', mal: conf < 30, onClick: goEmpleados }
+      : { ico: '🧢', valor: '—', label: 'sin entrenador', mal: true, onClick: goEmpleados },
+    ...(obj && objetivoPos !== null
+      ? [{ ico: OBJECTIVES[obj].icon, valor: pos !== null ? `${pos}º` : '—', label: `objetivo ${objetivoPos}º`, mal: lejos }]
+      : []),
+    ...(lesionados.length ? [{ ico: '🤕', valor: `${lesionados.length}`, label: 'lesionados', mal: lesionados.length >= 3, onClick: goPlantilla }] : []),
+  ];
+
   return (
-    <Card title="📣 Afición y vestuario">
+    <Card title="📣 Estado del club">
+      <div className="pulse">
+        {fichas.map((f) => (
+          <button key={f.label} className={`pulse-item${f.mal ? ' bad' : ''}`} onClick={f.onClick} disabled={!f.onClick} type="button">
+            <b>{f.ico} {f.valor}</b>
+            <span>{f.label}</span>
+          </button>
+        ))}
+      </div>
+      <details>
+        <summary>Ver detalle</summary>
       <Meter value={s.club.satisfaction} label="Afición" emoji={sat.emoji} text={sat.text} />
       <Meter value={s.club.morale} label="Moral del vestuario" emoji={mor.emoji} text={mor.text} />
       {coachOf(s) && (
@@ -112,6 +138,7 @@ export default function FansCard({ s, goPlantilla }: { s: GameState; goPlantilla
           </ul>
         </details>
       )}
+      </details>
     </Card>
   );
 }
