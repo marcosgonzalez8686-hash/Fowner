@@ -14,6 +14,8 @@ import { rivalCrest } from '../game/identity';
 import { resolveEvent } from '../game/events';
 import { SlotOffers } from '../components/Sponsors';
 import OffersCard from '../components/OffersCard';
+import Previa, { type MatchSetup } from '../components/Previa';
+import LiveMatch from '../components/LiveMatch';
 import { ROUND_NAMES, myCupMatchDue, myTie, playCupRound } from '../game/cup';
 import { seasonTicketForecast } from '../game/tickets';
 import { fmtMoney } from '../game/economy';
@@ -63,16 +65,37 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
   );
 
   // los partidos se juegan de uno en uno y al acabar se enseña el resumen
-  const jugar = () => {
-    update((g) => playMatchday(g));
-    setVerResumen(true);
+  // previa → partido (en directo o solo resultado) → resumen
+  const [fase, setFase] = useState<null | { tipo: 'previa'; setup: MatchSetup } | { tipo: 'directo' }>(null);
+  const abrirPrevia = (setup: MatchSetup) => setFase({ tipo: 'previa', setup });
+  const disputar = (comp: MatchSetup['comp'], enDirecto: boolean) => {
+    update((g) => (comp === 'copa' ? playCupRound(g) : playMatchday(g)));
+    if (enDirecto) setFase({ tipo: 'directo' });
+    else {
+      setFase(null);
+      setVerResumen(true);
+    }
   };
-  const jugarCopa = () => {
-    update((g) => playCupRound(g));
-    setVerResumen(true);
-  };
+  const jugar = () =>
+    prox &&
+    abrirPrevia({
+      comp: 'liga',
+      label: `Jornada ${s.matchday + 1}`,
+      homeId: prox.casa ? t.id : prox.rival.id,
+      awayId: prox.casa ? prox.rival.id : t.id,
+    });
   const tieCopa = copaAhora ? myTie(s) : undefined;
   const rivalCopa = tieCopa ? teamById(s, tieCopa.a === t.id ? tieCopa.b : tieCopa.a)! : undefined;
+  const jugarCopa = () =>
+    tieCopa &&
+    rivalCopa &&
+    abrirPrevia({
+      comp: 'copa',
+      label: `Copa · ${ROUND_NAMES[s.cup.current]}`,
+      homeId: tieCopa.home === rivalCopa.id ? rivalCopa.id : t.id,
+      awayId: tieCopa.home === rivalCopa.id ? t.id : rivalCopa.id,
+      neutral: tieCopa.home === null,
+    });
 
   const responder = (m: Message, aprobar: boolean) => {
     const err = update((g) => {
@@ -288,6 +311,26 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
         </Card>
       )}
 
+      {fase?.tipo === 'previa' && (
+        <Previa
+          s={s}
+          setup={fase.setup}
+          onPlay={() => disputar(fase.setup.comp, true)}
+          onSkip={() => disputar(fase.setup.comp, false)}
+          onClose={() => setFase(null)}
+        />
+      )}
+      {fase?.tipo === 'directo' && s.lastReport && (
+        <LiveMatch
+          s={s}
+          r={s.lastReport}
+          onStats={() => {
+            setFase(null);
+            setVerResumen(true);
+          }}
+          onClose={() => setFase(null)}
+        />
+      )}
       {verResumen && s.lastReport && <MatchSummary s={s} r={s.lastReport} onClose={() => setVerResumen(false)} />}
     </>
   );

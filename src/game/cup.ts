@@ -1,7 +1,7 @@
 import { fmtMoney, roundMoney } from './economy';
 import { changeSatisfaction } from './fans';
 import { addMessage, myTeam, teamById } from './market';
-import { bestEleven, simulate } from './match';
+import { bestEleven, chooseStyle, simulate, type Formation, type Style } from './match';
 import { changeMorale, injuryName, isInjured, moraleBonus, rollInjuries } from './morale';
 import { buildReport } from './report';
 import { chance, gauss, shuffle } from './rng';
@@ -133,7 +133,9 @@ export function playCupRound(s: GameState) {
     const media = (ra + rb) / 2;
     const fa = media + (ra - media) * 0.55 + casaA + gauss(0, 3);
     const fb = media + (rb - media) * 0.55 + casaB + gauss(0, 3);
-    const { hg: ga, ag: gb } = simulate(fa, fb);
+    const stA = chooseStyle(ra, rb, tie.home === tie.a);
+    const stB = chooseStyle(rb, ra, tie.home === tie.b);
+    const { hg: ga, ag: gb } = simulate(fa, fb, stA, stB);
     tie.ga = ga;
     tie.gb = gb;
     if (ga !== gb) tie.winner = ga > gb ? tie.a : tie.b;
@@ -143,7 +145,9 @@ export function playCupRound(s: GameState) {
       tie.winner = p.a > p.b ? tie.a : tie.b;
     }
 
-    if (tie.a === mio.id || tie.b === mio.id) ourMatch(s, tie, ronda, xiA.xi, xiB.xi, fa, fb);
+    if (tie.a === mio.id || tie.b === mio.id) {
+      ourMatch(s, tie, ronda, xiA.xi, xiB.xi, fa, fb, { formation: xiA.formation, style: stA }, { formation: xiB.formation, style: stB });
+    }
   }
 
   // siguiente ronda o campeón
@@ -173,7 +177,9 @@ export function playCupRound(s: GameState) {
   }
 }
 
-function ourMatch(s: GameState, tie: CupTie, ronda: number, xiA: Player[], xiB: Player[], fa: number, fb: number) {
+type Plan = { formation: Formation; style: Style };
+
+function ourMatch(s: GameState, tie: CupTie, ronda: number, xiA: Player[], xiB: Player[], fa: number, fb: number, ta: Plan, tb: Plan) {
   const mio = myTeam(s);
   const somosA = tie.a === mio.id;
   const rival = teamById(s, somosA ? tie.b : tie.a)!;
@@ -189,6 +195,7 @@ function ourMatch(s: GameState, tie: CupTie, ronda: number, xiA: Player[], xiB: 
     local === tie.a ? xiB : xiA,
     local === tie.a ? fa : fb,
     local === tie.a ? fb : fa,
+    { home: local === tie.a ? ta : tb, away: local === tie.a ? tb : ta },
   );
   rep.label = `${CUP_NAME} · ${ROUND_NAMES[ronda]}${tie.home === null ? ' (campo neutral)' : ''}`;
   if (tie.pens) rep.pens = local === tie.a ? tie.pens : tie.pens.split('-').reverse().join('-');
@@ -207,7 +214,7 @@ function ourMatch(s: GameState, tie: CupTie, ronda: number, xiA: Player[], xiB: 
   // lesiones de nuestros titulares
   const nuestros = somosA ? xiA : xiB;
   for (const p of rollInjuries(s, nuestros.filter((x) => !isInjured(x)), mio.id)) {
-    rep.events.push({ min: 90, side: local === mio.id ? 'home' : 'away', type: 'lesion', player: `${p.name} (${p.injury} j.)` });
+    rep.events.push({ min: 15 + Math.floor(Math.random() * 74), side: local === mio.id ? 'home' : 'away', type: 'lesion', player: `${p.name} (${p.injury} j.)` });
     addMessage(s, { from: 'club', title: `🤕 ${p.name} se lesiona en Copa`, body: `${injuryName(p.injury!)}: ${p.injury} jornada(s) de baja.` });
   }
   s.lastReport = rep;

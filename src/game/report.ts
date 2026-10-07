@@ -1,12 +1,14 @@
 import { chance, clamp, gauss, pick, poisson, randInt } from './rng';
 import type { Player } from './types';
+import type { Formation, Style } from './match';
 
 // Informe estadístico de nuestro partido, coherente con el resultado simulado
 
 export interface MatchEvent {
   min: number;
   side: 'home' | 'away';
-  type: 'gol' | 'amarilla' | 'roja' | 'lesion';
+  type: 'gol' | 'amarilla' | 'roja' | 'lesion' | 'ocasion';
+  detail?: 'parada' | 'fuera' | 'palo'; // cómo acaba una ocasión
   player: string;
   assist?: string;
 }
@@ -21,6 +23,9 @@ export interface SideStats {
   reds: number;
 }
 
+export interface LineupPlayer { name: string; pos: Player['pos']; ovr: number }
+export interface TeamPlan { formation: Formation; style: Style; xi: LineupPlayer[] }
+
 export interface MatchReport {
   season: number;
   matchday: number;
@@ -31,6 +36,7 @@ export interface MatchReport {
   events: MatchEvent[];
   stats: { home: SideStats; away: SideStats };
   mvp: { name: string; side: 'home' | 'away'; rating: number };
+  plans?: { home: TeamPlan; away: TeamPlan };
   attendance?: number;
   revenue?: number;
   label?: string; // p. ej. "Copa · Octavos"
@@ -84,6 +90,7 @@ export function buildReport(
   xiAway: Player[],
   fuerzaHome: number,
   fuerzaAway: number,
+  tacticas?: { home: { formation: Formation; style: Style }; away: { formation: Formation; style: Style } },
 ): MatchReport {
   const posesion = Math.round(clamp(50 + (fuerzaHome - fuerzaAway) * 1.3 + gauss(0, 4), 28, 72));
   const home = sideStats(info.hg, fuerzaHome, fuerzaAway, posesion);
@@ -108,6 +115,20 @@ export function buildReport(
   };
   tarjetas(home, xiHome, 'home');
   tarjetas(away, xiAway, 'away');
+  // ocasiones que no acabaron en gol: paradas (tiros a puerta) y tiros fuera o al palo
+  const ocasiones = (st: SideStats, goles: number, xi: Player[], side: 'home' | 'away') => {
+    if (!xi.length) return;
+    const paradas = Math.max(0, st.onTarget - goles);
+    const fuera = Math.max(0, st.shots - st.onTarget);
+    const total = Math.min(paradas + fuera, 9);
+    const mins = minutes(total);
+    for (let i = 0; i < total; i++) {
+      const detail = i < Math.min(paradas, total) ? 'parada' : chance(0.15) ? 'palo' : 'fuera';
+      events.push({ min: mins[i], side, type: 'ocasion', detail, player: weighted(xi, PESO_GOL).name });
+    }
+  };
+  ocasiones(home, info.hg, xiHome, 'home');
+  ocasiones(away, info.ag, xiAway, 'away');
   events.sort((a, b) => a.min - b.min);
 
   // mejor jugador: el que más ha aportado, con ventaja para el equipo que gana
@@ -135,5 +156,9 @@ export function buildReport(
   }
   mvp.rating = Math.round(clamp(mvp.rating, 6, 10) * 10) / 10;
 
-  return { ...info, events, stats: { home, away }, mvp };
+  const linea = (xi: Player[]) => xi.map((p) => ({ name: p.name, pos: p.pos, ovr: p.ovr }));
+  const plans = tacticas
+    ? { home: { ...tacticas.home, xi: linea(xiHome) }, away: { ...tacticas.away, xi: linea(xiAway) } }
+    : undefined;
+  return { ...info, events, stats: { home, away }, mvp, plans };
 }

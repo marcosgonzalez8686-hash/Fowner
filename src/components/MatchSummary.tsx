@@ -15,7 +15,7 @@ const FILAS: { k: keyof SideStats; label: string; pct?: boolean }[] = [
   { k: 'reds', label: 'Rojas' },
 ];
 
-const ICONO = { gol: '⚽', amarilla: '🟨', roja: '🟥', lesion: '🤕' } as const;
+const ICONO = { gol: '⚽', amarilla: '🟨', roja: '🟥', lesion: '🤕', ocasion: '🎯' } as const;
 
 export default function MatchSummary({ s, r, onClose }: { s: GameState; r: MatchReport; onClose: () => void }) {
   const team = (id: number) => s.teams.find((t) => t.id === id)!;
@@ -49,9 +49,9 @@ export default function MatchSummary({ s, r, onClose }: { s: GameState; r: Match
         </div>
       </div>
 
-      {r.events.length > 0 && (
+      {r.events.some((e) => e.type !== 'ocasion') && (
         <ul className="events">
-          {r.events.map((e, i) => (
+          {r.events.filter((e) => e.type !== 'ocasion').map((e, i) => (
             <li key={i} className={e.side}>
               <span className="min">{e.min}'</span>
               <span>

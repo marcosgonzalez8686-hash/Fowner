@@ -5,7 +5,7 @@ import {
 import { expireProposals, levelOf, runDirector } from './director';
 import { buildAllFixtures, makeDirectors, makePlayer } from './generate';
 import { addMessage, myTeam, mySquad, myYouth, teamById, wageBill } from './market';
-import { bestEleven, computeStandings, simulate } from './match';
+import { bestEleven, chooseStyle, computeStandings, simulate } from './match';
 import { chance, clamp, gauss, rand, randInt } from './rng';
 import type { GameState, MatchResult, Player, Team } from './types';
 import { buildReport } from './report';
@@ -83,9 +83,12 @@ export function playMatchday(s: GameState) {
   for (let d = 0; d < DIVISIONS; d++) {
     for (const f of s.fixtures[d][md]) {
       // pequeño factor anímico aleatorio por partido
+      // cada entrenador elige estilo según cómo ve el partido
+      const sh = chooseStyle(fuerza(f.home), fuerza(f.away), true);
+      const sa = chooseStyle(fuerza(f.away), fuerza(f.home), false);
       const fh = fuerza(f.home) + 2 + gauss(0, 2);
       const fa = fuerza(f.away) + gauss(0, 2);
-      const { hg, ag } = simulate(fh, fa);
+      const { hg, ag } = simulate(fh, fa, sh, sa);
       f.hg = hg;
       f.ag = ag;
       const r: MatchResult = { home: f.home, away: f.away, hg, ag };
@@ -108,6 +111,7 @@ export function playMatchday(s: GameState) {
           once(f.away).xi,
           fh,
           fa,
+          { home: { formation: once(f.home).formation, style: sh }, away: { formation: once(f.away).formation, style: sa } },
         );
         if (r.attendance !== undefined) {
           rep.attendance = r.attendance;
@@ -127,7 +131,7 @@ export function playMatchday(s: GameState) {
         const nuevas = rollInjuries(s, once(id).xi, id);
         if (id !== mio.id || !nuevas.length) continue;
         for (const p of nuevas) {
-          s.lastReport?.events.push({ min: 90, side: f.home === mio.id ? 'home' : 'away', type: 'lesion', player: `${p.name} (${p.injury} j.)` });
+          s.lastReport?.events.push({ min: randInt(15, 88), side: f.home === mio.id ? 'home' : 'away', type: 'lesion', player: `${p.name} (${p.injury} j.)` });
           addMessage(s, {
             from: 'club',
             title: `🤕 ${p.name} se lesiona`,
