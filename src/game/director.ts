@@ -7,7 +7,7 @@ import { FORMACION } from './match';
 import { gauss } from './rng';
 import { ownerTitle } from './identity';
 import { scoutingFactor } from './land';
-import { staffScoutFactor } from './staff';
+import { ROLES, ROLE_ORDER, hireStaff, staffScoutFactor, staffWages, type Role, type Staff } from './staff';
 import type { Director, GameState, Level, Player, Pos, Proposal, Task } from './types';
 
 export const TASK_LABEL: Record<Task, string> = {
@@ -15,6 +15,7 @@ export const TASK_LABEL: Record<Task, string> = {
   ventas: 'Ventas',
   renovaciones: 'Renovaciones',
   cantera: 'Cantera',
+  empleados: 'Empleados',
 };
 
 export const TASK_HELP: Record<Task, string> = {
@@ -22,6 +23,7 @@ export const TASK_HELP: Record<Task, string> = {
   ventas: 'Vende a quien sobra o no rinde para hacer caja y aligerar salarios.',
   renovaciones: 'Renueva a los jugadores importantes cuyo contrato acaba esta temporada.',
   cantera: 'Decide qué juveniles suben al primer equipo en cada pretemporada.',
+  empleados: 'Contrata entrenador, segundo, fisio, ojeadores... dentro del tope de salarios de empleados.',
 };
 
 export const LEVEL_LABEL: Record<Level, string> = {
@@ -77,6 +79,10 @@ export function executeProposal(s: GameState, pr: Proposal): string | undefined 
     case 'cantera':
       r = promoteYouth(s, pr.playerId);
       break;
+    case 'empleado': {
+      const err = hireStaff(s, pr.role, pr.staffId);
+      return err;
+    }
   }
   return r.ok ? undefined : r.error;
 }
@@ -253,6 +259,46 @@ function doYouth(s: GameState) {
   }
 }
 
+/** El director cubre los puestos vacantes del cuerpo técnico (y mejora alguno si sobra presupuesto) */
+function doStaff(s: GameState) {
+  const d = s.club.director!;
+  const pendientes = s.messages.filter((m) => m.status === 'pendiente' && m.proposal?.kind === 'empleado');
+  const rolesPendientes = new Set(pendientes.map((m) => (m.proposal as { role: string }).role));
+  let margen = s.club.staffBudget - staffWages(s);
+  const sinCubrir: string[] = [];
+  for (const role of ROLE_ORDER) {
+    if (rolesPendientes.has(role)) continue;
+    const actual = s.club.staff[role];
+    const libre = margen + (actual?.salary ?? 0);
+    const candidatos = (s.staffMarket[role] ?? []).filter((c) => c.salary <= libre);
+    if (!candidatos.length) {
+      if (!actual) sinCubrir.push(ROLES[role].name.toLowerCase());
+      continue;
+    }
+    // el estilo del director decide entre calidad y precio
+    const valor = (c: Staff) =>
+      d.style === 'estrellas' ? c.stars * 10 - c.salary / 1e6
+      : d.style === 'ahorrador' ? c.stars / Math.max(c.salary, 1) * 1e5
+      : c.stars * 3 - c.salary / Math.max(s.club.staffBudget, 1) * 4;
+    const mejor = [...candidatos].sort((a, b) => valor(b) - valor(a))[0];
+    // solo se sustituye a alguien si el nuevo es claramente mejor
+    if (actual && mejor.stars < actual.stars + 2) continue;
+    margen -= mejor.salary - (actual?.salary ?? 0);
+    act(
+      s, 'empleados',
+      { kind: 'empleado', role, staffId: mejor.id },
+      `${actual ? 'sustituir' : 'contratar'} ${ROLES[role].name.toLowerCase()}: ${mejor.name} (${mejor.stars}★)`,
+      `${mejor.name}, ${mejor.stars} estrella(s). ${mejor.trait}. Sueldo: ${fmtMoney(mejor.salary)}/temporada.` +
+        (actual ? `\nSustituiría a ${actual.name} (${actual.stars}★), con indemnización.` : '') +
+        `\nTras esto quedarían ${fmtMoney(Math.max(0, margen))} libres del tope de empleados.`,
+    );
+  }
+  if (sinCubrir.length) {
+    warnOnce(s, 'No llego para cubrir todos los puestos',
+      `Con el tope de salarios de empleados (${fmtMoney(s.club.staffBudget)}) no puedo contratar: ${sinCubrir.join(', ')}. Si quieres, súbelo en Club → Finanzas.`);
+  }
+}
+
 export type DirectorMoment = 'pretemporada' | 'jornada' | 'cambio';
 
 /** Turno del director deportivo: actúa en las tareas que tiene delegadas */
@@ -264,6 +310,7 @@ export function runDirector(s: GameState, moment: DirectorMoment) {
     if (levelOf(s, 'fichajes') !== 'manual') doSignings(s, moment === 'jornada' ? 1 : 3);
   }
   if (levelOf(s, 'renovaciones') !== 'manual' && s.phase === 'temporada' && s.matchday >= 28) doRenewals(s);
+  if (levelOf(s, 'empleados') !== 'manual') doStaff(s);
 }
 
 /** Las propuestas que ya no se pueden ejecutar caducan */
@@ -274,7 +321,8 @@ export function expireProposals(s: GameState) {
     const caduca =
       ((k === 'fichar' || k === 'vender') && !marketOpen(s)) ||
       (k === 'cantera' && s.phase !== 'pretemporada') ||
-      (k === 'renovar' && s.phase === 'pretemporada');
+      (k === 'renovar' && s.phase === 'pretemporada') ||
+      (k === 'empleado' && !s.staffMarket[(m.proposal as { role: Role }).role]?.some((c) => c.id === (m.proposal as { staffId: number }).staffId));
     if (caduca) m.status = 'caducada';
   }
 }

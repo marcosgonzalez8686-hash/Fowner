@@ -60,8 +60,8 @@ export default function App() {
   if (!state || !slot) {
     return (
       <Start
-        onNew={(n, nombre, identity, estadio) => {
-          const s = newGame(nombre, identity, estadio);
+        onNew={(n, nombre, identity, opts) => {
+          const s = newGame(nombre, identity, opts);
           saveGame(n, s);
           setSlot(n);
           setState(s);

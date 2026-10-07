@@ -3,6 +3,11 @@ import Crest from '../components/Crest';
 import { CrestEditor, KitsEditor } from '../components/Editors';
 import KitView from '../components/KitView';
 import { defaultIdentity, initialsFrom, type Identity } from '../game/identity';
+import { makeDirectors, type NewGameOptions } from '../game/generate';
+import { STYLE_LABEL } from '../game/director';
+import { DIVISIONS, fmtMoney } from '../game/economy';
+import type { Director, GameState, Level } from '../game/types';
+import { Segmented, Stars } from '../ui';
 import { DEFAULT_STADIUM, LAND_SIZE, clampStadium } from '../game/land';
 import type { MapModel } from '../components/Map3D';
 
@@ -10,10 +15,10 @@ const Map3D = lazy(() => import('../components/Map3D'));
 
 interface Props {
   onCancel: () => void;
-  onCreate: (clubName: string, identity: Identity, stadium: { x: number; y: number }) => void;
+  onCreate: (clubName: string, identity: Identity, opts: NewGameOptions) => void;
 }
 
-const PASOS = ['Tú', 'Club', 'Escudo', 'Equipación', 'Estadio', 'Resumen'];
+const PASOS = ['Tú', 'Club', 'Escudo', 'Equipo', 'Estadio', 'Director', 'Resumen'];
 
 export default function NewGame({ onCancel, onCreate }: Props) {
   const [paso, setPaso] = useState(0);
@@ -22,6 +27,10 @@ export default function NewGame({ onCancel, onCreate }: Props) {
   // las iniciales del escudo siguen al nombre del club hasta que el usuario las toque
   const [inicialesTocadas, setInicialesTocadas] = useState(false);
   const [estadio, setEstadio] = useState(DEFAULT_STADIUM);
+  // candidatos a director deportivo de la Liga Comarcal (sueldos de la última división)
+  const [candidatos] = useState<Director[]>(() => makeDirectors({ nextId: 1 } as unknown as GameState, DIVISIONS - 1));
+  const [director, setDirector] = useState<Director | null>(null);
+  const [delegar, setDelegar] = useState<Level>('propone');
 
   // terreno virgen con el estadio donde el dueño lo coloque
   const mapa: MapModel = useMemo(() => {
@@ -44,6 +53,7 @@ export default function NewGame({ onCancel, onCreate }: Props) {
     '',
     '',
     '',
+    '',
   ];
 
   const siguiente = () => {
@@ -56,7 +66,7 @@ export default function NewGame({ onCancel, onCreate }: Props) {
     onCreate(
       club.trim(),
       { ...id, ownerName: id.ownerName.trim(), ownerSurname: id.ownerSurname.trim(), stadium: id.stadium.trim() },
-      estadio,
+      { stadium: estadio, director: director ?? undefined, delegation: delegar },
     );
 
   return (
@@ -137,12 +147,54 @@ export default function NewGame({ onCancel, onCreate }: Props) {
 
       {paso === 5 && (
         <>
+          <h1>¿Contratas un director deportivo?</h1>
+          <p className="lead">
+            Es opcional. Puede encargarse de fichajes, ventas, renovaciones, cantera y de contratar a los empleados.
+            Cuanto mejor es, más cobra. También podrás contratarlo más tarde.
+          </p>
+          <button className={`slot as-btn${director === null ? ' chosen' : ''}`} onClick={() => setDirector(null)}>
+            <span className="slot-num">🧑‍💼</span>
+            <span className="slot-info">
+              <b>Ninguno, lo haré yo</b>
+              <small>Todas las decisiones deportivas son tuyas</small>
+            </span>
+          </button>
+          {candidatos.map((c) => (
+            <button key={c.id} className={`slot as-btn${director?.id === c.id ? ' chosen' : ''}`} onClick={() => setDirector(c)}>
+              <span className="slot-num">💼</span>
+              <span className="slot-info">
+                <b>{c.name} <Stars n={c.stars} /></b>
+                <small>{STYLE_LABEL[c.style]} · {fmtMoney(c.salary)}/temporada</small>
+              </span>
+            </button>
+          ))}
+          {director && (
+            <>
+              <h4>¿Qué le encargas al empezar?</h4>
+              <Segmented
+                value={delegar}
+                onChange={setDelegar}
+                options={[
+                  { value: 'manual', label: 'Nada aún' },
+                  { value: 'propone', label: 'Me propone' },
+                  { value: 'auto', label: 'Todo él' },
+                ]}
+              />
+              <p className="small muted">Luego puedes ajustarlo tarea por tarea en la pestaña Director.</p>
+            </>
+          )}
+        </>
+      )}
+
+      {paso === 6 && (
+        <>
           <h1>Todo listo</h1>
           <div className="summary">
             <Crest c={id.crest} size={96} />
             <div className="summary-name">{club}</div>
             <div className="muted">🏟️ {id.stadium}</div>
             <div className="muted">Presidente: {id.ownerName} {id.ownerSurname}</div>
+            <div className="muted">Director deportivo: {director ? director.name : 'ninguno'}</div>
             <div className="kits-row">
               <figure>
                 <KitView k={id.home} size={64} />

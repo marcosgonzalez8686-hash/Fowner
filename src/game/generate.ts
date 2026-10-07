@@ -8,6 +8,9 @@ import { STANDING, newLand } from './land';
 import { makeStaffCandidates } from './staff';
 import { refreshSponsorOffers } from './sponsor';
 import { defaultIdentity, ownerTitle, type Identity } from './identity';
+import type { Level, Task } from './types';
+import { STYLE_LABEL, runDirector } from './director';
+import { addMessage } from './market';
 import type { DDStyle, Director, GameState, Player, Pos, Team } from './types';
 
 export const SAVE_VERSION = 1;
@@ -64,7 +67,14 @@ export function makeDirectors(s: GameState, division: number): Director[] {
   }));
 }
 
-export function newGame(clubNameInput: string, identityInput?: Identity, stadiumPos?: { x: number; y: number }): GameState {
+export interface NewGameOptions {
+  stadium?: { x: number; y: number };
+  director?: Director;
+  delegation?: Level;
+}
+
+export function newGame(clubNameInput: string, identityInput?: Identity, opts: NewGameOptions = {}): GameState {
+  const stadiumPos = opts.stadium;
   const s: GameState = {
     version: SAVE_VERSION,
     season: 1,
@@ -121,9 +131,10 @@ export function newGame(clubNameInput: string, identityInput?: Identity, stadium
     training: 0, // sin ciudad deportiva al empezar
     academy: 0, // sin cantera al empezar
     director: null,
-    delegation: { fichajes: 'manual', ventas: 'manual', renovaciones: 'manual', cantera: 'manual' },
+    delegation: { fichajes: 'manual', ventas: 'manual', renovaciones: 'manual', cantera: 'manual', empleados: 'manual' },
     transferBudget: 40_000,
     wageCap: 170_000,
+    staffBudget: 25_000,
     works: null,
     ledger: emptyLedger(),
     lastLedger: null,
@@ -160,6 +171,19 @@ export function newGame(clubNameInput: string, identityInput?: Identity, stadium
       'Antes de empezar, firma un patrocinador de camiseta (Club → Finanzas) y contrata a tus empleados (Club → Empleados): sin entrenador el equipo rinde peor.',
     read: false,
   });
+  // director deportivo elegido al crear la partida
+  if (opts.director) {
+    const d = { ...opts.director, id: newId(s) };
+    s.club.director = d;
+    for (const t of Object.keys(s.club.delegation) as Task[]) s.club.delegation[t] = opts.delegation ?? 'propone';
+    addMessage(s, {
+      from: 'director',
+      title: `${d.name} se incorpora como director deportivo`,
+      body: `Encantado, ${ownerTitle(identity)}. Mi estilo: ${STYLE_LABEL[d.style].toLowerCase()}. ` +
+        'Ya estoy trabajando en lo que me has encargado; puedes cambiarlo cuando quieras en la pestaña Director.',
+    });
+    runDirector(s, 'cambio');
+  }
   return s;
 }
 

@@ -18,7 +18,11 @@ export default function Empleados({ s, update, notify }: ScreenProps) {
           <div><b>{fmtMoney(staffWages(s))}</b><span>sueldos/temporada</span></div>
         </div>
         {!staff.entrenador && <p className="hint warn-bg">⚠️ No tienes entrenador: el equipo rinde peor en cada partido.</p>}
-        <p className="small muted">El director deportivo se gestiona en su propia pestaña.</p>
+        <p className="small muted">
+          {s.club.director && s.club.delegation.empleados !== 'manual'
+            ? `Tu director deportivo se encarga de contratar (${s.club.delegation.empleados === 'auto' ? 'automático' : 'te lo propone'}) con un tope de ${fmtMoney(s.club.staffBudget)}/temp. Puedes contratar tú igualmente.`
+            : 'Contratas tú. Si quieres, delega esta tarea en el director deportivo (pestaña Director).'}
+        </p>
       </Card>
 
       {ROLE_ORDER.map((role) => {

@@ -24,9 +24,10 @@ export function setDelegation(s: GameState, task: Task, level: Level) {
   runDirector(s, 'cambio');
 }
 
-export function setBudgets(s: GameState, transferBudget: number, wageCap: number) {
+export function setBudgets(s: GameState, transferBudget: number, wageCap: number, staffBudget = s.club.staffBudget) {
   s.club.transferBudget = Math.max(0, Math.round(transferBudget));
   s.club.wageCap = Math.max(0, Math.round(wageCap));
+  s.club.staffBudget = Math.max(0, Math.round(staffBudget));
 }
 
 export function setAllDelegation(s: GameState, level: Level) {

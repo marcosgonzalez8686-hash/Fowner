@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import Crest from '../components/Crest';
 import type { Identity } from '../game/identity';
+import type { NewGameOptions } from '../game/generate';
 import NewGame from './NewGame';
 import { fmtMoney } from '../game/economy';
 import { deleteGame, listSlots, type Slot } from '../game/save';
 
 interface Props {
   onLoad: (slot: Slot) => void;
-  onNew: (slot: Slot, nombre: string, identity: Identity, stadium: { x: number; y: number }) => void;
+  onNew: (slot: Slot, nombre: string, identity: Identity, opts: NewGameOptions) => void;
 }
 
 function fecha(ms: number) {
@@ -25,7 +26,7 @@ export default function Start({ onLoad, onNew }: Props) {
   };
 
   if (creando) {
-    return <NewGame onCancel={() => setCreando(null)} onCreate={(nombre, identity, estadio) => onNew(creando, nombre, identity, estadio)} />;
+    return <NewGame onCancel={() => setCreando(null)} onCreate={(nombre, identity, opts) => onNew(creando, nombre, identity, opts)} />;
   }
 
   return (

@@ -7,6 +7,7 @@ import { maintenancePerSeason } from '../game/land';
 import { myTeam, wageBill } from '../game/market';
 import { creditLimit, expectedAttendance } from '../game/season';
 import Sponsors from '../components/Sponsors';
+import { staffWages } from '../game/staff';
 import type { Ledger } from '../game/types';
 import { Card, Money, Stepper } from '../ui';
 
@@ -147,7 +148,7 @@ export default function Finanzas({ s, update, notify, onMenu, onDelete }: Screen
       </Card>
 
       <Card title="💼 Límites para el director deportivo">
-        <p className="small muted">Lo que puede gastar si tiene delegados los fichajes o las renovaciones.</p>
+        <p className="small muted">Lo que puede gastar si tiene delegados los fichajes, las renovaciones o los empleados.</p>
         <h4>Presupuesto de fichajes</h4>
         <Stepper
           value={c.transferBudget}
@@ -162,7 +163,15 @@ export default function Finanzas({ s, update, notify, onMenu, onDelete }: Screen
           format={fmtMoney}
           onChange={(v) => update((g) => setBudgets(g, g.club.transferBudget, v))}
         />
-        <p className="small muted center">Salarios actuales: {fmtMoney(wageBill(s))}/temp.</p>
+        <p className="small muted center">Salarios actuales de la plantilla: {fmtMoney(wageBill(s))}/temp.</p>
+        <h4>Tope de salarios de empleados</h4>
+        <Stepper
+          value={c.staffBudget}
+          step={Math.max(2000, Math.round(c.staffBudget / 10 / 1000) * 1000)}
+          format={fmtMoney}
+          onChange={(v) => update((g) => setBudgets(g, g.club.transferBudget, g.club.wageCap, v))}
+        />
+        <p className="small muted center">Sueldos actuales de empleados: {fmtMoney(staffWages(s))}/temp.</p>
       </Card>
 
       <button className="btn full" onClick={onMenu}>

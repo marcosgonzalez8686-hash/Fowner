@@ -80,6 +80,8 @@ function migrate(s: GameState) {
   if (!c.cashLog) c.cashLog = [c.cash];
   if (!c.seasonLog) c.seasonLog = [];
   if (!c.staff) c.staff = {};
+  if (c.staffBudget === undefined) c.staffBudget = 25_000;
+  if (!c.delegation.empleados) c.delegation.empleados = 'manual';
   if (!s.staffMarket) s.staffMarket = makeStaffCandidates(s, s.teams.find((t) => t.id === c.teamId)!.division);
   migrateSponsors(s);
   c.ledger = { ...emptyLedger(), ...c.ledger };

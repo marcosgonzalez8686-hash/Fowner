@@ -48,7 +48,7 @@ export interface Standing {
 }
 
 /** Tareas deportivas que puede asumir el director deportivo */
-export type Task = 'fichajes' | 'ventas' | 'renovaciones' | 'cantera';
+export type Task = 'fichajes' | 'ventas' | 'renovaciones' | 'cantera' | 'empleados';
 export type Level = 'manual' | 'propone' | 'auto';
 
 export type DDStyle = 'equilibrado' | 'ahorrador' | 'cantera' | 'estrellas';
@@ -65,7 +65,8 @@ export type Proposal =
   | { kind: 'fichar'; playerId: number; fee: number; salary: number; years: number }
   | { kind: 'vender'; playerId: number; fee: number; toTeamId: number }
   | { kind: 'renovar'; playerId: number; salary: number; years: number }
-  | { kind: 'cantera'; playerId: number };
+  | { kind: 'cantera'; playerId: number }
+  | { kind: 'empleado'; role: Role; staffId: number; playerId?: undefined };
 
 export interface Message {
   id: number;
@@ -105,6 +106,7 @@ export interface Club {
   delegation: Record<Task, Level>;
   transferBudget: number; // presupuesto que el dueño concede al DD para fichajes
   wageCap: number; // tope de masa salarial anual que el DD debe respetar
+  staffBudget: number; // tope de sueldos de empleados que el DD debe respetar
   works: { kind: 'estadio' | 'training' | 'academy'; matchdaysLeft: number; amount: number } | null;
   ledger: Ledger; // temporada actual
   lastLedger: Ledger | null;

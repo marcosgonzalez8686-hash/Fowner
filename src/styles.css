@@ -350,3 +350,5 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .sp-stars .stars { font-size: 0.7rem; }
 .sp-detail { padding: 6px 0 10px 38px; margin: 0; }
 .offers { padding-bottom: 8px; }
+.slot.chosen { border-color: var(--brand-2); box-shadow: inset 0 0 0 2px var(--brand-2); }
+.slot.as-btn { display: flex; align-items: center; gap: 12px; padding: 12px; }
