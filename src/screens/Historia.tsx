@@ -125,6 +125,7 @@ export default function Historia({ s }: ScreenProps) {
                   <th>Goles</th>
                   <th className="left">Copa</th>
                   <th className="left">Pichichi</th>
+                  <th className="left">Mejor jugador</th>
                 </tr>
               </thead>
               <tbody>
@@ -137,6 +138,7 @@ export default function Historia({ s }: ScreenProps) {
                     <td>{x.gf !== undefined ? `${x.gf}:${x.gc}` : '—'}</td>
                     <td className="left">{x.cup ?? '—'}{x.cup === 'Campeón' ? ' 🏆' : ''}</td>
                     <td className="left">{x.topScorer ? `${x.topScorer.name} (${x.topScorer.goals})` : '—'}</td>
+                    <td className="left">{x.bestPlayer ? `${x.bestPlayer.name} (${x.bestPlayer.rating.toFixed(1).replace('.', ',')})` : '—'}</td>
                   </tr>
                 ))}
               </tbody>

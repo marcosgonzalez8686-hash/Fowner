@@ -25,6 +25,8 @@ export interface Player {
   teamId: number | null; // null = agente libre
   youth?: boolean; // canterano pendiente de decidir
   injury?: number; // jornadas que le quedan de baja
+  form?: number[]; // últimas notas en partidos (como mucho 5, la más reciente al final)
+  season?: { apps: number; goals: number; assists: number; ratingSum: number }; // esta temporada
   signedSeason?: number; // temporada en la que llegó al club del jugador
 }
 

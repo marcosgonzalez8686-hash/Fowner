@@ -24,7 +24,7 @@ export interface SideStats {
   reds: number;
 }
 
-export interface LineupPlayer { name: string; pos: Player['pos']; ovr: number }
+export interface LineupPlayer { id: number; name: string; pos: Player['pos']; ovr: number; rating: number }
 export interface TeamPlan { formation: Formation; style: Style; xi: LineupPlayer[] }
 
 export interface MatchReport {
@@ -38,6 +38,7 @@ export interface MatchReport {
   stats: { home: SideStats; away: SideStats };
   mvp: { name: string; side: 'home' | 'away'; rating: number };
   plans?: { home: TeamPlan; away: TeamPlan };
+  lineups?: { home: LineupPlayer[]; away: LineupPlayer[] }; // titulares con su nota
   attendance?: number;
   revenue?: number;
   label?: string; // p. ej. "Copa · Octavos"
@@ -132,34 +133,49 @@ export function buildReport(
   ocasiones(away, info.ag, xiAway, 'away');
   events.sort((a, b) => a.min - b.min);
 
-  // mejor jugador: el que más ha aportado, con ventaja para el equipo que gana
-  const notas = new Map<string, { side: 'home' | 'away'; rating: number }>();
-  const base = (xi: Player[], side: 'home' | 'away', dif: number) => {
-    for (const p of xi) notas.set(p.name + side, { side, rating: 6 + (p.ovr - 45) / 25 + dif * 0.25 + gauss(0, 0.45) });
-  };
-  base(xiHome, 'home', info.hg - info.ag);
-  base(xiAway, 'away', info.ag - info.hg);
-  for (const e of events) {
-    const n = notas.get(e.player + e.side);
-    if (!n) continue;
-    if (e.type === 'gol') n.rating += 1.1;
-    if (e.type === 'roja') n.rating -= 1.5;
-  }
-  for (const e of events) {
-    if (e.type === 'gol' && e.assist) {
-      const n = notas.get(e.assist + e.side);
-      if (n) n.rating += 0.5;
+  // notas de 1 a 10 relativas al nivel del partido: un partido normal ronda el 6
+  const todos = [...xiHome, ...xiAway];
+  const media = todos.reduce((acc, p) => acc + p.ovr, 0) / Math.max(1, todos.length);
+  const notas = new Map<number, number>();
+  const porNombre = { home: new Map(xiHome.map((p) => [p.name, p.id])), away: new Map(xiAway.map((p) => [p.name, p.id])) };
+  const base = (xi: Player[], gf: number, gc: number) => {
+    const res = gf > gc ? 0.4 : gf < gc ? -0.4 : 0;
+    for (const p of xi) {
+      let n = 6.1 + (p.ovr - media) / 10 + res + clamp(gf - gc, -3, 3) * 0.12 + gauss(0, 0.55);
+      // defensas y portero: portería a cero o goles encajados
+      if (p.pos === 'POR' || p.pos === 'DEF') n += gc === 0 ? (p.pos === 'POR' ? 0.8 : 0.5) : -0.25 * (gc - 1);
+      if (p.pos === 'DEL' && gf === 0) n -= 0.2;
+      notas.set(p.id, n);
     }
+  };
+  base(xiHome, info.hg, info.ag);
+  base(xiAway, info.ag, info.hg);
+  const suma = (side: 'home' | 'away', nombre: string | undefined, delta: number, pid?: number) => {
+    const id = pid ?? (nombre ? porNombre[side].get(nombre) : undefined);
+    if (id !== undefined && notas.has(id)) notas.set(id, notas.get(id)! + delta);
+  };
+  for (const e of events) {
+    if (e.type === 'gol') {
+      suma(e.side, e.player, 1.0, e.pid);
+      suma(e.side, e.assist, 0.5);
+    }
+    if (e.type === 'ocasion') suma(e.side, e.player, 0.1);
+    if (e.type === 'amarilla') suma(e.side, e.player, -0.3);
+    if (e.type === 'roja') suma(e.side, e.player, -1.5);
   }
-  let mvp = { name: '—', side: 'home' as 'home' | 'away', rating: 0 };
-  for (const [k, v] of notas) {
-    if (v.rating > mvp.rating) mvp = { name: k.slice(0, -v.side.length), side: v.side, rating: v.rating };
-  }
-  mvp.rating = Math.round(clamp(mvp.rating, 6, 10) * 10) / 10;
+  const fija = (n: number) => Math.round(clamp(n, 3, 10) * 10) / 10;
+  const linea = (xi: Player[]): LineupPlayer[] =>
+    xi.map((p) => ({ id: p.id, name: p.name, pos: p.pos, ovr: p.ovr, rating: fija(notas.get(p.id) ?? 6) }));
+  const lineups = { home: linea(xiHome), away: linea(xiAway) };
 
-  const linea = (xi: Player[]) => xi.map((p) => ({ name: p.name, pos: p.pos, ovr: p.ovr }));
+  // mejor jugador del partido: la nota más alta
+  let mvp = { name: '—', side: 'home' as 'home' | 'away', rating: 0 };
+  for (const side of ['home', 'away'] as const) {
+    for (const p of lineups[side]) if (p.rating > mvp.rating) mvp = { name: p.name, side, rating: p.rating };
+  }
+
   const plans = tacticas
-    ? { home: { ...tacticas.home, xi: linea(xiHome) }, away: { ...tacticas.away, xi: linea(xiAway) } }
+    ? { home: { ...tacticas.home, xi: lineups.home }, away: { ...tacticas.away, xi: lineups.away } }
     : undefined;
-  return { ...info, events, stats: { home, away }, mvp, plans };
+  return { ...info, events, stats: { home, away }, mvp, plans, lineups };
 }

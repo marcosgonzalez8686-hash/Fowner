@@ -10,6 +10,8 @@ import { FORMACION, bestEleven } from '../game/match';
 import type { Player, Pos } from '../game/types';
 import { Card, Ovr, Segmented, Sheet } from '../ui';
 import { moraleLabel } from '../game/morale';
+import { seasonAverage } from '../game/history';
+import { FormStrip, RatingBadge } from '../components/Rating';
 
 const POS_NAME: Record<Pos, string> = { POR: 'Porteros', DEF: 'Defensas', MED: 'Centrocampistas', DEL: 'Delanteros' };
 
@@ -75,6 +77,12 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
                     {(p.injury ?? 0) > 0 && <b className="neg">Lesionado {p.injury} j. · </b>}
                     {p.age} años · {fmtMoney(p.salary)} · {p.contract <= 1 ? <b className="warn">acaba contrato</b> : `${p.contract} temp.`}
                   </small>
+                  {p.form?.length ? (
+                    <small className="form-line">
+                      <FormStrip form={p.form} />
+                      {p.season?.apps ? <span className="muted"> · {p.season.apps} PJ{p.season.goals ? ` · ${p.season.goals} ⚽` : ''}</span> : null}
+                    </small>
+                  ) : null}
                 </span>
                 <Ovr v={p.ovr} base={nivel} />
               </button>
@@ -89,6 +97,21 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
             <br />
             Cobra {fmtMoney(sel.salary)}/temp. · contrato: {sel.contract} temp.
           </p>
+
+          <h4>Esta temporada</h4>
+          {sel.season?.apps ? (
+            <>
+              <div className="kpis">
+                <div><b>{sel.season.apps}</b><span>partidos</span></div>
+                <div><b>{sel.season.goals}</b><span>goles</span></div>
+                <div><b>{sel.season.assists}</b><span>asistencias</span></div>
+                <div><b><RatingBadge v={seasonAverage(sel)!} /></b><span>nota media</span></div>
+              </div>
+              <p className="small">Últimas notas: <FormStrip form={sel.form} /></p>
+            </>
+          ) : (
+            <p className="small muted">Aún no ha jugado esta temporada.</p>
+          )}
 
           <h4>Renovar</h4>
           <p className="small">Pide {fmtMoney(renewSalary(sel))}/temp.</p>

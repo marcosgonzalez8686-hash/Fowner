@@ -4,6 +4,7 @@ import type { MatchReport, SideStats } from '../game/report';
 import type { GameState } from '../game/types';
 import { Sheet } from '../ui';
 import Crest from './Crest';
+import { RatingBadge } from './Rating';
 
 const FILAS: { k: keyof SideStats; label: string; pct?: boolean }[] = [
   { k: 'possession', label: 'Posesión', pct: true },
@@ -61,6 +62,34 @@ export default function MatchSummary({ s, r, onClose }: { s: GameState; r: Match
             </li>
           ))}
         </ul>
+      )}
+
+      {r.lineups && (
+        <>
+          <h4>Notas de los jugadores</h4>
+          <div className="ratings-grid">
+            {(['home', 'away'] as const).map((side) => (
+              <div key={side}>
+                <div className="lineup-title">{team(side === 'home' ? r.home : r.away).short}</div>
+                {r.lineups![side].map((p) => {
+                  const goles = r.events.filter((e) => e.type === 'gol' && e.side === side && e.player === p.name).length;
+                  const tarjeta = r.events.find((e) => (e.type === 'amarilla' || e.type === 'roja') && e.side === side && e.player === p.name);
+                  return (
+                    <div key={p.id} className={`rating-row${p.name === r.mvp.name ? ' mvp' : ''}`}>
+                      <span className="pos-mini">{p.pos}</span>
+                      <span className="rating-name">
+                        {p.name.split(' ').slice(1).join(' ') || p.name}
+                        {goles > 0 && ` ${'⚽'.repeat(goles)}`}
+                        {tarjeta && (tarjeta.type === 'roja' ? ' 🟥' : ' 🟨')}
+                      </span>
+                      <RatingBadge v={p.rating} />
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       <h4>Estadísticas</h4>

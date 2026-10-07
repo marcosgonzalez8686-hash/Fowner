@@ -484,3 +484,18 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .rank li { padding: 3px 0; border-bottom: 1px solid var(--line); }
 .rank li span { display: inline-block; max-width: calc(100% - 30px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 .rank li b { float: right; font-variant-numeric: tabular-nums; }
+
+/* notas de los jugadores */
+.rating { display: inline-block; min-width: 1.9em; padding: 1px 4px; border-radius: 6px; font-weight: 800; font-size: 0.78rem; text-align: center; font-variant-numeric: tabular-nums; color: #fff; }
+.rating.top { background: #1f8a4c; }
+.rating.good { background: #5aa469; }
+.rating.ok { background: #8a8f98; }
+.rating.bad { background: #c94a3a; }
+.form-strip { display: inline-flex; gap: 3px; vertical-align: middle; }
+.form-strip .rating { min-width: 1.35em; padding: 0 3px; font-size: 0.72rem; }
+.form-line { display: block; margin-top: 3px; }
+.ratings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rating-row { display: flex; align-items: center; gap: 6px; padding: 3px 4px; font-size: 0.82rem; border-radius: 6px; }
+.rating-row.mvp { background: color-mix(in srgb, #f2c230 22%, transparent); }
+.rating-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pos-mini { font-size: 0.65rem; font-weight: 700; opacity: 0.6; width: 2.2em; }

@@ -44,8 +44,9 @@ export function generateOffers(s: GameState, max: number) {
   let nuevas = 0;
   for (const p of candidatos) {
     if (nuevas >= max || activas + nuevas >= MAX_ACTIVAS) break;
-    // los que destacan en su categoría llaman más la atención
-    const interes = 0.15 + Math.max(0, p.ovr - nivel) * 0.05 + (p.age <= 23 ? 0.1 : 0);
+    // los que destacan en su categoría y los que encadenan buenas notas llaman más la atención
+    const media = p.form?.length ? p.form.reduce((a, n) => a + n, 0) / p.form.length : 6;
+    const interes = 0.15 + Math.max(0, p.ovr - nivel) * 0.05 + (p.age <= 23 ? 0.1 : 0) + Math.max(0, media - 6.5) * 0.15;
     if (!chance(Math.min(0.7, interes))) continue;
     const comprador = buyerFor(s, p);
     if (!comprador) continue;
