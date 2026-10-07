@@ -5,7 +5,7 @@ import { fmtMoney } from '../game/economy';
 import type { Level, Task } from '../game/types';
 import { Card, Segmented, Stars } from '../ui';
 
-const TASKS: Task[] = ['fichajes', 'ventas', 'renovaciones', 'cantera'];
+const TASKS: Task[] = ['fichajes', 'ventas', 'renovaciones', 'cantera', 'empleados'];
 const LEVELS: Level[] = ['manual', 'propone', 'auto'];
 const LEVEL_SHORT: Record<Level, string> = { manual: '🧑‍💼 Yo', propone: '✅ Propone', auto: '🤖 Auto' };
 
@@ -63,7 +63,7 @@ export default function DirectorScreen({ s, update, notify }: ScreenProps) {
           <button className="btn small grow" disabled={!d} onClick={() => update((g) => setAllDelegation(g, 'propone'))}>Todo propone</button>
           <button className="btn small grow" disabled={!d} onClick={() => update((g) => setAllDelegation(g, 'auto'))}>Todo auto</button>
         </div>
-        <p className="small muted">Sus límites de gasto se fijan en Dirección → Presupuestos.</p>
+        <p className="small muted">Sus límites de gasto se fijan en Dirección → Presupuesto.</p>
       </Card>
 
       <Card title={d ? 'Otros candidatos' : 'Candidatos disponibles'}>
