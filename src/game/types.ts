@@ -1,5 +1,6 @@
 import type { Identity } from './identity';
 import type { Land } from './land';
+import type { MatchReport } from './report';
 
 export type Pos = 'POR' | 'DEF' | 'MED' | 'DEL';
 
@@ -129,6 +130,7 @@ export interface GameState {
   messages: Message[];
   history: { season: number; division: number; position: number }[];
   lastResults: MatchResult[]; // últimos resultados de la división del jugador
+  lastReport?: MatchReport; // informe de nuestro último partido
   gameOver?: string;
   nextId: number;
 }

@@ -4,7 +4,7 @@ import type { MapModel } from '../components/Map3D';
 import { expandStadium, stadiumCost } from '../game/club';
 import { fmtMoney } from '../game/economy';
 import {
-  BUILDINGS, LAND_SIZE, buildingLevel, buyParcel, canBuyParcel, construct, isBuilt, maintenancePerSeason,
+  BUILDINGS, LAND_SIZE, STANDING, buildingLevel, buyParcel, canBuyParcel, construct, isBuilt, maintenancePerSeason,
   nextLevelCost, parcelCost, upgrade, type BuildingKind,
 } from '../game/land';
 import { Card } from '../ui';
@@ -17,7 +17,11 @@ const KINDS = Object.keys(BUILDINGS) as BuildingKind[];
 
 export default function Instalaciones({ s, update, notify, go }: ScreenProps) {
   const c = s.club;
-  const [sel, setSel] = useState<{ x: number; y: number } | null>({ x: 3, y: 3 });
+  // al entrar se selecciona el estadio, esté donde esté
+  const [sel, setSel] = useState<{ x: number; y: number } | null>(() => {
+    const p = c.land.parcels.find((x) => x.stadium);
+    return p ? { x: p.x, y: p.y } : null;
+  });
   const parcela = sel ? c.land.parcels.find((p) => p.x === sel.x && p.y === sel.y) : undefined;
 
   const model: MapModel = useMemo(
@@ -63,7 +67,12 @@ export default function Instalaciones({ s, update, notify, go }: ScreenProps) {
         <Card title={parcela.stadium ? `🏟️ ${c.identity.stadium}` : parcela.building ? `${BUILDINGS[parcela.building].icon} ${BUILDINGS[parcela.building].name}` : `Parcela ${parcela.x + 1}-${parcela.y + 1}`}>
           {parcela.stadium && (
             <>
-              <p>Aforo: <b>{c.capacity.toLocaleString('es-ES')}</b> espectadores. Las gradas crecen en el mapa al ampliar.</p>
+              <p>Aforo: <b>{c.capacity.toLocaleString('es-ES')}</b> espectadores.</p>
+              <p className="small muted">
+                {c.capacity <= STANDING
+                  ? `Todavía no hay gradas: caben ${STANDING} personas de pie alrededor de la valla. Amplía el aforo para construir la primera grada.`
+                  : 'Con más aforo, las gradas crecen y aparecen en los demás lados del campo.'}
+              </p>
               {c.works ? (
                 <p className="hint">🚧 Obras en marcha: +{c.works.amount} asientos, faltan {c.works.matchdaysLeft} jornadas.</p>
               ) : (

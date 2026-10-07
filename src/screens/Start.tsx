@@ -7,7 +7,7 @@ import { deleteGame, listSlots, type Slot } from '../game/save';
 
 interface Props {
   onLoad: (slot: Slot) => void;
-  onNew: (slot: Slot, nombre: string, identity: Identity) => void;
+  onNew: (slot: Slot, nombre: string, identity: Identity, stadium: { x: number; y: number }) => void;
 }
 
 function fecha(ms: number) {
@@ -25,7 +25,7 @@ export default function Start({ onLoad, onNew }: Props) {
   };
 
   if (creando) {
-    return <NewGame onCancel={() => setCreando(null)} onCreate={(nombre, identity) => onNew(creando, nombre, identity)} />;
+    return <NewGame onCancel={() => setCreando(null)} onCreate={(nombre, identity, estadio) => onNew(creando, nombre, identity, estadio)} />;
   }
 
   return (

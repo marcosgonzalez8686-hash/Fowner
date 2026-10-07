@@ -7,6 +7,7 @@ import { bestEleven, computeStandings, form } from '../game/match';
 import { endSeason, playMatchday, startSeason } from '../game/season';
 import type { GameState, Message } from '../game/types';
 import { Card } from '../ui';
+import MatchSummary from '../components/MatchSummary';
 import Crest from '../components/Crest';
 import KitView from '../components/KitView';
 import { rivalCrest } from '../game/identity';
@@ -23,6 +24,7 @@ function nextMatch(s: GameState) {
 
 export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const [abierto, setAbierto] = useState<number | null>(null);
+  const [verResumen, setVerResumen] = useState(false);
   const t = myTeam(s);
   const prox = nextMatch(s);
   const tabla = computeStandings(s.teams.filter((x) => x.division === t.division).map((x) => x.id), s.fixtures[t.division]);
@@ -45,14 +47,10 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
     </div>
   );
 
-  const jugar = (n: number) => {
-    update((g) => {
-      for (let i = 0; i < n && g.phase === 'temporada' && !g.gameOver; i++) {
-        playMatchday(g);
-        // se para si el director deja propuestas pendientes
-        if (i < n - 1 && g.messages.some((m) => m.status === 'pendiente')) break;
-      }
-    });
+  // los partidos se juegan de uno en uno y al acabar se enseña el resumen
+  const jugar = () => {
+    update((g) => playMatchday(g));
+    setVerResumen(true);
   };
 
   const responder = (m: Message, aprobar: boolean) => {
@@ -106,11 +104,8 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
               {' · '}Racha: {form(t.id, s.fixtures[t.division]).join(' ') || '—'}
             </p>
             <div className="row">
-              <button className="btn primary big grow" onClick={() => jugar(1)}>
-                Jugar jornada
-              </button>
-              <button className="btn big" onClick={() => jugar(5)} title="Juega hasta 5 jornadas">
-                ×5
+              <button className="btn primary big grow" onClick={jugar}>
+                ⚽ Jugar partido
               </button>
             </div>
             {marketOpen(s) && <p className="hint">🔁 Mercado de invierno abierto</p>}
@@ -129,6 +124,9 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
 
       {miUltimo && (
         <Card title={`Resultados jornada ${s.matchday}`} right={<button className="link" onClick={() => go('liga')}>Clasificación</button>}>
+          {s.lastReport && s.lastReport.matchday === s.matchday && (
+            <button className="btn full mb" onClick={() => setVerResumen(true)}>📋 Ver resumen de nuestro partido</button>
+          )}
           <ul className="results">
             {s.lastResults.map((r, i) => {
               const mine = r.home === t.id || r.away === t.id;
@@ -182,6 +180,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
           </div>
         ))}
       </Card>
+      {verResumen && s.lastReport && <MatchSummary s={s} r={s.lastReport} onClose={() => setVerResumen(false)} />}
     </>
   );
 }

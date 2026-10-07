@@ -8,6 +8,7 @@ import { addMessage, myTeam, mySquad, myYouth, teamById, wageBill } from './mark
 import { bestEleven, computeStandings, form, simulate } from './match';
 import { chance, clamp, gauss, rand, randInt } from './rng';
 import type { GameState, MatchResult, Player, Team } from './types';
+import { buildReport } from './report';
 import {
   agingFactor, attendanceBonus, commercialPerMatch, fansGrowthBonus, maintenancePerSeason, sponsorBonus,
 } from './land';
@@ -61,7 +62,9 @@ export function playMatchday(s: GameState) {
   for (let d = 0; d < DIVISIONS; d++) {
     for (const f of s.fixtures[d][md]) {
       // pequeño factor anímico aleatorio por partido
-      const { hg, ag } = simulate(fuerza(f.home) + 2 + gauss(0, 2), fuerza(f.away) + gauss(0, 2));
+      const fh = fuerza(f.home) + 2 + gauss(0, 2);
+      const fa = fuerza(f.away) + gauss(0, 2);
+      const { hg, ag } = simulate(fh, fa);
       f.hg = hg;
       f.ag = ag;
       const r: MatchResult = { home: f.home, away: f.away, hg, ag };
@@ -72,6 +75,20 @@ export function playMatchday(s: GameState) {
         s.club.cash += ingreso + comercial;
         s.club.ledger.taquilla += ingreso;
         s.club.ledger.comercial += comercial;
+      }
+      if (f.home === mio.id || f.away === mio.id) {
+        const rep = buildReport(
+          { season: s.season, matchday: md + 1, home: f.home, away: f.away, hg, ag },
+          bestEleven(porEquipo.get(f.home) ?? []).xi,
+          bestEleven(porEquipo.get(f.away) ?? []).xi,
+          fh,
+          fa,
+        );
+        if (r.attendance !== undefined) {
+          rep.attendance = r.attendance;
+          rep.revenue = r.attendance * s.club.ticketPrice + commercialPerMatch(s, r.attendance, mio.fans);
+        }
+        s.lastReport = rep;
       }
       if (d === mio.division) s.lastResults.push(r);
       // la afición crece o baja con los resultados
@@ -271,7 +288,9 @@ export function endSeason(s: GameState) {
   // 5. cantera del club
   const nivelCantera = DIV_LEVEL[mio.division] - 14 + s.club.academy * 2.5;
   const canteranos: Player[] = [];
-  for (let i = 0; i < randInt(3, 5); i++) {
+  // sin residencia de cantera llegan menos chavales
+  const nuevos = s.club.academy === 0 ? randInt(1, 2) : randInt(3, 5);
+  for (let i = 0; i < nuevos; i++) {
     const y = makePlayer(s, nivelCantera, { teamId: mio.id, age: randInt(16, 18), youth: true, contract: 0 });
     y.pot = clamp(Math.round(y.ovr + rand(6, 14) + s.club.academy * 3), y.ovr, 95);
     y.salary = roundMoney(y.salary * 0.5);

@@ -4,7 +4,7 @@ import {
 import { roundRobin } from './match';
 import { clubName, personName, shortName, townNames } from './names';
 import { clamp, gauss, pick, rand, randInt } from './rng';
-import { newLand } from './land';
+import { STANDING, newLand } from './land';
 import { defaultIdentity, ownerTitle, type Identity } from './identity';
 import type { DDStyle, Director, GameState, Player, Pos, Team } from './types';
 
@@ -62,7 +62,7 @@ export function makeDirectors(s: GameState, division: number): Director[] {
   }));
 }
 
-export function newGame(clubNameInput: string, identityInput?: Identity): GameState {
+export function newGame(clubNameInput: string, identityInput?: Identity, stadiumPos?: { x: number; y: number }): GameState {
   const s: GameState = {
     version: SAVE_VERSION,
     season: 1,
@@ -111,20 +111,20 @@ export function newGame(clubNameInput: string, identityInput?: Identity): GameSt
   s.club = {
     teamId: mio.id,
     identity,
-    cash: 120_000,
+    cash: 180_000,
     ticketPrice: DIV_PRICE[ultima],
-    capacity: 1_200,
-    training: 1,
-    academy: 1,
+    capacity: STANDING, // sin gradas: la gente ve el partido de pie
+    training: 0, // sin ciudad deportiva al empezar
+    academy: 0, // sin cantera al empezar
     director: null,
     delegation: { fichajes: 'manual', ventas: 'manual', renovaciones: 'manual', cantera: 'manual' },
     transferBudget: 40_000,
-    wageCap: 200_000,
+    wageCap: 170_000,
     works: null,
     ledger: emptyLedger(),
     lastLedger: null,
-    land: newLand(),
-    cashLog: [120_000],
+    land: newLand(stadiumPos),
+    cashLog: [180_000],
     seasonLog: [],
   };
 
@@ -145,6 +145,8 @@ export function newGame(clubNameInput: string, identityInput?: Identity): GameSt
     title: `¡Bienvenido, ${ownerTitle(identity)}!`,
     body:
       `Acabas de comprar el ${nombre}. Jugamos en el ${identity.stadium}, estamos en la Liga Comarcal y la caja está justa.\n\n` +
+      'De momento solo tenemos el campo: no hay gradas y caben unas 600 personas de pie. ' +
+      'En Club → Instalaciones puedes construir gradas, comprar terreno y levantar nuevas instalaciones.\n\n' +
       'Puedes llevarlo todo tú o contratar un director deportivo (pestaña Director) y decidir qué tareas le delegas: ' +
       'fichajes, ventas, renovaciones y cantera. Cada una puede estar en Manual, Propone y apruebas, o Automático.\n\n' +
       'Cuando estés listo, empieza la temporada desde Inicio.',

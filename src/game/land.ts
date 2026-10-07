@@ -6,7 +6,10 @@ import type { GameState } from './types';
 // y en el resto de parcelas propias se construyen instalaciones.
 
 export const LAND_SIZE = 8;
-const ESTADIO = [[3, 3], [4, 3], [3, 4], [4, 4]];
+/** Personas que caben de pie alrededor del campo, sin gradas */
+export const STANDING = 600;
+/** Posición por defecto del estadio (esquina superior izquierda del bloque 2x2) */
+export const DEFAULT_STADIUM = { x: 3, y: 3 };
 
 /** Edificios que se pueden construir en una parcela (uno de cada tipo) */
 export type BuildingKind = 'entrenamiento' | 'cantera' | 'parking' | 'tienda' | 'bar' | 'medico' | 'ojeadores' | 'museo';
@@ -38,12 +41,12 @@ export const BUILDINGS: Record<BuildingKind, BuildingInfo> = {
   entrenamiento: {
     name: 'Ciudad deportiva', icon: '🏋️', maxLevel: NIVEL_MAX,
     help: 'Los jugadores jóvenes mejoran más rápido.',
-    cost: [0, 0, ...COSTE_INSTALACION.slice(2)],
+    cost: [0, 40_000, ...COSTE_INSTALACION.slice(2)],
   },
   cantera: {
     name: 'Residencia de cantera', icon: '🌱', maxLevel: NIVEL_MAX,
-    help: 'Salen juveniles mejores y con más potencial.',
-    cost: [0, 0, ...COSTE_INSTALACION.slice(2)],
+    help: 'Salen más juveniles, mejores y con más potencial.',
+    cost: [0, 35_000, ...COSTE_INSTALACION.slice(2)],
   },
   parking: {
     name: 'Aparcamiento', icon: '🅿️', maxLevel: 3,
@@ -80,22 +83,27 @@ export const BUILDINGS: Record<BuildingKind, BuildingInfo> = {
 /** Mantenimiento anual: 6% de lo invertido en cada edificio */
 const MANTENIMIENTO = 0.06;
 
-export function newLand(): Land {
+/** Ajusta la esquina del estadio para que el bloque 2x2 quepa en el terreno */
+export function clampStadium(x: number, y: number) {
+  return { x: Math.max(0, Math.min(LAND_SIZE - 2, x)), y: Math.max(0, Math.min(LAND_SIZE - 2, y)) };
+}
+
+/** Terreno inicial: solo las 4 parcelas del estadio, donde el dueño haya querido ponerlo */
+export function newLand(pos = DEFAULT_STADIUM): Land {
+  const { x: ax, y: ay } = clampStadium(pos.x, pos.y);
   const parcels: Parcel[] = [];
   for (let y = 0; y < LAND_SIZE; y++) {
     for (let x = 0; x < LAND_SIZE; x++) {
-      const stadium = ESTADIO.some(([a, b]) => a === x && b === y);
+      const stadium = x >= ax && x <= ax + 1 && y >= ay && y <= ay + 1;
       parcels.push({ x, y, owned: stadium, stadium });
     }
   }
-  // de inicio, dos parcelas con la ciudad deportiva y la cantera
-  const p1 = parcels.find((p) => p.x === 2 && p.y === 3)!;
-  const p2 = parcels.find((p) => p.x === 5 && p.y === 4)!;
-  p1.owned = true;
-  p1.building = 'entrenamiento';
-  p2.owned = true;
-  p2.building = 'cantera';
   return { parcels, bought: 0, levels: {} };
+}
+
+function stadiumCenter(s: GameState) {
+  const c = s.club.land.parcels.filter((p) => p.stadium);
+  return { x: c.reduce((a, p) => a + p.x, 0) / c.length, y: c.reduce((a, p) => a + p.y, 0) / c.length };
 }
 
 export function buildingLevel(s: GameState, k: BuildingKind) {
@@ -116,7 +124,8 @@ export function canBuyParcel(s: GameState, p: Parcel) {
 
 export function parcelCost(s: GameState, p: Parcel) {
   // más caro cuanto más compras y cuanto más lejos del estadio
-  const dist = Math.abs(p.x - 3.5) + Math.abs(p.y - 3.5);
+  const centro = stadiumCenter(s);
+  const dist = Math.abs(p.x - centro.x) + Math.abs(p.y - centro.y);
   return roundMoney(15_000 * Math.pow(1.3, s.club.land.bought) * (0.8 + dist * 0.08));
 }
 
@@ -151,7 +160,9 @@ export function construct(s: GameState, k: BuildingKind, x: number, y: number): 
   s.club.cash -= coste;
   s.club.ledger.obras += coste;
   p.building = k;
-  s.club.land.levels[k] = 1;
+  if (k === 'entrenamiento') s.club.training = Math.max(1, s.club.training);
+  else if (k === 'cantera') s.club.academy = Math.max(1, s.club.academy);
+  else s.club.land.levels[k] = 1;
   addMessage(s, { from: 'club', title: `${BUILDINGS[k].name} construido`, body: `${BUILDINGS[k].help}\nCoste: ${fmtMoney(coste)}.` });
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import type { BuildingKind } from '../game/land';
+import { STANDING, type BuildingKind } from '../game/land';
 
 // Mapa 3D del terreno del club. Se dibuja con three.js y solo se vuelve a pintar
 // cuando el usuario mueve la cámara o cambia algo (ahorra batería).
@@ -82,8 +82,11 @@ function stadium(capacity: number, standColor: string, accent: string) {
   pitch.receiveShadow = true;
   g.add(pitch);
 
-  // las gradas crecen con el aforo
-  const h = THREE.MathUtils.clamp(0.06 + Math.log10(Math.max(capacity, 300) / 300) * 0.16, 0.06, 0.55);
+  // aforo de pie fijo (alrededor de la valla) y el resto sentado en gradas
+  const sentados = Math.max(0, capacity - STANDING);
+  const nLados = sentados <= 0 ? 0 : sentados < 1000 ? 1 : sentados < 3500 ? 2 : 4;
+  const porLado = nLados ? sentados / nLados : 0;
+  const h = THREE.MathUtils.clamp(0.05 + Math.log10(Math.max(porLado, 100) / 100) * 0.14, 0.05, 0.55);
   const grada = mat(standColor);
   const lados: [number, number, number, number][] = [
     [1.7, 0.2, 0, -0.6],
@@ -91,7 +94,43 @@ function stadium(capacity: number, standColor: string, accent: string) {
     [0.2, 1.0, -0.83, 0],
     [0.2, 1.0, 0.83, 0],
   ];
-  for (const [w, d, x, z] of lados) g.add(box(w, h, d, grada, x, 0, z));
+  lados.slice(0, nLados).forEach(([w, d, x, z]) => g.add(box(w, h, d, grada, x, 0, z)));
+
+  // valla alrededor del campo
+  const valla = mat(0xf2f2f2);
+  g.add(box(1.46, 0.035, 0.012, valla, 0, 0, -0.5), box(1.46, 0.035, 0.012, valla, 0, 0, 0.5));
+  g.add(box(0.012, 0.035, 1.0, valla, -0.73, 0, 0), box(0.012, 0.035, 1.0, valla, 0.73, 0, 0));
+
+  // público de pie en los lados que no tienen grada
+  const huecos = [
+    { x: 0, z: -0.56, w: 1.4, horiz: true },
+    { x: 0, z: 0.56, w: 1.4, horiz: true },
+    { x: -0.79, z: 0, w: 0.9, horiz: false },
+    { x: 0.79, z: 0, w: 0.9, horiz: false },
+  ].slice(nLados);
+  if (huecos.length) {
+    const porHueco = Math.ceil(70 / 4);
+    const total = porHueco * huecos.length;
+    const gente = new THREE.InstancedMesh(new THREE.BoxGeometry(0.028, 0.06, 0.028), new THREE.MeshStandardMaterial({ roughness: 0.9 }), total);
+    const colores = [new THREE.Color(standColor), new THREE.Color(accent), new THREE.Color(0x2b2b2b), new THREE.Color(0x3d5a80), new THREE.Color(0xe9e2d0)];
+    const m4 = new THREE.Matrix4();
+    let i = 0;
+    huecos.forEach((hu, k) => {
+      for (let j = 0; j < porHueco; j++) {
+        const t = (j + 0.5) / porHueco - 0.5;
+        const fila = (j * 7 + k * 3) % 3;
+        const off = (fila - 1) * 0.035;
+        const x = hu.horiz ? hu.x + t * hu.w : hu.x + Math.sign(hu.x) * (fila * 0.035);
+        const z = hu.horiz ? hu.z + Math.sign(hu.z) * (fila * 0.035) : hu.z + t * hu.w;
+        m4.makeTranslation(x + (hu.horiz ? off * 0.3 : 0), 0.03, z + (hu.horiz ? 0 : off * 0.3));
+        gente.setMatrixAt(i, m4);
+        gente.setColorAt(i, colores[(j * 3 + k) % colores.length]);
+        i++;
+      }
+    });
+    gente.castShadow = true;
+    g.add(gente);
+  }
   // cubierta en la tribuna principal cuando el estadio es grande
   if (capacity >= 4000) {
     const techo = box(1.7, 0.03, 0.3, mat(accent), 0, h + 0.12, -0.62);
