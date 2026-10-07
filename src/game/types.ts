@@ -1,6 +1,9 @@
 import type { Identity } from './identity';
 import type { Land } from './land';
 import type { MatchReport } from './report';
+import type { Role, Staff } from './staff';
+import type { ActiveSponsor, SponsorDeal } from './sponsor';
+import type { PendingEvent } from './events';
 
 export type Pos = 'POR' | 'DEF' | 'MED' | 'DEL';
 
@@ -87,6 +90,7 @@ export interface Ledger {
   obras: number;
   comercial: number; // tienda y bar
   mantenimiento: number; // instalaciones
+  personal: number; // empleados, multas y otros gastos
 }
 
 export interface Club {
@@ -105,6 +109,8 @@ export interface Club {
   ledger: Ledger; // temporada actual
   lastLedger: Ledger | null;
   land: Land;
+  staff: Partial<Record<Role, Staff>>;
+  sponsor?: ActiveSponsor;
   cashLog: number[]; // caja al empezar la temporada y tras cada jornada
   seasonLog: { season: number; division: number; ledger: Ledger; cashEnd: number }[];
 }
@@ -127,6 +133,10 @@ export interface GameState {
   fixtures: Fixture[][][]; // [división][jornada][partido]
   club: Club;
   directorsMarket: Director[];
+  staffMarket: Record<Role, Staff[]>;
+  sponsorOffers: SponsorDeal[];
+  pendingEvent?: PendingEvent;
+  lastEventKey?: string;
   messages: Message[];
   history: { season: number; division: number; position: number }[];
   lastResults: MatchResult[]; // últimos resultados de la división del jugador

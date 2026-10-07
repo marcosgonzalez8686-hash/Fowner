@@ -7,6 +7,7 @@ import { FORMACION } from './match';
 import { gauss } from './rng';
 import { ownerTitle } from './identity';
 import { scoutingFactor } from './land';
+import { staffScoutFactor } from './staff';
 import type { Director, GameState, Level, Player, Pos, Proposal, Task } from './types';
 
 export const TASK_LABEL: Record<Task, string> = {
@@ -44,7 +45,7 @@ export const levelOf = (s: GameState, t: Task): Level => (s.club.director ? s.cl
 
 /** El director valora con más o menos acierto según su calidad */
 function perceived(s: GameState, d: Director, p: Player) {
-  return p.ovr + gauss(0, (6 - d.stars) * 1.3 * scoutingFactor(s));
+  return p.ovr + gauss(0, (6 - d.stars) * 1.3 * scoutingFactor(s) * staffScoutFactor(s));
 }
 
 function starters(squad: Player[], pos: Pos) {

@@ -10,7 +10,12 @@ import { chance, clamp, gauss, rand, randInt } from './rng';
 import type { GameState, MatchResult, Player, Team } from './types';
 import { buildReport } from './report';
 import {
-  agingFactor, attendanceBonus, commercialPerMatch, fansGrowthBonus, maintenancePerSeason, sponsorBonus,
+  makeStaffCandidates, marketingFansBonus, scoutDiscoveries, staffAgingFactor, staffMatchBonus, staffWages, youthGrowthBonus,
+} from './staff';
+import { sponsorFixed, sponsorNewSeason } from './sponsor';
+import { maybeCreateEvent } from './events';
+import {
+  agingFactor, attendanceBonus, commercialPerMatch, fansGrowthBonus, maintenancePerSeason,
 } from './land';
 
 export const creditLimit = (s: GameState) => {
@@ -18,10 +23,8 @@ export const creditLimit = (s: GameState) => {
   return roundMoney((DIV_TV[d] + DIV_SPONSOR[d]) * 0.5 + 40_000);
 };
 
-export const sponsorFor = (s: GameState) => {
-  const t = myTeam(s);
-  return roundMoney(DIV_SPONSOR[t.division] * clamp(0.6 + 0.4 * (t.fans / DIV_FANS[t.division]), 0.5, 2) * sponsorBonus(s));
-};
+/** Patrocinio fijo de la temporada */
+export const sponsorFor = (s: GameState) => sponsorFixed(s);
 
 /** Asistencia esperada a un partido en casa */
 export function expectedAttendance(s: GameState) {
@@ -33,8 +36,9 @@ export function expectedAttendance(s: GameState) {
   return Math.round(Math.min(s.club.capacity, t.fans * precio * animo * attendanceBonus(s)));
 }
 
-export function startSeason(s: GameState) {
+export function startSeason(s: GameState): string | undefined {
   if (s.phase !== 'pretemporada') return;
+  if (!s.club.sponsor && s.sponsorOffers.length) return 'Antes de empezar, elige patrocinador.';
   // los juveniles sin decidir se van
   for (const y of myYouth(s)) { y.teamId = null; y.youth = false; }
   s.phase = 'temporada';
@@ -54,7 +58,8 @@ export function playMatchday(s: GameState) {
     if (!porEquipo.has(p.teamId)) porEquipo.set(p.teamId, []);
     porEquipo.get(p.teamId)!.push(p);
   }
-  const fuerza = (id: number) => bestEleven(porEquipo.get(id) ?? []).strength;
+  const extra = staffMatchBonus(s);
+  const fuerza = (id: number) => bestEleven(porEquipo.get(id) ?? []).strength + (id === s.club.teamId ? extra : 0);
   const mio = myTeam(s);
   const md = s.matchday;
   s.lastResults = [];
@@ -109,8 +114,17 @@ export function playMatchday(s: GameState) {
   const sal = Math.round(wageBill(s) / MATCHDAYS);
   const dd = c.director ? Math.round(c.director.salary / MATCHDAYS) : 0;
   const mant = Math.round(maintenancePerSeason(s) / MATCHDAYS);
-  c.cash += tv + patro - sal - dd - mant;
+  const pers = Math.round(staffWages(s) / MATCHDAYS);
+  c.cash += tv + patro - sal - dd - mant - pers;
   c.ledger.mantenimiento += mant;
+  c.ledger.personal += pers;
+
+  // prima del patrocinador por victoria
+  const nuestro = s.fixtures[mio.division][md].find((f) => f.home === mio.id || f.away === mio.id);
+  if (nuestro && c.sponsor?.perWin) {
+    const gana = nuestro.home === mio.id ? nuestro.hg! > nuestro.ag! : nuestro.ag! > nuestro.hg!;
+    if (gana) { c.cash += c.sponsor.perWin; c.ledger.patrocinio += c.sponsor.perWin; }
+  }
   c.ledger.tv += tv;
   c.ledger.patrocinio += patro;
   c.ledger.salarios += sal;
@@ -145,6 +159,7 @@ export function playMatchday(s: GameState) {
 
   runDirector(s, 'jornada');
   expireProposals(s);
+  if (s.matchday < MATCHDAYS) maybeCreateEvent(s);
 
   if (c.cash < -creditLimit(s)) {
     s.gameOver = `La deuda (${fmtMoney(-c.cash)}) supera el límite que aceptan los bancos (${fmtMoney(creditLimit(s))}). El club entra en concurso de acreedores.`;
@@ -184,10 +199,10 @@ function finishWorks(s: GameState) {
 }
 
 /** Evolución de un jugador al cambiar de temporada */
-function develop(p: Player, training: number, aging = 1) {
+function develop(p: Player, training: number, aging = 1, growth = 1) {
   p.age++;
   if (p.age <= 24) {
-    const crece = Math.max(0, p.pot - p.ovr) * rand(0.15, 0.4) * (0.75 + training * 0.1);
+    const crece = Math.max(0, p.pot - p.ovr) * rand(0.15, 0.4) * (0.75 + training * 0.1) * growth;
     p.ovr = Math.min(p.pot, Math.round(p.ovr + crece));
   } else if (p.age <= 29) {
     p.ovr = clamp(p.ovr + randInt(-1, 1), 20, p.pot);
@@ -223,14 +238,19 @@ export function endSeason(s: GameState) {
   }
   // la afición tiende a la media de su categoría
   for (const t of s.teams) t.fans = Math.round(t.fans * 0.85 + DIV_FANS[t.division] * 0.15 * rand(0.7, 1.3));
-  mio.fans = Math.round(mio.fans * fansGrowthBonus(s));
+  mio.fans = Math.round(mio.fans * fansGrowthBonus(s) * marketingFansBonus(s));
+  // prima del patrocinador por ascenso
+  if (mio.division < divAntes && s.club.sponsor?.promotionBonus) {
+    s.club.cash += s.club.sponsor.promotionBonus;
+    s.club.ledger.patrocinio += s.club.sponsor.promotionBonus;
+  }
 
   // 2. jugadores: edad, evolución, retiradas y contratos
   const seVan: Player[] = [];
   const retirados: Player[] = [];
   s.players = s.players.filter((p) => {
     const esMio = p.teamId === mio.id;
-    develop(p, esMio ? s.club.training : 2.5, esMio ? agingFactor(s) : 1);
+    develop(p, esMio ? s.club.training : 2.5, esMio ? agingFactor(s) * staffAgingFactor(s) : 1, esMio ? youthGrowthBonus(s) : 1);
     if (p.age >= 35 && chance(0.5 + (p.age - 35) * 0.2)) {
       if (esMio) retirados.push(p);
       return false;
@@ -310,6 +330,15 @@ export function endSeason(s: GameState) {
   s.phase = 'pretemporada';
   s.fixtures = buildAllFixtures(s);
   s.directorsMarket = makeDirectors(s, mio.division);
+  s.staffMarket = makeStaffCandidates(s, mio.division);
+  s.pendingEvent = undefined;
+  sponsorNewSeason(s);
+  scoutDiscoveries(s, () => {
+    const p = makePlayer(s, DIV_LEVEL[mio.division] - 6, { age: randInt(17, 20), contract: 0 });
+    p.pot = clamp(p.ovr + randInt(14, 24), p.ovr, 95);
+    s.players.push(p);
+    return { name: p.name, pos: p.pos, pot: p.pot };
+  });
   s.lastResults = [];
 
   const cambio = mio.division < divAntes ? `¡Subimos a ${DIVISION_NAMES[mio.division]}!`

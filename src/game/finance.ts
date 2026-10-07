@@ -1,6 +1,7 @@
 import { DIV_TV, MATCHDAYS, emptyLedger } from './economy';
 import { commercialPerMatch, maintenancePerSeason } from './land';
 import { myTeam, wageBill } from './market';
+import { staffWages } from './staff';
 import { expectedAttendance, sponsorFor } from './season';
 import type { GameState, Ledger } from './types';
 
@@ -25,18 +26,20 @@ export function projectSeason(s: GameState): Projection {
     salarios: wageBill(s) / MATCHDAYS,
     director: (s.club.director?.salary ?? 0) / MATCHDAYS,
     mantenimiento: maintenancePerSeason(s) / MATCHDAYS,
+    personal: staffWages(s) / MATCHDAYS,
   };
   let caja = s.club.cash;
   const cashPath = [caja];
   let homeMatches = 0;
   for (let md = desde; md < MATCHDAYS; md++) {
     const enCasa = s.fixtures[t.division][md].some((f) => f.home === t.id);
-    let delta = porJornada.tv + porJornada.patrocinio - porJornada.salarios - porJornada.director - porJornada.mantenimiento;
+    let delta = porJornada.tv + porJornada.patrocinio - porJornada.salarios - porJornada.director - porJornada.mantenimiento - porJornada.personal;
     pending.tv += porJornada.tv;
     pending.patrocinio += porJornada.patrocinio;
     pending.salarios += porJornada.salarios;
     pending.director += porJornada.director;
     pending.mantenimiento += porJornada.mantenimiento;
+    pending.personal += porJornada.personal;
     if (enCasa) {
       homeMatches++;
       const taquilla = asistencia * s.club.ticketPrice;

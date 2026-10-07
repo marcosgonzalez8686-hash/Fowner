@@ -11,6 +11,9 @@ import MatchSummary from '../components/MatchSummary';
 import Crest from '../components/Crest';
 import KitView from '../components/KitView';
 import { rivalCrest } from '../game/identity';
+import { resolveEvent } from '../game/events';
+import { KIND_INFO, chooseSponsor } from '../game/sponsor';
+import { fmtMoney } from '../game/economy';
 
 const FROM_ICON: Record<Message['from'], string> = { director: '💼', club: '🏛️', liga: '🏆', prensa: '📰' };
 
@@ -77,9 +80,20 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
             <p className="muted">
               Mercado abierto. Ficha, decide la cantera y ajusta el club antes de empezar.
             </p>
-            <button className="btn primary big" onClick={() => update((g) => startSeason(g))}>
+            {!s.club.staff.entrenador && (
+              <p className="hint warn-bg">⚠️ No tienes entrenador. Contrátalo en Club → Empleados.</p>
+            )}
+            <button
+              className="btn primary big"
+              disabled={!s.club.sponsor && s.sponsorOffers.length > 0}
+              onClick={() => {
+                const err = update((g) => startSeason(g));
+                if (err) notify(err);
+              }}
+            >
               Empezar temporada
             </button>
+            {!s.club.sponsor && s.sponsorOffers.length > 0 && <p className="small muted">Primero elige patrocinador ↓</p>}
           </>
         )}
         {prox && (
@@ -104,10 +118,11 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
               {' · '}Racha: {form(t.id, s.fixtures[t.division]).join(' ') || '—'}
             </p>
             <div className="row">
-              <button className="btn primary big grow" onClick={jugar}>
+              <button className="btn primary big grow" onClick={jugar} disabled={Boolean(s.pendingEvent)}>
                 ⚽ Jugar partido
               </button>
             </div>
+            {s.pendingEvent && <p className="small muted center">Decide antes qué hacer con el asunto de esta semana ↓</p>}
             {marketOpen(s) && <p className="hint">🔁 Mercado de invierno abierto</p>}
           </>
         )}
@@ -121,6 +136,57 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
           </>
         )}
       </Card>
+
+      {s.pendingEvent && (
+        <Card title={`${s.pendingEvent.icon} Esta semana`}>
+          <h3 className="event-title">{s.pendingEvent.title}</h3>
+          <p>{s.pendingEvent.body}</p>
+          <div className="options">
+            {s.pendingEvent.options.map((o, i) => (
+              <button
+                key={o.label}
+                className={`btn option${i === 0 ? ' primary' : ''}`}
+                onClick={() => {
+                  const r = update((g) => resolveEvent(g, i));
+                  if (r) notify(r);
+                }}
+              >
+                <b>{o.label}</b>
+                <small>{o.hint}</small>
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {s.phase === 'pretemporada' && !s.club.sponsor && s.sponsorOffers.length > 0 && (
+        <Card title="🤝 Elige patrocinador">
+          <p className="small muted">Tres empresas quieren poner su nombre en tu camiseta. Solo puedes firmar con una.</p>
+          {s.sponsorOffers.map((o) => (
+            <div key={o.id} className="offer">
+              <div className="offer-head">
+                <b>{o.name}</b>
+                <span className="tag">{KIND_INFO[o.kind].label}</span>
+              </div>
+              <div className="small muted">{o.sector} · {KIND_INFO[o.kind].help}</div>
+              <ul className="offer-terms">
+                <li>{fmtMoney(o.fixed)} por temporada{o.seasons > 1 ? `, durante ${o.seasons} temporadas` : ''}</li>
+                {o.perWin > 0 && <li>+{fmtMoney(o.perWin)} por cada victoria</li>}
+                {o.promotionBonus > 0 && <li>+{fmtMoney(o.promotionBonus)} si ascendemos</li>}
+              </ul>
+              <button
+                className="btn primary full"
+                onClick={() => {
+                  const err = update((g) => chooseSponsor(g, o.id));
+                  notify(err ?? `Firmado con ${o.name}`);
+                }}
+              >
+                Firmar con {o.name}
+              </button>
+            </div>
+          ))}
+        </Card>
+      )}
 
       {miUltimo && (
         <Card title={`Resultados jornada ${s.matchday}`} right={<button className="link" onClick={() => go('liga')}>Clasificación</button>}>

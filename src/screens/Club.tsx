@@ -3,8 +3,9 @@ import type { ScreenProps } from '../App';
 import { Segmented } from '../ui';
 import Finanzas from './Finanzas';
 import Instalaciones from './Instalaciones';
+import Empleados from './Empleados';
 
-type Zona = 'finanzas' | 'instalaciones';
+type Zona = 'finanzas' | 'instalaciones' | 'empleados';
 
 export default function ClubScreen(props: ScreenProps & { onMenu: () => void; onDelete: () => void }) {
   const [zona, setZona] = useState<Zona>('finanzas');
@@ -15,10 +16,13 @@ export default function ClubScreen(props: ScreenProps & { onMenu: () => void; on
         onChange={setZona}
         options={[
           { value: 'finanzas', label: '💰 Finanzas' },
-          { value: 'instalaciones', label: '🏗️ Instalaciones' },
+          { value: 'instalaciones', label: '🏗️ Instalac.' },
+          { value: 'empleados', label: '👔 Empleados' },
         ]}
       />
-      {zona === 'finanzas' ? <Finanzas {...props} /> : <Instalaciones {...props} />}
+      {zona === 'finanzas' && <Finanzas {...props} />}
+      {zona === 'instalaciones' && <Instalaciones {...props} />}
+      {zona === 'empleados' && <Empleados {...props} />}
     </>
   );
 }

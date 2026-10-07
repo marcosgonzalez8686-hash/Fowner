@@ -18,6 +18,7 @@ const LINEAS: { k: keyof Ledger; label: string; gasto?: boolean }[] = [
   { k: 'salarios', label: 'Salarios', gasto: true },
   { k: 'director', label: 'Director dep.', gasto: true },
   { k: 'mantenimiento', label: 'Mantenimiento', gasto: true },
+  { k: 'personal', label: 'Empleados y otros', gasto: true },
   { k: 'traspasosOut', label: 'Fichajes', gasto: true },
   { k: 'obras', label: 'Obras y terrenos', gasto: true },
 ];
@@ -47,7 +48,7 @@ export default function Finanzas({ s, update, onMenu, onDelete }: ScreenProps & 
   const prev = projectSeason(s);
   const p = prev.pending;
   const ingresosPrev = p.taquilla + p.comercial + p.tv + p.patrocinio;
-  const gastosPrev = p.salarios + p.director + p.mantenimiento;
+  const gastosPrev = p.salarios + p.director + p.mantenimiento + p.personal;
   const restantes = s.phase === 'fin' ? 0 : MATCHDAYS - s.matchday;
   const ocupacion = expectedAttendance(s);
   const barras: BarItem[] = LINEAS.map((x) => ({ label: x.label, value: c.ledger[x.k], kind: x.gasto ? 'out' : 'in' }));
@@ -91,6 +92,7 @@ export default function Finanzas({ s, update, onMenu, onDelete }: ScreenProps & 
             <tr><td className="left">Salarios</td><td><Money v={-p.salarios} /></td></tr>
             <tr><td className="left">Director deportivo</td><td><Money v={-p.director} /></td></tr>
             <tr><td className="left">Mantenimiento</td><td><Money v={-p.mantenimiento} /></td></tr>
+            <tr><td className="left">Empleados</td><td><Money v={-p.personal} /></td></tr>
             <tr className="total"><td className="left">Balance previsto</td><td><Money v={ingresosPrev - gastosPrev} sign /></td></tr>
             <tr className="total"><td className="left">Caja al final</td><td><Money v={prev.cashEnd} /></td></tr>
           </tbody>
@@ -137,7 +139,8 @@ export default function Finanzas({ s, update, onMenu, onDelete }: ScreenProps & 
           {c.capacity.toLocaleString('es-ES')} ({fmtMoney(ocupacion * c.ticketPrice)} por partido).
         </p>
         <p className="small muted center">
-          Patrocinio: {fmtMoney(sponsorFor(s))}/temp. · Afición: {t.fans.toLocaleString('es-ES')}
+          Patrocinio{c.sponsor ? ` (${c.sponsor.name})` : ''}: {fmtMoney(sponsorFor(s))}/temp.
+          {c.sponsor?.perWin ? ` + ${fmtMoney(c.sponsor.perWin)} por victoria` : ''} · Afición: {t.fans.toLocaleString('es-ES')}
         </p>
       </Card>
 
