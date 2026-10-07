@@ -2,7 +2,8 @@ import { DIV_TV, MATCHDAYS, emptyLedger } from './economy';
 import { commercialPerMatch, maintenancePerSeason } from './land';
 import { myTeam, wageBill } from './market';
 import { staffWages } from './staff';
-import { expectedAttendance, sponsorFor } from './season';
+import { sponsorFor } from './season';
+import { leagueAttendance, seasonTicketForecast } from './tickets';
 import type { GameState, Ledger } from './types';
 
 export interface Projection {
@@ -19,7 +20,8 @@ export function projectSeason(s: GameState): Projection {
   const t = myTeam(s);
   const pending = emptyLedger();
   const desde = s.phase === 'fin' ? MATCHDAYS : s.matchday;
-  const asistencia = expectedAttendance(s);
+  // en liga los abonados no pagan: la taquilla sale solo de las entradas sueltas
+  const asis = leagueAttendance(s);
   const porJornada = {
     tv: DIV_TV[t.division] / MATCHDAYS,
     patrocinio: sponsorFor(s) / MATCHDAYS,
@@ -29,6 +31,11 @@ export function projectSeason(s: GameState): Projection {
     personal: staffWages(s) / MATCHDAYS,
   };
   let caja = s.club.cash;
+  // en pretemporada todavía falta cobrar la campaña de abonos
+  if (s.phase === 'pretemporada') {
+    pending.abonos = seasonTicketForecast(s) * s.club.seasonTickets.price;
+    caja += pending.abonos;
+  }
   const cashPath = [caja];
   let homeMatches = 0;
   for (let md = desde; md < MATCHDAYS; md++) {
@@ -42,8 +49,8 @@ export function projectSeason(s: GameState): Projection {
     pending.personal += porJornada.personal;
     if (enCasa) {
       homeMatches++;
-      const taquilla = asistencia * s.club.ticketPrice;
-      const comercial = commercialPerMatch(s, asistencia, t.fans);
+      const taquilla = asis.entradas * s.club.ticketPrice;
+      const comercial = commercialPerMatch(s, asis.total, t.fans);
       pending.taquilla += taquilla;
       pending.comercial += comercial;
       delta += taquilla + comercial;

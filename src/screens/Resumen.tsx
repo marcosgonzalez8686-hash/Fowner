@@ -10,6 +10,7 @@ import { Card, Money } from '../ui';
 
 const LINEAS: { k: keyof Ledger; label: string; gasto?: boolean }[] = [
   { k: 'taquilla', label: 'Taquilla' },
+  { k: 'abonos', label: 'Abonos' },
   { k: 'comercial', label: 'Tienda y bar' },
   { k: 'tv', label: 'Televisión' },
   { k: 'patrocinio', label: 'Patrocinio' },
@@ -46,7 +47,7 @@ export default function Resumen({ s }: ScreenProps) {
   const c = s.club;
   const prev = projectSeason(s);
   const p = prev.pending;
-  const ingresosPrev = p.taquilla + p.comercial + p.tv + p.patrocinio;
+  const ingresosPrev = p.taquilla + p.comercial + p.tv + p.patrocinio + p.abonos;
   const gastosPrev = p.salarios + p.director + p.mantenimiento + p.personal;
   const restantes = s.phase === 'fin' ? 0 : MATCHDAYS - s.matchday;
   const ocupacion = expectedAttendance(s);
@@ -85,7 +86,8 @@ export default function Resumen({ s }: ScreenProps) {
         </p>
         <table className="table money">
           <tbody>
-            <tr><td className="left">Taquilla</td><td><Money v={p.taquilla} /></td></tr>
+            {p.abonos > 0 && <tr><td className="left">Campaña de abonos</td><td><Money v={p.abonos} /></td></tr>}
+            <tr><td className="left">Taquilla (entradas sueltas)</td><td><Money v={p.taquilla} /></td></tr>
             <tr><td className="left">Tienda y bar</td><td><Money v={p.comercial} /></td></tr>
             <tr><td className="left">Televisión y patrocinio</td><td><Money v={p.tv + p.patrocinio} /></td></tr>
             <tr><td className="left">Salarios</td><td><Money v={-p.salarios} /></td></tr>

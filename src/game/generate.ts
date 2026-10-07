@@ -8,6 +8,7 @@ import { STANDING, newLand } from './land';
 import { makeStaffCandidates } from './staff';
 import { refreshSponsorOffers } from './sponsor';
 import { newCup } from './cup';
+import { defaultSeasonTickets } from './tickets';
 import { defaultIdentity, ownerTitle, type Identity } from './identity';
 import type { Level, Task } from './types';
 import { STYLE_LABEL, runDirector } from './director';
@@ -129,6 +130,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
     identity,
     cash: 180_000,
     ticketPrice: DIV_PRICE[ultima],
+    seasonTickets: { price: 0, maxShare: 0.5, sold: 0 },
     capacity: STANDING, // sin gradas: la gente ve el partido de pie
     training: 0, // sin ciudad deportiva al empezar
     academy: 0, // sin cantera al empezar
@@ -161,6 +163,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
   s.directorsMarket = makeDirectors(s, ultima);
   s.staffMarket = makeStaffCandidates(s, ultima);
   s.cup = newCup(s);
+  s.club.seasonTickets = defaultSeasonTickets(s);
   refreshSponsorOffers(s);
 
   s.messages.push({

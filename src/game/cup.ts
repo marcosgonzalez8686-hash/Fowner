@@ -6,7 +6,7 @@ import { changeMorale, injuryName, isInjured, moraleBonus, rollInjuries } from '
 import { buildReport } from './report';
 import { chance, gauss, shuffle } from './rng';
 import { staffMatchBonus } from './staff';
-import { expectedAttendance } from './season';
+import { cupAttendance } from './tickets';
 import type { GameState, Player } from './types';
 
 // Copa: eliminatoria a partido único entre 64 equipos, jugada entre semana.
@@ -196,7 +196,7 @@ function ourMatch(s: GameState, tie: CupTie, ronda: number, xiA: Player[], xiB: 
   // taquilla si jugamos en casa: la Copa atrae más, sobre todo ante equipos de más categoría
   if (tie.home === mio.id) {
     const atractivo = 1.1 + Math.max(0, mio.division - rival.division) * 0.15;
-    const asistencia = Math.round(Math.min(s.club.capacity, expectedAttendance(s) * atractivo));
+    const asistencia = cupAttendance(s, atractivo);
     const ingreso = asistencia * s.club.ticketPrice;
     s.club.cash += ingreso;
     s.club.ledger.taquilla += ingreso;

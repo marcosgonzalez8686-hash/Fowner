@@ -34,6 +34,7 @@ export interface MatchReport {
   attendance?: number;
   revenue?: number;
   label?: string; // p. ej. "Copa · Octavos"
+  abonados?: number; // abonados que fueron al campo (no pagan entrada)
   pens?: string; // tanda de penaltis (local-visitante)
 }
 

@@ -6,6 +6,7 @@ import type { SponsorContract, SponsorSlot } from './sponsor';
 import type { PendingEvent } from './events';
 import type { Objective } from './fans';
 import type { Cup } from './cup';
+import type { SeasonTickets } from './tickets';
 
 export type Pos = 'POR' | 'DEF' | 'MED' | 'DEL';
 
@@ -96,6 +97,7 @@ export interface Ledger {
   mantenimiento: number; // instalaciones
   personal: number; // empleados, multas y otros gastos
   copa: number; // premios de Copa
+  abonos: number; // campaña de abonos
 }
 
 export interface Club {
@@ -103,6 +105,7 @@ export interface Club {
   identity: Identity;
   cash: number;
   ticketPrice: number;
+  seasonTickets: SeasonTickets;
   capacity: number;
   training: number; // nivel 1-5
   academy: number; // nivel 1-5
@@ -127,6 +130,7 @@ export interface Club {
 }
 
 export interface MatchResult {
+  abonados?: number;
   home: number;
   away: number;
   hg: number;

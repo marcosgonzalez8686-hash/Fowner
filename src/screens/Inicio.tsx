@@ -14,6 +14,8 @@ import { rivalCrest } from '../game/identity';
 import { resolveEvent } from '../game/events';
 import { SlotOffers } from '../components/Sponsors';
 import { ROUND_NAMES, myCupMatchDue, myTie, playCupRound } from '../game/cup';
+import { seasonTicketForecast } from '../game/tickets';
+import { fmtMoney } from '../game/economy';
 import FansCard, { ObjectivePicker } from '../components/FansCard';
 
 function nextMatch(s: GameState) {
@@ -101,6 +103,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
     ...(myYouth(s).length
       ? [{ ok: false, texto: `Decidir ${myYouth(s).length} juvenil(es) de la cantera`, obligatoria: false, ir: () => go('equipo', 'plantilla') }]
       : []),
+    { ok: false, texto: `Campaña de abonos: ~${seasonTicketForecast(s).toLocaleString('es-ES')} abonos a ${fmtMoney(s.club.seasonTickets.price)}`, obligatoria: false, ir: () => go('finanzas', 'entradas') },
     { ok: Boolean(s.club.director), texto: 'Director deportivo (opcional)', obligatoria: false, ir: () => go('direccion', 'director') },
   ];
 

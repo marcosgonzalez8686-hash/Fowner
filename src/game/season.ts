@@ -1,11 +1,11 @@
 import {
-  DIV_FANS, DIV_LEVEL, DIV_PRICE, DIV_SPONSOR, DIV_TV, DIVISION_NAMES, DIVISIONS, MATCHDAYS, PROMOTE,
+  DIV_FANS, DIV_LEVEL, DIV_SPONSOR, DIV_TV, DIVISION_NAMES, DIVISIONS, MATCHDAYS, PROMOTE,
   SQUAD_TARGET, emptyLedger, fmtMoney, ledgerExpense, ledgerIncome, roundMoney,
 } from './economy';
 import { expireProposals, levelOf, runDirector } from './director';
 import { buildAllFixtures, makeDirectors, makePlayer } from './generate';
 import { addMessage, myTeam, mySquad, myYouth, teamById, wageBill } from './market';
-import { bestEleven, computeStandings, form, simulate } from './match';
+import { bestEleven, computeStandings, simulate } from './match';
 import { chance, clamp, gauss, rand, randInt } from './rng';
 import type { GameState, MatchResult, Player, Team } from './types';
 import { buildReport } from './report';
@@ -15,10 +15,11 @@ import {
 import { refreshSponsorOffers, sponsorFixed, sponsorPerWin, sponsorsEndSeason } from './sponsor';
 import { maybeCreateEvent } from './events';
 import { cupRoundDue, newCup, playCupRound, stillIn } from './cup';
+import { leagueAttendance, seasonTicketFansGrowth, seasonTicketLoyalty, seasonTicketsNewSeason, sellSeasonTickets } from './tickets';
 import { healOneMatchday, injuryName, isInjured, moraleAfterMatch, moraleBonus, resetSeasonMorale, rollInjuries } from './morale';
-import { changeSatisfaction, attendanceSatisfaction, fansGrowthSatisfaction, satisfactionAfterMatch, satisfactionEndSeason } from './fans';
+import { changeSatisfaction, fansGrowthSatisfaction, satisfactionAfterMatch, satisfactionEndSeason } from './fans';
 import {
-  agingFactor, attendanceBonus, commercialPerMatch, fansGrowthBonus, maintenancePerSeason,
+  agingFactor, commercialPerMatch, fansGrowthBonus, maintenancePerSeason,
 } from './land';
 
 export const creditLimit = (s: GameState) => {
@@ -29,14 +30,9 @@ export const creditLimit = (s: GameState) => {
 /** Patrocinio fijo de la temporada */
 export const sponsorFor = (s: GameState) => sponsorFixed(s);
 
-/** Asistencia esperada a un partido en casa */
+/** Asistencia total esperada a un partido de liga en casa (abonados que van + entradas vendidas) */
 export function expectedAttendance(s: GameState) {
-  const t = myTeam(s);
-  const ref = DIV_PRICE[t.division];
-  const precio = clamp(1.6 - 0.6 * (s.club.ticketPrice / ref), 0.15, 1.6);
-  const racha = form(t.id, s.fixtures[t.division]);
-  const animo = 1 + racha.reduce((a, r) => a + (r === 'G' ? 0.04 : r === 'P' ? -0.04 : 0), 0);
-  return Math.round(Math.min(s.club.capacity, t.fans * precio * animo * attendanceBonus(s) * attendanceSatisfaction(s)));
+  return leagueAttendance(s).total;
 }
 
 export function startSeason(s: GameState): string | undefined {
@@ -46,6 +42,7 @@ export function startSeason(s: GameState): string | undefined {
   // los juveniles sin decidir se van
   for (const y of myYouth(s)) { y.teamId = null; y.youth = false; }
   s.phase = 'temporada';
+  sellSeasonTickets(s);
   expireProposals(s);
   addMessage(s, {
     from: 'liga',
@@ -90,8 +87,12 @@ export function playMatchday(s: GameState) {
       f.ag = ag;
       const r: MatchResult = { home: f.home, away: f.away, hg, ag };
       if (f.home === mio.id) {
-        r.attendance = expectedAttendance(s);
-        const ingreso = r.attendance * s.club.ticketPrice;
+        // los abonados no pagan entrada: solo cuentan las entradas sueltas
+        const asis = leagueAttendance(s);
+        r.attendance = asis.total;
+        r.abonados = asis.abonados;
+        const ingreso = asis.entradas * s.club.ticketPrice;
+        changeSatisfaction(s, seasonTicketLoyalty(s), 'Ambiente de los abonados');
         const comercial = commercialPerMatch(s, r.attendance, mio.fans);
         s.club.cash += ingreso + comercial;
         s.club.ledger.taquilla += ingreso;
@@ -107,7 +108,8 @@ export function playMatchday(s: GameState) {
         );
         if (r.attendance !== undefined) {
           rep.attendance = r.attendance;
-          rep.revenue = r.attendance * s.club.ticketPrice + commercialPerMatch(s, r.attendance, mio.fans);
+          rep.abonados = r.abonados;
+          rep.revenue = (r.attendance - (r.abonados ?? 0)) * s.club.ticketPrice + commercialPerMatch(s, r.attendance, mio.fans);
         }
         s.lastReport = rep;
         // moral y afición reaccionan a nuestro resultado
@@ -282,7 +284,7 @@ export function endSeason(s: GameState) {
   }
   // la afición tiende a la media de su categoría
   for (const t of s.teams) t.fans = Math.round(t.fans * 0.85 + DIV_FANS[t.division] * 0.15 * rand(0.7, 1.3));
-  mio.fans = Math.round(mio.fans * fansGrowthBonus(s) * marketingFansBonus(s) * fansGrowthSatisfaction(s));
+  mio.fans = Math.round(mio.fans * fansGrowthBonus(s) * marketingFansBonus(s) * fansGrowthSatisfaction(s) * seasonTicketFansGrowth(s));
   const fuerzanVenta = satisfactionEndSeason(s, miPos, divAntes, mio.division);
   resetSeasonMorale(s);
 
@@ -372,6 +374,7 @@ export function endSeason(s: GameState) {
   s.fixtures = buildAllFixtures(s);
   s.directorsMarket = makeDirectors(s, mio.division);
   s.cup = newCup(s);
+  seasonTicketsNewSeason(s, mio.division !== divAntes);
   s.staffMarket = makeStaffCandidates(s, mio.division);
   s.pendingEvent = undefined;
   sponsorsEndSeason(s);

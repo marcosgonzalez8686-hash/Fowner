@@ -95,7 +95,7 @@ export default function MatchSummary({ s, r, onClose }: { s: GameState; r: Match
         {r.attendance !== undefined ? (
           <div>
             <b>👥 {r.attendance.toLocaleString('es-ES')}</b>
-            <span>espectadores · ingresos {fmtMoney(r.revenue ?? 0)}</span>
+            <span>espectadores{r.abonados ? ` (${r.abonados.toLocaleString('es-ES')} abonados)` : ''} · ingresos {fmtMoney(r.revenue ?? 0)}</span>
           </div>
         ) : (
           <div>

@@ -406,3 +406,7 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .cup-score { text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; }
 .cup-score small { font-weight: 400; color: var(--muted); font-size: 0.7rem; }
 .subtabs .seg button { font-size: 0.75rem; }
+.meter.stack { display: flex; height: 12px; }
+.meter.stack i { border-radius: 0; }
+.meter.stack i.s1 { background: var(--s1); }
+.meter.stack i.s2 { background: var(--s2); margin-left: 2px; }
