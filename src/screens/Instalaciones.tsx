@@ -8,14 +8,13 @@ import {
   nextLevelCost, parcelCost, upgrade, type BuildingKind,
 } from '../game/land';
 import { Card } from '../ui';
-import Identidad from './Identidad';
 
 // el motor 3D pesa: se descarga solo al abrir esta pantalla
 const Map3D = lazy(() => import('../components/Map3D'));
 
 const KINDS = Object.keys(BUILDINGS) as BuildingKind[];
 
-export default function Instalaciones({ s, update, notify, go }: ScreenProps) {
+export default function Instalaciones({ s, update, notify }: ScreenProps) {
   const c = s.club;
   // al entrar se selecciona el estadio, esté donde esté
   const [sel, setSel] = useState<{ x: number; y: number } | null>(() => {
@@ -178,7 +177,6 @@ export default function Instalaciones({ s, update, notify, go }: ScreenProps) {
         )}
       </Card>
 
-      <Identidad s={s} update={update} notify={notify} go={go} />
     </>
   );
 }

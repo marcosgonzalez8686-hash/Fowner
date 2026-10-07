@@ -6,6 +6,7 @@ import { newLand } from './land';
 import { makeStaffCandidates } from './staff';
 import { migrateSponsors } from './sponsor';
 import { newCup } from './cup';
+import { emptyRecords } from './history';
 import { defaultSeasonTickets } from './tickets';
 import { emptyBank, refreshInvestorOffers } from './bank';
 import type { GameState } from './types';
@@ -87,6 +88,11 @@ function migrate(s: GameState) {
   if (c.morale === undefined) c.morale = 55;
   if (!c.satLog) c.satLog = [];
   if (!c.trophies) c.trophies = [];
+  if (!c.records) {
+    c.records = emptyRecords();
+    // temporadas ya jugadas, con lo que se sabía de ellas
+    c.records.seasons = s.history.map((h) => ({ season: h.season, division: h.division, position: h.position }));
+  }
   if (!s.cup) s.cup = newCup(s);
   if (!s.incomingOffers) s.incomingOffers = [];
   if (!c.seasonTickets) c.seasonTickets = defaultSeasonTickets(s);

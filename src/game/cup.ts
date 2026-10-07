@@ -4,6 +4,7 @@ import { addMessage, myTeam, teamById } from './market';
 import { bestEleven, chooseStyle, simulate, type Formation, type Style } from './match';
 import { changeMorale, injuryName, isInjured, moraleBonus, rollInjuries } from './morale';
 import { buildReport } from './report';
+import { recordMatch } from './history';
 import { chance, gauss, shuffle } from './rng';
 import { staffMatchBonus } from './staff';
 import { cupAttendance } from './tickets';
@@ -218,6 +219,7 @@ function ourMatch(s: GameState, tie: CupTie, ronda: number, xiA: Player[], xiB: 
     addMessage(s, { from: 'club', title: `🤕 ${p.name} se lesiona en Copa`, body: `${injuryName(p.injury!)}: ${p.injury} jornada(s) de baja.` });
   }
   s.lastReport = rep;
+  recordMatch(s, rep, somosA ? xiA : xiB);
 
   const gesta = rival.division < mio.division;
   const marcador = `${gf}-${gc}${tie.pens ? ` (penaltis ${somosA ? tie.pens : tie.pens.split('-').reverse().join('-')})` : ''}`;

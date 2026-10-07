@@ -468,3 +468,19 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .feed-line.gol { font-weight: 800; background: var(--me); }
 .feed-line .min { color: var(--muted); min-width: 28px; font-variant-numeric: tabular-nums; }
 @keyframes entra { from { opacity: 0; transform: translateY(-4px); } }
+
+/* Historia */
+.club-hero { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+.trophies { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.trophy { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; padding: 10px 6px; border-radius: 12px; background: var(--me); }
+.trophy-ico { font-size: 2rem; }
+.trophy b { font-size: 0.78rem; }
+.trophy small { font-size: 0.7rem; color: var(--muted); }
+.chart .band { fill: var(--grid); }
+.table-scroll { overflow-x: auto; margin: 0 -4px; }
+.table-scroll .table { min-width: 520px; }
+.legends { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.rank { margin: 0; padding-left: 20px; font-size: 0.82rem; }
+.rank li { padding: 3px 0; border-bottom: 1px solid var(--line); }
+.rank li span { display: inline-block; max-width: calc(100% - 30px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.rank li b { float: right; font-variant-numeric: tabular-nums; }

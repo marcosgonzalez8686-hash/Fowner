@@ -9,6 +9,7 @@ import type { Cup } from './cup';
 import type { SeasonTickets } from './tickets';
 import type { BankState } from './bank';
 import type { IncomingOffer } from './offers';
+import type { Records } from './history';
 
 export type Pos = 'POR' | 'DEF' | 'MED' | 'DEL';
 
@@ -130,6 +131,7 @@ export interface Club {
   objective?: Objective; // objetivo de la temporada en curso
   satLog: { season: number; matchday: number; delta: number; text: string }[];
   trophies: { season: number; name: string }[];
+  records: Records;
   staff: Partial<Record<Role, Staff>>;
   sponsors: Partial<Record<SponsorSlot, SponsorContract>>;
   cashLog: number[]; // caja al empezar la temporada y tras cada jornada

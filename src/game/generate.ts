@@ -11,6 +11,7 @@ import { newCup } from './cup';
 import { defaultSeasonTickets } from './tickets';
 import { emptyBank, refreshInvestorOffers } from './bank';
 import { generateOffers } from './offers';
+import { emptyRecords } from './history';
 import { defaultIdentity, ownerTitle, type Identity } from './identity';
 import type { Level, Task } from './types';
 import { STYLE_LABEL, runDirector } from './director';
@@ -151,6 +152,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
     morale: 55,
     satLog: [],
     trophies: [],
+    records: emptyRecords(),
     staff: {},
     sponsors: {},
     cashLog: [180_000],

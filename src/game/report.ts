@@ -11,6 +11,7 @@ export interface MatchEvent {
   detail?: 'parada' | 'fuera' | 'palo'; // cómo acaba una ocasión
   player: string;
   assist?: string;
+  pid?: number; // id del goleador (para la historia del club)
 }
 
 export interface SideStats {
@@ -102,7 +103,7 @@ export function buildReport(
       if (!xi.length) break;
       const autor = weighted(xi, PESO_GOL);
       const asist = chance(0.7) ? weighted(xi, PESO_ASIST, autor) : undefined;
-      events.push({ min, side, type: 'gol', player: autor.name, assist: asist?.name });
+      events.push({ min, side, type: 'gol', player: autor.name, pid: autor.id, assist: asist?.name });
     }
   };
   goles(info.hg, xiHome, 'home');

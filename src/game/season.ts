@@ -7,7 +7,8 @@ import { buildAllFixtures, makeDirectors, makePlayer } from './generate';
 import { addMessage, myTeam, mySquad, myYouth, teamById, wageBill } from './market';
 import { bestEleven, chooseStyle, computeStandings, simulate } from './match';
 import { chance, clamp, gauss, rand, randInt } from './rng';
-import type { GameState, MatchResult, Player, Team } from './types';
+import type { GameState, MatchResult, Player, Standing, Team } from './types';
+import { recordMatch, recordSeason } from './history';
 import { buildReport } from './report';
 import {
   makeStaffCandidates, marketingFansBonus, scoutDiscoveries, staffAgingFactor, staffMatchBonus, staffWages, youthGrowthBonus,
@@ -119,6 +120,7 @@ export function playMatchday(s: GameState) {
           rep.revenue = (r.attendance - (r.abonados ?? 0)) * s.club.ticketPrice + commercialPerMatch(s, r.attendance, mio.fans);
         }
         s.lastReport = rep;
+        recordMatch(s, rep, once(mio.id).xi);
         // moral y afición reaccionan a nuestro resultado
         const casa = f.home === mio.id;
         const gf = casa ? hg : ag;
@@ -277,12 +279,16 @@ export function endSeason(s: GameState) {
   // 1. clasificaciones, ascensos y descensos
   const movimientos: { team: Team; to: number }[] = [];
   let miPos = 0;
+  let miFila: Standing | undefined;
   for (let d = 0; d < DIVISIONS; d++) {
     const ids = s.teams.filter((t) => t.division === d).map((t) => t.id);
     const tabla = computeStandings(ids, s.fixtures[d]);
     tabla.forEach((row, i) => {
       const t = teamById(s, row.teamId)!;
-      if (t.id === mio.id) miPos = i + 1;
+      if (t.id === mio.id) {
+        miPos = i + 1;
+        miFila = row;
+      }
       if (d > 0 && i < PROMOTE) movimientos.push({ team: t, to: d - 1 });
       if (d < DIVISIONS - 1 && i >= tabla.length - PROMOTE) movimientos.push({ team: t, to: d + 1 });
     });
@@ -293,6 +299,8 @@ export function endSeason(s: GameState) {
     m.team.division = m.to;
     m.team.fans = Math.round(m.team.fans * (sube ? 1.35 : 0.8));
   }
+  // la temporada pasa a la historia del club (y los títulos, a la sala de trofeos)
+  recordSeason(s, divAntes, mio.division, miPos, miFila);
   // la afición tiende a la media de su categoría
   for (const t of s.teams) t.fans = Math.round(t.fans * 0.85 + DIV_FANS[t.division] * 0.15 * rand(0.7, 1.3));
   mio.fans = Math.round(mio.fans * fansGrowthBonus(s) * marketingFansBonus(s) * fansGrowthSatisfaction(s) * seasonTicketFansGrowth(s));

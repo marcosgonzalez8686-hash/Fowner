@@ -20,6 +20,8 @@ import Resumen from './screens/Resumen';
 import Entradas from './screens/Entradas';
 import Banca from './screens/Banca';
 import Instalaciones from './screens/Instalaciones';
+import Historia from './screens/Historia';
+import Identidad from './screens/Identidad';
 import Tabs from './screens/Tabs';
 import Start from './screens/Start';
 
@@ -31,7 +33,7 @@ const TABS = [
   { id: 'equipo', label: 'Equipo', icon: '⚽' },
   { id: 'direccion', label: 'Dirección', icon: '💼' },
   { id: 'finanzas', label: 'Finanzas', icon: '💰' },
-  { id: 'instalaciones', label: 'Instalac.', icon: '🏟️' },
+  { id: 'instalaciones', label: 'Club', icon: '🏟️' },
 ] as const;
 export type TabId = (typeof TABS)[number]['id'];
 
@@ -41,7 +43,7 @@ const DEFAULT_SUB: Record<TabId, string> = {
   equipo: 'plantilla',
   direccion: 'director',
   finanzas: 'resumen',
-  instalaciones: '',
+  instalaciones: 'instalaciones',
 };
 
 export default function App() {
@@ -218,7 +220,20 @@ export default function App() {
               </Tabs>
             )}
 
-            {tab === 'instalaciones' && <Instalaciones {...props} />}
+            {tab === 'instalaciones' && (
+              <Tabs
+                {...subProps('instalaciones')}
+                options={[
+                  { value: 'instalaciones', label: '🏗️ Instalaciones' },
+                  { value: 'historia', label: '📜 Historia' },
+                  { value: 'identidad', label: '🛡️ Identidad' },
+                ]}
+              >
+                {sub.instalaciones === 'instalaciones' && <Instalaciones {...props} />}
+                {sub.instalaciones === 'historia' && <Historia {...props} />}
+                {sub.instalaciones === 'identidad' && <Identidad {...props} />}
+              </Tabs>
+            )}
           </>
         )}
       </main>
