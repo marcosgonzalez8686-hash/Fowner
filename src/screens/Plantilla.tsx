@@ -1,0 +1,125 @@
+import { useState } from 'react';
+import type { ScreenProps } from '../App';
+import { levelOf } from '../game/director';
+import { DIV_LEVEL, fmtMoney, roundMoney } from '../game/economy';
+import {
+  marketOpen, myTeam, mySquad, myYouth, promoteYouth, releasePlayer, renewPlayer, renewSalary, sellPlayer, sellPrice,
+  wageBill,
+} from '../game/market';
+import { FORMACION, bestEleven } from '../game/match';
+import type { Player, Pos } from '../game/types';
+import { Card, Ovr, Segmented, Sheet } from '../ui';
+
+const POS_NAME: Record<Pos, string> = { POR: 'Porteros', DEF: 'Defensas', MED: 'Centrocampistas', DEL: 'Delanteros' };
+
+export default function Plantilla({ s, update, notify }: ScreenProps) {
+  const [sel, setSel] = useState<Player | null>(null);
+  const [anos, setAnos] = useState('2');
+  const squad = mySquad(s);
+  const youth = myYouth(s);
+  const nivel = DIV_LEVEL[myTeam(s).division];
+  const { xi, strength } = bestEleven(squad);
+  const titulares = new Set(xi.map((p) => p.id));
+
+  const run = (fn: () => string | undefined | void, ok: string) => {
+    const err = fn();
+    notify(err ?? ok);
+    setSel(null);
+  };
+
+  return (
+    <>
+      <Card>
+        <div className="kpis">
+          <div><b>{squad.length}</b><span>jugadores</span></div>
+          <div><b>{strength.toFixed(1)}</b><span>media del once</span></div>
+          <div><b>{nivel}</b><span>media de la liga</span></div>
+          <div><b>{fmtMoney(wageBill(s))}</b><span>salarios/temp.</span></div>
+        </div>
+      </Card>
+
+      {youth.length > 0 && (
+        <Card title="🌱 Juveniles de la cantera">
+          <p className="muted small">
+            {levelOf(s, 'cantera') === 'manual'
+              ? 'Decide a quién subes. Los que no subas antes de la jornada 1 se marcharán.'
+              : 'El director deportivo se encarga, pero puedes decidir tú.'}
+          </p>
+          {youth.map((p) => (
+            <div key={p.id} className="player">
+              <span className="pos">{p.pos}</span>
+              <span className="name">{p.name}<small>{p.age} años · potencial {p.pot}</small></span>
+              <Ovr v={p.ovr} base={nivel} />
+              <button className="btn small primary" onClick={() => run(() => update((g) => promoteYouth(g, p.id).error), `${p.name} sube al primer equipo`)}>Subir</button>
+              <button className="btn small" onClick={() => run(() => update((g) => releasePlayer(g, p.id).error), `${p.name} se marcha`)}>✕</button>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {(Object.keys(FORMACION) as Pos[]).map((pos) => (
+        <Card key={pos} title={POS_NAME[pos]}>
+          {squad
+            .filter((p) => p.pos === pos)
+            .sort((a, b) => b.ovr - a.ovr)
+            .map((p) => (
+              <button key={p.id} className="player as-btn" onClick={() => { setSel(p); setAnos(p.age >= 31 ? '1' : '2'); }}>
+                <span className="pos">{titulares.has(p.id) ? '⭐' : ''}</span>
+                <span className="name">
+                  {p.name}
+                  <small>
+                    {p.age} años · {fmtMoney(p.salary)} · {p.contract <= 1 ? <b className="warn">acaba contrato</b> : `${p.contract} temp.`}
+                  </small>
+                </span>
+                <Ovr v={p.ovr} base={nivel} />
+              </button>
+            ))}
+        </Card>
+      ))}
+
+      {sel && (
+        <Sheet title={sel.name} onClose={() => setSel(null)}>
+          <p className="muted">
+            {sel.pos} · {sel.age} años · media {sel.ovr} · potencial {sel.pot}
+            <br />
+            Cobra {fmtMoney(sel.salary)}/temp. · contrato: {sel.contract} temp.
+          </p>
+
+          <h4>Renovar</h4>
+          <p className="small">Pide {fmtMoney(renewSalary(sel))}/temp.</p>
+          <Segmented
+            value={anos}
+            onChange={setAnos}
+            options={['1', '2', '3', '4'].map((v) => ({ value: v, label: `${v} año${v === '1' ? '' : 's'}` }))}
+          />
+          <button
+            className="btn primary full"
+            onClick={() => run(() => update((g) => renewPlayer(g, sel.id, renewSalary(sel), Number(anos)).error), 'Renovado')}
+          >
+            Renovar
+          </button>
+
+          <h4>Vender</h4>
+          {marketOpen(s) ? (
+            <button
+              className="btn full"
+              onClick={() => run(() => update((g) => sellPlayer(g, sel.id, sellPrice(sel)).error), `Vendido por ${fmtMoney(sellPrice(sel))}`)}
+            >
+              Aceptar oferta de {fmtMoney(sellPrice(sel))}
+            </button>
+          ) : (
+            <p className="small muted">El mercado está cerrado.</p>
+          )}
+
+          <h4>Rescindir</h4>
+          <button
+            className="btn danger full"
+            onClick={() => run(() => update((g) => releasePlayer(g, sel.id).error), `${sel.name} queda libre`)}
+          >
+            Rescindir (cuesta {fmtMoney(roundMoney((sel.salary * Math.max(sel.contract, 1)) / 2))})
+          </button>
+        </Sheet>
+      )}
+    </>
+  );
+}
