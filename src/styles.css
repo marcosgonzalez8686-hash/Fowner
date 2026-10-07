@@ -380,3 +380,12 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .menu-btn { width: 36px; height: 36px; font-size: 1rem; }
 .subtabs { position: static; margin-top: 0; padding: 0; }
 .subtabs .seg button { white-space: nowrap; font-size: 0.8rem; padding: 8px 2px; }
+
+/* Afición y vestuario */
+.mood { margin-bottom: 8px; }
+.mood-head { display: flex; justify-content: space-between; font-size: 0.85rem; }
+.mood .meter { margin-top: 4px; }
+.satlog { list-style: none; padding: 0; margin: 6px 0 0; font-size: 0.82rem; }
+.satlog li { padding: 3px 0; border-bottom: 1px solid var(--line); }
+.satlog span { display: inline-block; min-width: 42px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.btn.option .tag { font-weight: 600; margin-bottom: 2px; }

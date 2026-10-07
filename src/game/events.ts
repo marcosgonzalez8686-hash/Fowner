@@ -3,6 +3,8 @@ import { makePlayer } from './generate';
 import { addMessage, myTeam, mySquad } from './market';
 import { chance, pick, randInt } from './rng';
 import type { GameState } from './types';
+import { changeSatisfaction } from './fans';
+import { changeMorale } from './morale';
 
 // Eventos entre semana: de vez en cuando pasa algo y el dueño tiene que decidir
 
@@ -37,6 +39,7 @@ const caja = (s: GameState, v: number, linea: 'comercial' | 'obras' | 'personal'
 const aficion = (s: GameState, pct: number) => {
   const t = myTeam(s);
   t.fans = Math.max(100, Math.round(t.fans * (1 + pct / 100)));
+  changeSatisfaction(s, pct * 1.2, 'Decisión de la semana');
 };
 
 const TEMPLATES: Template[] = [
@@ -82,9 +85,10 @@ const TEMPLATES: Template[] = [
     apply: (s, o, d) => {
       const p = s.players.find((x) => x.id === Number(d.id));
       if (!p) return 'El jugador ya no está en el club.';
-      if (o === 0) { p.salary += Number(d.subida); return `${p.name} está contento y renueva su compromiso.`; }
-      if (chance(0.6)) { p.ovr = Math.max(20, p.ovr - 2); return `${p.name} está desmotivado: baja 2 puntos de media.`; }
-      return `${p.name} lo acepta sin protestar.`;
+      if (o === 0) { p.salary += Number(d.subida); changeMorale(s, 2); return `${p.name} está contento y renueva su compromiso.`; }
+      changeMorale(s, -4);
+      if (chance(0.6)) { p.ovr = Math.max(20, p.ovr - 2); return `${p.name} está desmotivado: baja 2 puntos de media y el vestuario lo nota.`; }
+      return `${p.name} lo acepta, aunque el vestuario no lo ve con buenos ojos.`;
     },
   },
   {
@@ -175,11 +179,13 @@ const TEMPLATES: Template[] = [
       const p = s.players.find((x) => x.id === Number(d.id));
       if (o === 0) {
         caja(s, Number(d.multa));
+        changeMorale(s, -3);
         if (p && chance(0.4)) p.ovr = Math.max(20, p.ovr - 1);
         return `Multa de ${fmtMoney(Number(d.multa))}. Mano dura en el club.`;
       }
       aficion(s, -1.5);
-      return 'El jugador pide perdón públicamente.';
+      changeMorale(s, 2);
+      return 'El jugador pide perdón públicamente y el vestuario lo agradece.';
     },
   },
   {

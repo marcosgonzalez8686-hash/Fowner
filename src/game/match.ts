@@ -26,7 +26,8 @@ export function roundRobin(teamIds: number[]): Fixture[][] {
 
 /** Once titular: los mejores de cada posición; si faltan, se cubre con otros con penalización */
 export function bestEleven(squad: Player[]): { xi: Player[]; strength: number } {
-  const disponibles = squad.filter((p) => !p.youth).sort((a, b) => b.ovr - a.ovr);
+  // los juveniles sin decidir y los lesionados no juegan
+  const disponibles = squad.filter((p) => !p.youth && !(p.injury && p.injury > 0)).sort((a, b) => b.ovr - a.ovr);
   const usados = new Set<number>();
   const xi: Player[] = [];
   let total = 0;

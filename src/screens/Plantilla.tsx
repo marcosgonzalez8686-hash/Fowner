@@ -9,6 +9,7 @@ import {
 import { FORMACION, bestEleven } from '../game/match';
 import type { Player, Pos } from '../game/types';
 import { Card, Ovr, Segmented, Sheet } from '../ui';
+import { moraleLabel } from '../game/morale';
 
 const POS_NAME: Record<Pos, string> = { POR: 'Porteros', DEF: 'Defensas', MED: 'Centrocampistas', DEL: 'Delanteros' };
 
@@ -35,7 +36,10 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
           <div><b>{strength.toFixed(1)}</b><span>media del once</span></div>
           <div><b>{nivel}</b><span>media de la liga</span></div>
           <div><b>{fmtMoney(wageBill(s))}</b><span>salarios/temp.</span></div>
+          <div><b>{moraleLabel(s.club.morale).emoji} {s.club.morale}</b><span>moral del vestuario</span></div>
+          <div><b>{squad.filter((p) => (p.injury ?? 0) > 0).length}</b><span>lesionados</span></div>
         </div>
+        <p className="small muted">⭐ titular · 🤕 lesionado (no juega hasta recuperarse)</p>
       </Card>
 
       {youth.length > 0 && (
@@ -64,10 +68,11 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
             .sort((a, b) => b.ovr - a.ovr)
             .map((p) => (
               <button key={p.id} className="player as-btn" onClick={() => { setSel(p); setAnos(p.age >= 31 ? '1' : '2'); }}>
-                <span className="pos">{titulares.has(p.id) ? '⭐' : ''}</span>
+                <span className="pos">{(p.injury ?? 0) > 0 ? '🤕' : titulares.has(p.id) ? '⭐' : ''}</span>
                 <span className="name">
                   {p.name}
                   <small>
+                    {(p.injury ?? 0) > 0 && <b className="neg">Lesionado {p.injury} j. · </b>}
                     {p.age} años · {fmtMoney(p.salary)} · {p.contract <= 1 ? <b className="warn">acaba contrato</b> : `${p.contract} temp.`}
                   </small>
                 </span>

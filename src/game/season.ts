@@ -14,6 +14,8 @@ import {
 } from './staff';
 import { refreshSponsorOffers, sponsorFixed, sponsorPerWin, sponsorsEndSeason } from './sponsor';
 import { maybeCreateEvent } from './events';
+import { healOneMatchday, injuryName, isInjured, moraleAfterMatch, moraleBonus, resetSeasonMorale, rollInjuries } from './morale';
+import { changeSatisfaction, attendanceSatisfaction, fansGrowthSatisfaction, satisfactionAfterMatch, satisfactionEndSeason } from './fans';
 import {
   agingFactor, attendanceBonus, commercialPerMatch, fansGrowthBonus, maintenancePerSeason,
 } from './land';
@@ -33,12 +35,13 @@ export function expectedAttendance(s: GameState) {
   const precio = clamp(1.6 - 0.6 * (s.club.ticketPrice / ref), 0.15, 1.6);
   const racha = form(t.id, s.fixtures[t.division]);
   const animo = 1 + racha.reduce((a, r) => a + (r === 'G' ? 0.04 : r === 'P' ? -0.04 : 0), 0);
-  return Math.round(Math.min(s.club.capacity, t.fans * precio * animo * attendanceBonus(s)));
+  return Math.round(Math.min(s.club.capacity, t.fans * precio * animo * attendanceBonus(s) * attendanceSatisfaction(s)));
 }
 
 export function startSeason(s: GameState): string | undefined {
   if (s.phase !== 'pretemporada') return;
   if (!s.club.sponsors.camiseta && s.sponsorOffers.camiseta?.length) return 'Antes de empezar, firma un patrocinador de camiseta.';
+  if (!s.club.objective) return 'Antes de empezar, fija el objetivo de la temporada.';
   // los juveniles sin decidir se van
   for (const y of myYouth(s)) { y.teamId = null; y.youth = false; }
   s.phase = 'temporada';
@@ -58,8 +61,15 @@ export function playMatchday(s: GameState) {
     if (!porEquipo.has(p.teamId)) porEquipo.set(p.teamId, []);
     porEquipo.get(p.teamId)!.push(p);
   }
-  const extra = staffMatchBonus(s);
-  const fuerza = (id: number) => bestEleven(porEquipo.get(id) ?? []).strength + (id === s.club.teamId ? extra : 0);
+  const extra = staffMatchBonus(s) + moraleBonus(s);
+  // once titular de cada equipo (sin lesionados), calculado una sola vez por jornada
+  const onces = new Map<number, ReturnType<typeof bestEleven>>();
+  const once = (id: number) => {
+    if (!onces.has(id)) onces.set(id, bestEleven(porEquipo.get(id) ?? []));
+    return onces.get(id)!;
+  };
+  const fuerza = (id: number) => once(id).strength + (id === s.club.teamId ? extra : 0);
+  const lesionadosAntes = new Set(s.players.filter((p) => isInjured(p)).map((p) => p.id));
   const mio = myTeam(s);
   const md = s.matchday;
   s.lastResults = [];
@@ -84,8 +94,8 @@ export function playMatchday(s: GameState) {
       if (f.home === mio.id || f.away === mio.id) {
         const rep = buildReport(
           { season: s.season, matchday: md + 1, home: f.home, away: f.away, hg, ag },
-          bestEleven(porEquipo.get(f.home) ?? []).xi,
-          bestEleven(porEquipo.get(f.away) ?? []).xi,
+          once(f.home).xi,
+          once(f.away).xi,
           fh,
           fa,
         );
@@ -94,6 +104,25 @@ export function playMatchday(s: GameState) {
           rep.revenue = r.attendance * s.club.ticketPrice + commercialPerMatch(s, r.attendance, mio.fans);
         }
         s.lastReport = rep;
+        // moral y afición reaccionan a nuestro resultado
+        const casa = f.home === mio.id;
+        const gf = casa ? hg : ag;
+        const gc = casa ? ag : hg;
+        moraleAfterMatch(s, gf, gc);
+        satisfactionAfterMatch(s, gf, gc, casa);
+      }
+      // lesiones de los titulares de ambos equipos
+      for (const id of [f.home, f.away]) {
+        const nuevas = rollInjuries(s, once(id).xi, id);
+        if (id !== mio.id || !nuevas.length) continue;
+        for (const p of nuevas) {
+          s.lastReport?.events.push({ min: 90, side: f.home === mio.id ? 'home' : 'away', type: 'lesion', player: `${p.name} (${p.injury} j.)` });
+          addMessage(s, {
+            from: 'club',
+            title: `🤕 ${p.name} se lesiona`,
+            body: `${injuryName(p.injury!)}: estará ${p.injury} jornada(s) de baja.`,
+          });
+        }
       }
       if (d === mio.division) s.lastResults.push(r);
       // la afición crece o baja con los resultados
@@ -136,6 +165,7 @@ export function playMatchday(s: GameState) {
     if (c.works.matchdaysLeft <= 0) finishWorks(s);
   }
 
+  healOneMatchday(s, lesionadosAntes);
   s.matchday++;
   c.cashLog.push(c.cash);
 
@@ -162,6 +192,10 @@ export function playMatchday(s: GameState) {
   expireProposals(s);
   if (s.matchday < MATCHDAYS) maybeCreateEvent(s);
 
+  if (c.satisfaction <= 5) {
+    s.gameOver = 'Los socios, hartos de la gestión, han reunido las firmas necesarias y te obligan a vender el club.';
+    return;
+  }
   if (c.cash < -creditLimit(s)) {
     s.gameOver = `La deuda (${fmtMoney(-c.cash)}) supera el límite que aceptan los bancos (${fmtMoney(creditLimit(s))}). El club entra en concurso de acreedores.`;
     return;
@@ -194,6 +228,7 @@ function finishWorks(s: GameState) {
   const w = s.club.works!;
   if (w.kind === 'estadio') {
     s.club.capacity += w.amount;
+    changeSatisfaction(s, 2, 'Estadio ampliado');
     addMessage(s, { from: 'club', title: 'Obras del estadio terminadas', body: `Nuevo aforo de «${s.club.identity.stadium}»: ${s.club.capacity.toLocaleString('es-ES')} espectadores.` });
   }
   s.club.works = null;
@@ -241,7 +276,9 @@ export function endSeason(s: GameState) {
   }
   // la afición tiende a la media de su categoría
   for (const t of s.teams) t.fans = Math.round(t.fans * 0.85 + DIV_FANS[t.division] * 0.15 * rand(0.7, 1.3));
-  mio.fans = Math.round(mio.fans * fansGrowthBonus(s) * marketingFansBonus(s));
+  mio.fans = Math.round(mio.fans * fansGrowthBonus(s) * marketingFansBonus(s) * fansGrowthSatisfaction(s));
+  const fuerzanVenta = satisfactionEndSeason(s, miPos, divAntes, mio.division);
+  resetSeasonMorale(s);
 
   // 2. jugadores: edad, evolución, retiradas y contratos
   const seVan: Player[] = [];
@@ -354,5 +391,9 @@ export function endSeason(s: GameState) {
       (levelOf(s, 'cantera') === 'manual' ? 'Decide en Plantilla a quién subes antes de empezar la liga.' : 'El director deportivo los está valorando.'),
   });
 
+  if (fuerzanVenta) {
+    s.gameOver = 'Tras una temporada decepcionante, los socios han votado en asamblea y te obligan a vender el club.';
+    return;
+  }
   runDirector(s, 'pretemporada');
 }

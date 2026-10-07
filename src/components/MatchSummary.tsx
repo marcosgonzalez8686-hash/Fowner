@@ -15,7 +15,7 @@ const FILAS: { k: keyof SideStats; label: string; pct?: boolean }[] = [
   { k: 'reds', label: 'Rojas' },
 ];
 
-const ICONO = { gol: '⚽', amarilla: '🟨', roja: '🟥' } as const;
+const ICONO = { gol: '⚽', amarilla: '🟨', roja: '🟥', lesion: '🤕' } as const;
 
 export default function MatchSummary({ s, r, onClose }: { s: GameState; r: MatchReport; onClose: () => void }) {
   const team = (id: number) => s.teams.find((t) => t.id === id)!;

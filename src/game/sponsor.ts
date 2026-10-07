@@ -3,6 +3,7 @@ import { STANDING, buildingLevel, isBuilt, sponsorBonus, type BuildingKind } fro
 import { addMessage, myTeam } from './market';
 import { clamp, rand, randInt, shuffle } from './rng';
 import { marketingSponsorBonus } from './staff';
+import { sponsorSatisfaction } from './fans';
 import type { GameState } from './types';
 
 // Patrocinios por espacios: camiseta, estadio y cada instalación construida.
@@ -88,7 +89,7 @@ function slotValue(s: GameState, slot: SponsorSlot) {
   const { level } = slotStatus(s, slot);
   const aficion = clamp(0.6 + 0.4 * (t.fans / DIV_FANS[t.division]), 0.5, 2);
   const calidad = 0.7 + 0.15 * level; // mejores instalaciones, mejores patrocinadores
-  return DIV_SPONSOR[t.division] * SLOTS[slot].weight * aficion * calidad * sponsorBonus(s) * marketingSponsorBonus(s);
+  return DIV_SPONSOR[t.division] * SLOTS[slot].weight * aficion * calidad * sponsorBonus(s) * marketingSponsorBonus(s) * sponsorSatisfaction(s);
 }
 
 function pickCompanies(s: GameState, slot: SponsorSlot, n: number) {

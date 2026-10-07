@@ -1,6 +1,7 @@
 import { COSTE_INSTALACION, NIVEL_MAX, fmtMoney, roundMoney } from './economy';
 import { addMessage } from './market';
 import { refreshSponsorOffers } from './sponsor';
+import { changeSatisfaction } from './fans';
 import type { GameState } from './types';
 
 // Terreno del club: una cuadrícula de parcelas. El estadio ocupa 2x2 en el centro
@@ -165,6 +166,7 @@ export function construct(s: GameState, k: BuildingKind, x: number, y: number): 
   else if (k === 'cantera') s.club.academy = Math.max(1, s.club.academy);
   else s.club.land.levels[k] = 1;
   addMessage(s, { from: 'club', title: `${BUILDINGS[k].name} construido`, body: `${BUILDINGS[k].help}\nCoste: ${fmtMoney(coste)}.` });
+  changeSatisfaction(s, 2, `Nueva instalación: ${BUILDINGS[k].name.toLowerCase()}`);
   // cada instalación abre un nuevo espacio para patrocinadores
   refreshSponsorOffers(s);
 }

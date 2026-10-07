@@ -4,6 +4,7 @@ import type { MatchReport } from './report';
 import type { Role, Staff } from './staff';
 import type { SponsorContract, SponsorSlot } from './sponsor';
 import type { PendingEvent } from './events';
+import type { Objective } from './fans';
 
 export type Pos = 'POR' | 'DEF' | 'MED' | 'DEL';
 
@@ -18,6 +19,7 @@ export interface Player {
   contract: number; // temporadas de contrato restantes (incluida la actual)
   teamId: number | null; // null = agente libre
   youth?: boolean; // canterano pendiente de decidir
+  injury?: number; // jornadas que le quedan de baja
   signedSeason?: number; // temporada en la que llegó al club del jugador
 }
 
@@ -111,6 +113,10 @@ export interface Club {
   ledger: Ledger; // temporada actual
   lastLedger: Ledger | null;
   land: Land;
+  satisfaction: number; // satisfacción de la afición, 0-100
+  morale: number; // moral del vestuario, 0-100
+  objective?: Objective; // objetivo de la temporada en curso
+  satLog: { season: number; matchday: number; delta: number; text: string }[];
   staff: Partial<Record<Role, Staff>>;
   sponsors: Partial<Record<SponsorSlot, SponsorContract>>;
   cashLog: number[]; // caja al empezar la temporada y tras cada jornada

@@ -6,7 +6,7 @@ import type { Player } from './types';
 export interface MatchEvent {
   min: number;
   side: 'home' | 'away';
-  type: 'gol' | 'amarilla' | 'roja';
+  type: 'gol' | 'amarilla' | 'roja' | 'lesion';
   player: string;
   assist?: string;
 }

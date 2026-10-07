@@ -9,6 +9,7 @@ import type { Task } from '../src/game/types';
 import { signOffer, type SponsorSlot } from '../src/game/sponsor';
 import { hireStaff } from '../src/game/staff';
 import { resolveEvent } from '../src/game/events';
+import { expectedObjective, setObjective } from '../src/game/fans';
 
 const modo = process.argv[2] ?? 'auto'; // auto | manual
 const temporadas = Number(process.argv[3] ?? 4);
@@ -25,6 +26,7 @@ if (modo === 'auto') {
 
 const t0 = Date.now();
 for (let temp = 0; temp < temporadas && !s.gameOver; temp++) {
+  setObjective(s, expectedObjective(s));
   startSeason(s);
   while (s.phase === 'temporada' && !s.gameOver) {
     playMatchday(s);
@@ -34,7 +36,7 @@ for (let temp = 0; temp < temporadas && !s.gameOver; temp++) {
   const l = s.club.ledger;
   console.log(
     `T${s.season} div ${myTeam(s).division} | plantilla ${mySquad(s).length} | salarios ${fmtMoney(wageBill(s))} | ` +
-    `ingresos ${fmtMoney(ledgerIncome(l))} gastos ${fmtMoney(ledgerExpense(l))} | caja ${fmtMoney(s.club.cash)} | afición ${myTeam(s).fans}`,
+    `ingresos ${fmtMoney(ledgerIncome(l))} gastos ${fmtMoney(ledgerExpense(l))} | caja ${fmtMoney(s.club.cash)} | afición ${myTeam(s).fans} | satisf ${s.club.satisfaction} moral ${s.club.morale} | lesionados ${mySquad(s).filter((p) => (p.injury ?? 0) > 0).length}`,
   );
   endSeason(s);
   // firma la oferta intermedia de cada espacio libre

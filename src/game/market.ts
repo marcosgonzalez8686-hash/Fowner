@@ -2,6 +2,9 @@ import { DIV_LEVEL, SQUAD_MAX, fairSalary, fmtMoney, playerValue, roundMoney } f
 import { newId } from './generate';
 import { pick } from './rng';
 import type { GameState, Message, Player, Team } from './types';
+import { bestEleven } from './match';
+import { changeSatisfaction } from './fans';
+import { changeMorale } from './morale';
 
 export const myTeam = (s: GameState) => s.teams.find((t) => t.id === s.club.teamId)!;
 export const teamById = (s: GameState, id: number | null) => s.teams.find((t) => t.id === id);
@@ -61,6 +64,13 @@ export function buyPlayer(s: GameState, playerId: number, fee: number, salary: n
   p.signedSeason = s.season;
   // el club vendedor repone con un jugador de su nivel
   if (vendedor) replaceForTeam(s, vendedor, p.pos);
+  // un fichaje que mejora el once ilusiona a la grada y al vestuario
+  const xi = bestEleven(mySquad(s).filter((x) => x.id !== p.id)).xi;
+  const media = xi.reduce((a, x) => a + x.ovr, 0) / Math.max(1, xi.length);
+  if (p.ovr >= media + 3) {
+    changeSatisfaction(s, 2, `Fichaje ilusionante: ${p.name}`);
+    changeMorale(s, 2);
+  }
   return { ok: true };
 }
 
@@ -86,6 +96,12 @@ export function sellPlayer(s: GameState, playerId: number, fee: number, toTeamId
   const p = s.players.find((x) => x.id === playerId && x.teamId === s.club.teamId);
   if (!p) return { ok: false, error: 'El jugador ya no está en el club.' };
   const comprador = teamById(s, toTeamId ?? null) ?? findBuyer(s, p);
+  // vender a uno de los tres mejores no gusta nada
+  const top3 = [...mySquad(s)].sort((a, b) => b.ovr - a.ovr).slice(0, 3);
+  if (top3.some((x) => x.id === p.id)) {
+    changeSatisfaction(s, -3, `Venta de ${p.name}, de los mejores`);
+    changeMorale(s, -4);
+  }
   s.club.cash += fee;
   s.club.ledger.traspasosIn += fee;
   // el comprador se queda con el jugador y suelta a otro para no inflar plantillas

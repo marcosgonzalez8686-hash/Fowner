@@ -80,6 +80,11 @@ function migrate(s: GameState) {
   if (!c.cashLog) c.cashLog = [c.cash];
   if (!c.seasonLog) c.seasonLog = [];
   if (!c.staff) c.staff = {};
+  if (c.satisfaction === undefined) c.satisfaction = 60;
+  if (c.morale === undefined) c.morale = 55;
+  if (!c.satLog) c.satLog = [];
+  // partida a mitad de temporada sin objetivo: se le pone uno moderado
+  if (s.phase !== 'pretemporada' && !c.objective) c.objective = 'mitad';
   if (c.staffBudget === undefined) c.staffBudget = 25_000;
   if (!c.delegation.empleados) c.delegation.empleados = 'manual';
   if (!s.staffMarket) s.staffMarket = makeStaffCandidates(s, s.teams.find((t) => t.id === c.teamId)!.division);

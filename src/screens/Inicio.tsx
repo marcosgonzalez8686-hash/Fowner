@@ -13,6 +13,7 @@ import KitView from '../components/KitView';
 import { rivalCrest } from '../game/identity';
 import { resolveEvent } from '../game/events';
 import { SlotOffers } from '../components/Sponsors';
+import FansCard, { ObjectivePicker } from '../components/FansCard';
 
 function nextMatch(s: GameState) {
   const t = myTeam(s);
@@ -25,7 +26,8 @@ function nextMatch(s: GameState) {
 /** Número de decisiones pendientes (para el aviso de la pestaña) */
 export function pendingCount(s: GameState) {
   const faltaCamiseta = !s.club.sponsors.camiseta && Boolean(s.sponsorOffers.camiseta?.length);
-  return (s.pendingEvent ? 1 : 0) + s.messages.filter((m) => m.status === 'pendiente').length + (faltaCamiseta ? 1 : 0);
+  const faltaObjetivo = s.phase === 'pretemporada' && !s.club.objective;
+  return (s.pendingEvent ? 1 : 0) + s.messages.filter((m) => m.status === 'pendiente').length + (faltaCamiseta ? 1 : 0) + (faltaObjetivo ? 1 : 0);
 }
 
 export default function Inicio({ s, update, notify, go }: ScreenProps) {
@@ -39,7 +41,8 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const mia = bestEleven(squadOf(s, t.id)).strength;
   const propuestas = s.messages.filter((m) => m.status === 'pendiente');
   const miUltimo = s.lastResults.find((r) => r.home === t.id || r.away === t.id);
-  const hayPendientes = Boolean(s.pendingEvent) || propuestas.length > 0 || faltaCamiseta || ofertasPendientes > 0;
+  const faltaObjetivo = s.phase === 'pretemporada' && !s.club.objective;
+  const hayPendientes = Boolean(s.pendingEvent) || propuestas.length > 0 || faltaCamiseta || ofertasPendientes > 0 || faltaObjetivo;
 
   const nosotros = prox && (
     <div className="me">
@@ -79,6 +82,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const plantilla = mySquad(s);
   const tareas = [
     { ok: !faltaCamiseta, texto: 'Firmar patrocinador de camiseta', obligatoria: true, ir: undefined },
+    { ok: !faltaObjetivo, texto: 'Fijar el objetivo de la temporada', obligatoria: true, ir: undefined },
     { ok: Boolean(s.club.staff.entrenador), texto: 'Contratar entrenador', obligatoria: false, ir: () => go('direccion', 'empleados') },
     {
       ok: plantilla.length >= 18 && plantilla.some((p) => p.pos === 'POR'),
@@ -113,7 +117,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
             </ul>
             <button
               className="btn primary big full"
-              disabled={faltaCamiseta}
+              disabled={faltaCamiseta || faltaObjetivo}
               onClick={() => {
                 const err = update((g) => startSeason(g));
                 if (err) notify(err);
@@ -190,6 +194,8 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
         </Card>
       )}
 
+      {s.phase === 'pretemporada' && <ObjectivePicker s={s} update={update} notify={notify} />}
+
       {faltaCamiseta && (
         <Card title="👕 Patrocinador de camiseta">
           <p className="small muted">
@@ -219,6 +225,8 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
           🤝 {ofertasPendientes} espacio(s) con ofertas de patrocinio sin firmar · Ver en Finanzas ›
         </button>
       )}
+
+      {s.phase !== 'pretemporada' && <FansCard s={s} goPlantilla={() => go('equipo', 'plantilla')} />}
 
       {miUltimo && (
         <Card title={`Resultados jornada ${s.matchday}`} right={<button className="link" onClick={() => go('equipo', 'liga')}>Clasificación</button>}>
