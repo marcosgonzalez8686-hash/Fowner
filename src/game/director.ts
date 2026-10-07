@@ -4,7 +4,8 @@ import {
   promoteYouth, releasePlayer, renewPlayer, renewSalary, sellPlayer, sellPrice, wageBill, willJoin,
 } from './market';
 import { FORMACION, elevenFor } from './match';
-import { ourShape, tacticsLabel } from './coach';
+import { ourShape, ourTactics, tacticsLabel } from './coach';
+import { FIT_ICON, PROFILES, TRAITS, fitBonus, fitOf } from './traits';
 import { gauss } from './rng';
 import { ownerTitle } from './identity';
 import { scoutingFactor } from './land';
@@ -54,6 +55,16 @@ function perceived(s: GameState, d: Director, p: Player) {
 
 function starters(squad: Player[], pos: Pos, forma: Record<Pos, number> = FORMACION) {
   return squad.filter((p) => p.pos === pos).sort((a, b) => b.ovr - a.ovr).slice(0, forma[pos]);
+}
+
+/** "Perfil: Extremo (✅ encaja con el 4-3-3 del entrenador). Carácter: 👑 Líder." */
+function describeProfile(s: GameState, p: Player) {
+  if (!p.profile) return '';
+  const t = ourTactics(s);
+  const f = fitOf(p, t.formation, t.style);
+  const encaje = f > 0 ? 'encaja' : f < 0 ? 'no encaja' : 'neutro';
+  const rasgos = p.traits?.length ? ` Carácter: ${p.traits.map((x) => `${TRAITS[x].icon} ${TRAITS[x].name}`).join(', ')}.` : '';
+  return `Perfil: ${PROFILES[p.profile].name} (${FIT_ICON[f]} ${encaje} con el ${t.formation} del entrenador).${rasgos}\n`;
 }
 
 function pendingFor(s: GameState, kind: Proposal['kind']) {
@@ -157,7 +168,9 @@ function doSignings(s: GameState, maxOps: number) {
       const fee = roundMoney(askingPrice(p) * rebaja);
       const salary = roundMoney(askingSalary(s, p) * rebaja);
       if (fee > presupuesto || salary > margenSalarial) continue;
-      const perc = perceived(s, d, p);
+      // también valora si encaja en el sistema del entrenador
+      const t = ourTactics(s);
+      const perc = perceived(s, d, p) + fitBonus(p, t.formation, t.style, -1);
       if (necesitaHueco ? perc < objetivo - 8 : perc < listón + 2) continue;
       const score = scoreSigning(d, p, fee + salary, perc);
       if (!mejor || score > mejor.score) mejor = { p, fee, salary, score, perc };
@@ -177,6 +190,7 @@ function doSignings(s: GameState, maxOps: number) {
       { kind: 'fichar', playerId: p.id, fee, salary, years },
       `fichar a ${p.name} (${p.pos}, ${p.ovr})`,
       `${p.name}, ${p.age} años, ${p.pos} de media ${p.ovr} (potencial ${p.pot}).\n` +
+      describeProfile(s, p) +
         `${describeMoney(fee, salary)}, ${years} temporada(s).\n` +
         `Yo le veo un nivel de ${Math.round(perc)}. ` +
         (necesitaHueco ? `Nos faltan jugadores en ${pos}.` : `Creo que mejora a nuestro titular más flojo en ${pos} (${listón}).`),

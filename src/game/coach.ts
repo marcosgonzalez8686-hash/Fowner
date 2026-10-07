@@ -5,6 +5,7 @@ import { FORMATIONS, STYLES, elevenFor, type Formation, type Style } from './mat
 import { coachSeverance, ROLES, type Staff } from './staff';
 import { pick } from './rng';
 import type { GameState, Player } from './types';
+import { fitBonus } from './traits';
 
 // El entrenador: su sistema y estilo son los que juega el equipo, tiene contrato y la grada lo juzga.
 
@@ -30,7 +31,9 @@ export function ourTactics(s: GameState) {
 /** Once que pone nuestro entrenador con su sistema */
 export function ourPlan(s: GameState, squad: Player[] = mySquad(s)) {
   const t = ourTactics(s);
-  return { ...elevenFor(squad, t.formation), ...t };
+  const coach = coachOf(s)?.id ?? 0;
+  // el entrenador alinea por rendimiento real: nivel más encaje en su sistema
+  return { ...elevenFor(squad, t.formation, (p) => p.ovr + fitBonus(p, t.formation, t.style, coach)), ...t };
 }
 
 /** Jugadores por línea que pide el sistema del entrenador */

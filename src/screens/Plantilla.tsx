@@ -13,6 +13,8 @@ import { Card, Ovr, Segmented, Sheet } from '../ui';
 import { moraleLabel } from '../game/morale';
 import { seasonAverage } from '../game/history';
 import { FormStrip, RatingBadge } from '../components/Rating';
+import { PlayerTags, ProfileDetail } from '../components/Traits';
+import { fitOf } from '../game/traits';
 import { PEAK, TREND_TEXT, persuadeVeteran, trendOf } from '../game/aging';
 
 const POS_NAME: Record<Pos, string> = { POR: 'Porteros', DEF: 'Defensas', MED: 'Centrocampistas', DEL: 'Delanteros' };
@@ -49,12 +51,18 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
           🧢 <b>{tacticsLabel(formation, style)}</b>
           <span className="muted"> · {coachOf(s) ? `el sistema de ${coachOf(s)!.name}` : 'sin entrenador, el capitán tira de lo clásico'}</span>
         </p>
+        <p className="small muted">
+          En el once: {xi.filter((p) => fitOf(p, formation, style) > 0).length} encajan ✅ ·{' '}
+          {xi.filter((p) => fitOf(p, formation, style) < 0).length} no encajan ❌ con su sistema
+        </p>
         {faltan.length > 0 && (
           <p className="hint warn-bg small">
             ⚠️ Para su {formation} faltan jugadores en: {faltan.map((pos) => POS_NAME[pos].toLowerCase()).join(', ')}. Juegan fuera de posición y rinden menos.
           </p>
         )}
-        <p className="small muted">⭐ titular · 🤕 lesionado (no juega hasta recuperarse)</p>
+        <p className="small muted">
+          ⭐ titular · 🤕 lesionado · ✅ encaja en el sistema (+2) · ➖ neutro · ❌ no encaja (−3, menos al adaptarse). Toca un jugador para ver su perfil y su carácter.
+        </p>
       </Card>
 
       {youth.length > 0 && (
@@ -91,6 +99,7 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
                     {p.retiring && <b className="warn">👴 se retira · </b>}
                     {p.age} años {TREND_TEXT[trendOf(p)].icon} · {fmtMoney(p.salary)} · {p.contract <= 1 ? <b className="warn">acaba contrato</b> : `${p.contract} temp.`}
                   </small>
+                  <PlayerTags s={s} p={p} />
                   {p.form?.length ? (
                     <small className="form-line">
                       <FormStrip form={p.form} />
@@ -129,6 +138,8 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
               )}
             </div>
           )}
+
+          <ProfileDetail s={s} p={sel} />
 
           <h4>Esta temporada</h4>
           {sel.season?.apps ? (

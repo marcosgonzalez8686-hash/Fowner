@@ -3,6 +3,7 @@ import { addMessage } from './market';
 import { chance, clamp, rand } from './rng';
 import { staffStars } from './staff';
 import type { GameState, Player } from './types';
+import { hasTrait } from './traits';
 
 // Lesiones de jugadores y moral del vestuario
 
@@ -35,7 +36,8 @@ export function rollInjuries(s: GameState, xi: Player[], teamId: number): Player
   const recuperacion = mio ? 1 - 0.1 * buildingLevel(s, 'medico') - 0.08 * staffStars(s, 'fisio') : 1;
   const nuevas: Player[] = [];
   for (const p of xi) {
-    if (isInjured(p) || !chance(prob)) continue;
+    const propension = hasTrait(p, 'fragil') ? 2 : hasTrait(p, 'profesional') ? 0.5 : 1;
+    if (isInjured(p) || !chance(prob * propension)) continue;
     p.injury = Math.max(1, Math.round(injuryLength() * clamp(recuperacion, 0.45, 1)));
     nuevas.push(p);
   }
@@ -85,6 +87,8 @@ export function changeMorale(s: GameState, delta: number) {
 export function moraleAfterMatch(s: GameState, gf: number, gc: number) {
   const delta = gf > gc ? 4 + Math.min(2, gf - gc - 1) : gf < gc ? -4 - Math.min(2, gc - gf - 1) : 1;
   changeMorale(s, delta);
+  // los líderes tiran del vestuario tras una derrota
+  if (gf < gc) changeMorale(s, Math.min(2, s.players.filter((p) => p.teamId === s.club.teamId && hasTrait(p, 'lider')).length));
   // poco a poco vuelve a su nivel normal
   changeMorale(s, (moraleRest(s) - s.club.morale) * 0.12);
 }

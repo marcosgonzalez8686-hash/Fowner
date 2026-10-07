@@ -3,6 +3,7 @@ import { addMessage, marketOpen, myTeam, mySquad, sellPlayer, teamById } from '.
 import { changeMorale } from './morale';
 import { chance, pick, rand } from './rng';
 import type { GameState, Level, Player } from './types';
+import { hasTrait } from './traits';
 
 // Ofertas de otros clubes por nuestros jugadores, con negociación.
 
@@ -46,7 +47,7 @@ export function generateOffers(s: GameState, max: number) {
     if (nuevas >= max || activas + nuevas >= MAX_ACTIVAS) break;
     // los que destacan en su categoría y los que encadenan buenas notas llaman más la atención
     const media = p.form?.length ? p.form.reduce((a, n) => a + n, 0) / p.form.length : 6;
-    const interes = 0.15 + Math.max(0, p.ovr - nivel) * 0.05 + (p.age <= 23 ? 0.1 : 0) + Math.max(0, media - 6.5) * 0.15;
+    const interes = 0.15 + Math.max(0, p.ovr - nivel) * 0.05 + (p.age <= 23 ? 0.1 : 0) + Math.max(0, media - 6.5) * 0.15 + (hasTrait(p, 'ambicioso') ? 0.1 : 0);
     if (!chance(Math.min(0.7, interes))) continue;
     const comprador = buyerFor(s, p);
     if (!comprador) continue;
@@ -59,7 +60,8 @@ export function generateOffers(s: GameState, max: number) {
       fee: roundMoney(valor * rand(0.75, 1.1) * (sube ? 1.1 : 1)),
       maxFee: roundMoney(valor * rand(0.95, 1.4) * (sube ? 1.1 : 1)),
       rounds: 0,
-      wantsToLeave: sube,
+      // el ambicioso quiere irse a cualquier club que suba de nivel o le dé minutos; el fiel nunca fuerza
+      wantsToLeave: !hasTrait(p, 'fiel') && (sube || (hasTrait(p, 'ambicioso') && comprador.division <= myTeam(s).division)),
     };
     s.incomingOffers.push(oferta);
     nuevas++;
@@ -102,6 +104,10 @@ export function rejectOffer(s: GameState, id: number): string {
   if (!o) return 'La oferta ya no está.';
   const p = s.players.find((x) => x.id === o.playerId);
   remove(s, id);
+  if (p && hasTrait(p, 'conflictivo')) {
+    changeMorale(s, -2);
+    addMessage(s, { from: 'club', title: `😤 ${p.name} no se calla`, body: 'Se entera de que has rechazado la oferta y lo cuenta en el vestuario.' });
+  }
   if (o.wantsToLeave && p) {
     changeMorale(s, -3);
     addMessage(s, { from: 'club', title: `😒 ${p.name} está molesto`, body: 'Quería dar el salto a un club de más categoría y no le has dejado.' });

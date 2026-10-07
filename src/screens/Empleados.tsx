@@ -3,6 +3,7 @@ import { fmtMoney } from '../game/economy';
 import { ROLES, ROLE_ORDER, coachSeverance, fireStaff, hireStaff, staffWages, type Role, type Staff } from '../game/staff';
 import { coachRenewal, confidenceLabel, ourPlan, renewCoach, tacticsLabel } from '../game/coach';
 import { elevenFor } from '../game/match';
+import { fitBonus, fitOf } from '../game/traits';
 import { mySquad } from '../game/market';
 import { Card, Stars } from '../ui';
 
@@ -12,7 +13,13 @@ export default function Empleados({ s, update, notify }: ScreenProps) {
   /** Sistema de un entrenador y cómo quedaría nuestro once con él */
   const sistema = (c: Staff) => {
     if (!c.formation || !c.style) return null;
-    const media = elevenFor(mySquad(s), c.formation).strength;
+    // con un entrenador nuevo nadie está adaptado; con el actual se respeta lo ya adaptado
+    const f = c.formation;
+    const st = c.style;
+    const plan = elevenFor(mySquad(s), f, (p) => p.ovr + fitBonus(p, f, st, c.id));
+    const media = plan.strength;
+    const bien = plan.xi.filter((p) => fitOf(p, f, st) > 0).length;
+    const mal = plan.xi.filter((p) => fitOf(p, f, st) < 0).length;
     const dif = media - mediaActual;
     return (
       <div className="small">
@@ -20,6 +27,7 @@ export default function Empleados({ s, update, notify }: ScreenProps) {
         {staff.entrenador && staff.entrenador.id !== c.id && Math.abs(dif) >= 0.1 && (
           <span className={dif > 0 ? 'pos' : 'neg'}> ({dif > 0 ? '+' : ''}{dif.toFixed(1)})</span>
         )}
+        <div className="muted">En su once: {bien} encajan ✅ · {mal} no encajan ❌</div>
       </div>
     );
   };

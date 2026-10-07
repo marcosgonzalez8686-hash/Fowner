@@ -53,10 +53,10 @@ export function roundRobin(teamIds: number[]): Fixture[][] {
 }
 
 /** Once titular en una formación: los mejores de cada posición; si faltan, se cubre con otros con penalización */
-export function elevenFor(squad: Player[], formation: Formation): { xi: Player[]; strength: number } {
+export function elevenFor(squad: Player[], formation: Formation, rate: (p: Player) => number = (p) => p.ovr): { xi: Player[]; strength: number } {
   const forma = FORMATIONS[formation];
   // los juveniles sin decidir y los lesionados no juegan
-  const disponibles = squad.filter((p) => !p.youth && !(p.injury && p.injury > 0)).sort((a, b) => b.ovr - a.ovr);
+  const disponibles = squad.filter((p) => !p.youth && !(p.injury && p.injury > 0)).sort((a, b) => rate(b) - rate(a));
   const usados = new Set<number>();
   const xi: Player[] = [];
   let total = 0;
@@ -65,7 +65,7 @@ export function elevenFor(squad: Player[], formation: Formation): { xi: Player[]
     for (const p of deEsa) {
       usados.add(p.id);
       xi.push(p);
-      total += p.ovr;
+      total += rate(p);
     }
     // huecos: jugador de otra posición con -12, o nadie (-30)
     for (let i = deEsa.length; i < forma[pos]; i++) {
@@ -73,7 +73,7 @@ export function elevenFor(squad: Player[], formation: Formation): { xi: Player[]
       if (suplente) {
         usados.add(suplente.id);
         xi.push(suplente);
-        total += suplente.ovr - (pos === 'POR' ? 20 : 12);
+        total += rate(suplente) - (pos === 'POR' ? 20 : 12);
       } else {
         total += 10;
       }

@@ -1,3 +1,4 @@
+import { rollIdentity } from './traits';
 import {
   DIV_FANS, DIV_LEVEL, DIV_PRICE, DIVISIONS, TEAMS_PER_DIV, emptyLedger, fairSalary,
 } from './economy';
@@ -51,6 +52,7 @@ export function makePlayer(s: GameState, level: number, opts: Partial<Player> = 
     youth: opts.youth,
   };
   p.salary = opts.salary ?? Math.round(fairSalary(p) * rand(0.85, 1.15) / 100) * 100;
+  rollIdentity(p);
   return p;
 }
 

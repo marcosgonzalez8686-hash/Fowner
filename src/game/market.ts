@@ -98,6 +98,7 @@ export function sellPlayer(s: GameState, playerId: number, fee: number, toTeamId
   const comprador = teamById(s, toTeamId ?? null) ?? findBuyer(s, p);
   // vender a uno de los tres mejores no gusta nada
   const top3 = [...mySquad(s)].sort((a, b) => b.ovr - a.ovr).slice(0, 3);
+  if (p.traits?.includes('idolo')) changeSatisfaction(s, -6, `Venta del ídolo ${p.name}`);
   if (top3.some((x) => x.id === p.id)) {
     changeSatisfaction(s, -3, `Venta de ${p.name}, de los mejores`);
     changeMorale(s, -4);
@@ -128,7 +129,9 @@ export function releasePlayer(s: GameState, playerId: number): BuyResult {
 }
 
 export function renewSalary(p: Player) {
-  return roundMoney(Math.max(p.salary * 1.1, fairSalary(p)));
+  // el ambicioso aprieta, el fiel se conforma
+  const caracter = p.traits?.includes('ambicioso') ? 1.25 : p.traits?.includes('fiel') ? 0.85 : 1;
+  return roundMoney(Math.max(p.salary * 1.1, fairSalary(p)) * caracter);
 }
 
 export function renewPlayer(s: GameState, playerId: number, salary: number, years: number): BuyResult {

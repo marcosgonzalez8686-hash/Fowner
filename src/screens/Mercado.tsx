@@ -6,6 +6,7 @@ import { askingPrice, askingSalary, buyPlayer, marketOpen, myTeam, teamById, wil
 import type { Player, Pos } from '../game/types';
 import { Card, Ovr, Segmented, Sheet } from '../ui';
 import OffersCard from '../components/OffersCard';
+import { PlayerTags, ProfileDetail } from '../components/Traits';
 
 type Filtro = 'TODOS' | Pos;
 
@@ -63,6 +64,7 @@ export default function Mercado({ s, update, notify }: ScreenProps) {
               <small>
                 {p.age} años · {p.teamId === null ? 'libre' : teamById(s, p.teamId)!.name} · {fmtMoney(askingPrice(p))}
               </small>
+              <PlayerTags s={s} p={p} />
             </span>
             <Ovr v={p.ovr} base={nivel} />
           </button>
@@ -76,6 +78,7 @@ export default function Mercado({ s, update, notify }: ScreenProps) {
             <br />
             {sel.teamId === null ? 'Agente libre' : teamById(s, sel.teamId)!.name}
           </p>
+          <ProfileDetail s={s} p={sel} fichaje />
           <div className="kpis">
             <div><b>{fmtMoney(askingPrice(sel))}</b><span>traspaso</span></div>
             <div><b>{fmtMoney(askingSalary(s, sel))}</b><span>ficha/temp.</span></div>

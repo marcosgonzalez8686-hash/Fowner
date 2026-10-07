@@ -197,7 +197,9 @@ export function maintenancePerSeason(s: GameState) {
 const lvl = buildingLevel;
 
 export function commercialPerMatch(s: GameState, attendance: number, fans: number) {
-  return Math.round(fans * 0.45 * lvl(s, 'tienda') + attendance * 1.2 * lvl(s, 'bar'));
+  // los ídolos de la grada venden camisetas aunque no haya tienda
+  const idolos = s.players.filter((p) => p.teamId === s.club.teamId && p.traits?.includes('idolo')).length;
+  return Math.round((fans * 0.45 * lvl(s, 'tienda') + attendance * 1.2 * lvl(s, 'bar')) * (1 + 0.08 * idolos) + fans * 0.1 * idolos);
 }
 
 export const attendanceBonus = (s: GameState) => 1 + 0.06 * lvl(s, 'parking');

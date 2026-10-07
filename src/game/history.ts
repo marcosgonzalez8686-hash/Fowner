@@ -5,6 +5,7 @@ import type { MatchReport } from './report';
 import type { GameState, Player, Standing } from './types';
 import { changeMorale } from './morale';
 import { chance } from './rng';
+import { adaptAfterMatch } from './traits';
 
 // Historia del club: temporadas, récords y leyendas
 
@@ -60,6 +61,7 @@ export function recordMatch(s: GameState, r: MatchReport, xi: Player[]) {
     rec.current[e.pid] = (rec.current[e.pid] ?? 0) + 1;
   }
   rateOurPlayers(s, r, lado);
+  adaptAfterMatch(s, xi.map((p) => p.id));
   const gf = lado === 'home' ? r.hg : r.ag;
   const gc = lado === 'home' ? r.ag : r.hg;
   const marca: MatchMark = { season: s.season, rival, gf, gc, label: r.label ?? `Jornada ${r.matchday}` };

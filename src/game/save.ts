@@ -5,6 +5,7 @@ import { defaultIdentity, type Crest } from './identity';
 import { newLand } from './land';
 import { makeStaffCandidates } from './staff';
 import { ensureCoach } from './coach';
+import { rollIdentity } from './traits';
 import { bestEleven } from './match';
 import { migrateSponsors } from './sponsor';
 import { newCup } from './cup';
@@ -111,6 +112,8 @@ function migrate(s: GameState) {
   // (el que ya estaba sigue con el sistema que mejor le iba a la plantilla)
   if (c.staff.entrenador) ensureCoach(c.staff.entrenador, bestEleven(s.players.filter((p) => p.teamId === c.teamId)).formation);
   for (const e of s.staffMarket.entrenador ?? []) ensureCoach(e);
+  // perfil de juego y rasgos para los jugadores de antes
+  for (const p of s.players) rollIdentity(p);
   migrateSponsors(s);
   c.ledger = { ...emptyLedger(), ...c.ledger };
   if (c.lastLedger) c.lastLedger = { ...emptyLedger(), ...c.lastLedger };

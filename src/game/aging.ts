@@ -3,6 +3,7 @@ import { changeSatisfaction } from './fans';
 import { addMessage, mySquad } from './market';
 import { chance, clamp, pick, rand, randInt } from './rng';
 import type { GameState, Player, Pos } from './types';
+import { hasTrait } from './traits';
 
 // Envejecimiento y retiradas: cada posición tiene su edad de madurez; los veteranos anuncian su adiós.
 
@@ -41,7 +42,7 @@ export function develop(p: Player, training: number, aging = 1, growth = 1) {
     p.ovr = clamp(p.ovr + randInt(-1, 1), 20, p.pot);
   } else {
     // el declive se acelera con cada año de más
-    const baja = (rand(0.5, 2) + (p.age - pico) * 0.7) * aging;
+    const baja = (rand(0.5, 2) + (p.age - pico) * 0.7) * aging * (hasTrait(p, 'profesional') ? 0.6 : 1);
     p.ovr = Math.max(20, Math.round(p.ovr - baja));
   }
   p.pot = Math.max(p.pot, p.ovr);
@@ -104,7 +105,7 @@ export function farewells(s: GameState, retirados: Player[]) {
   rec.retired ??= [];
   for (const p of retirados) {
     const h = rec.players[p.id] ?? { apps: 0, goals: 0 };
-    const leyenda = h.apps >= LEGEND_APPS;
+    const leyenda = h.apps >= (hasTrait(p, 'fiel') ? 40 : LEGEND_APPS);
     rec.retired.push({ name: p.name, pos: p.pos, season: s.season - 1, age: p.age, apps: h.apps, goals: h.goals, tribute: leyenda });
     if (!leyenda) continue;
     // partido homenaje: estadio casi lleno

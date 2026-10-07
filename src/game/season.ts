@@ -6,6 +6,7 @@ import { expireProposals, levelOf, runDirector } from './director';
 import { buildAllFixtures, makeDirectors, makePlayer } from './generate';
 import { addMessage, myTeam, mySquad, myYouth, teamById, wageBill } from './market';
 import { bestEleven, chooseStyle, computeStandings, simulate, type Formation } from './match';
+import { conflictAfterMatch, newIdols } from './traits';
 import { announceRetirements, develop, farewells, retireChance } from './aging';
 import { coachAfterMatch, coachEndSeason, ourPlan, ourTactics } from './coach';
 import { chance, clamp, gauss, rand, randInt } from './rng';
@@ -21,7 +22,7 @@ import { cupRoundDue, newCup, playCupRound, stillIn } from './cup';
 import { expireOffers, generateOffers } from './offers';
 import { payDividends, payLoans, refreshInvestorOffers } from './bank';
 import { leagueAttendance, seasonTicketFansGrowth, seasonTicketLoyalty, seasonTicketsNewSeason, sellSeasonTickets } from './tickets';
-import { healOneMatchday, injuryName, isInjured, moraleAfterMatch, moraleBonus, resetSeasonMorale, rollInjuries } from './morale';
+import { changeMorale, healOneMatchday, injuryName, isInjured, moraleAfterMatch, moraleBonus, resetSeasonMorale, rollInjuries } from './morale';
 import { changeSatisfaction, fansGrowthSatisfaction, satisfactionAfterMatch, satisfactionEndSeason } from './fans';
 import {
   agingFactor, commercialPerMatch, fansGrowthBonus, maintenancePerSeason,
@@ -130,6 +131,12 @@ export function playMatchday(s: GameState) {
         const gf = casa ? hg : ag;
         const gc = casa ? ag : hg;
         moraleAfterMatch(s, gf, gc);
+        conflictAfterMatch(
+          s,
+          once(mio.id).xi.map((p) => p.id),
+          (d) => changeMorale(s, d),
+          (title, body) => addMessage(s, { from: 'club', title, body }),
+        );
         satisfactionAfterMatch(s, gf, gc, casa);
         coachAfterMatch(s, gf, gc);
       }
@@ -308,6 +315,7 @@ export function endSeason(s: GameState) {
   const fuerzanVenta = satisfactionEndSeason(s, miPos, divAntes, mio.division);
   resetSeasonMorale(s);
   coachEndSeason(s);
+  newIdols(s, (title, body) => addMessage(s, { from: 'club', title, body }));
 
   // 2. jugadores: edad, evolución, retiradas y contratos
   const seVan: Player[] = [];

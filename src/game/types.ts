@@ -2,6 +2,7 @@ import type { Identity } from './identity';
 import type { Land } from './land';
 import type { MatchReport } from './report';
 import type { Role, Staff } from './staff';
+import type { Profile, Trait } from './traits';
 import type { SponsorContract, SponsorSlot } from './sponsor';
 import type { PendingEvent } from './events';
 import type { Objective } from './fans';
@@ -29,6 +30,9 @@ export interface Player {
   season?: { apps: number; goals: number; assists: number; ratingSum: number }; // esta temporada
   retiring?: boolean; // ha anunciado que se retira al acabar la temporada
   persuaded?: boolean; // ya se intentó convencerle de seguir
+  profile?: Profile; // perfil de juego: decide cómo encaja en el sistema del entrenador
+  traits?: Trait[]; // rasgos de personalidad
+  adapt?: { coach: number; apps: number }; // partidos jugados con el entrenador actual (adaptación al sistema)
   signedSeason?: number; // temporada en la que llegó al club del jugador
 }
 

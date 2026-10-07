@@ -499,3 +499,7 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .rating-row.mvp { background: color-mix(in srgb, #f2c230 22%, transparent); }
 .rating-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pos-mini { font-size: 0.65rem; font-weight: 700; opacity: 0.6; width: 2.2em; }
+
+/* perfil de juego y rasgos */
+.tags { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 2px; font-size: 0.72rem; color: var(--muted); }
+.tags span + span { margin-left: 0; }
