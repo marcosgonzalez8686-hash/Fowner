@@ -5,9 +5,9 @@ import {
   myTeam, mySquad, myYouth, promoteYouth, releasePlayer, teamById, wageBill,
 } from '../game/market';
 import { FORMACION } from '../game/match';
-import { coachOf, ourPlan, ourShape, tacticsLabel } from '../game/coach';
+import { coachOf, confidenceLabel, ourPlan, ourShape, tacticsLabel } from '../game/coach';
 import type { Pos } from '../game/types';
-import { Card, Ovr } from '../ui';
+import { Card, Ovr, Stars } from '../ui';
 import { moraleLabel } from '../game/morale';
 import { FormStrip } from '../components/Rating';
 import { PlayerTags } from '../components/Traits';
@@ -18,7 +18,7 @@ import { TREND_TEXT, trendOf } from '../game/aging';
 
 const POS_NAME: Record<Pos, string> = { POR: 'Porteros', DEF: 'Defensas', MED: 'Centrocampistas', DEL: 'Delanteros' };
 
-export default function Plantilla({ s, update, notify }: ScreenProps) {
+export default function Plantilla({ s, update, notify, go }: ScreenProps) {
   const { openPlayer } = useNav();
   const squad = mySquad(s);
   const youth = myYouth(s);
@@ -44,10 +44,24 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
           <div><b>{moraleLabel(s.club.morale).emoji} {s.club.morale}</b><span>moral del vestuario</span></div>
           <div><b>{squad.filter((p) => (p.injury ?? 0) > 0).length}</b><span>lesionados</span></div>
         </div>
-        <p className="small">
-          🧢 <b>{tacticsLabel(formation, style)}</b>
-          <span className="muted"> · {coachOf(s) ? `el sistema de ${coachOf(s)!.name}` : 'sin entrenador, el capitán tira de lo clásico'}</span>
-        </p>
+        {/* el entrenador decide el sistema: acceso directo a su ficha en Empleados */}
+        <button className="coach-row as-btn" onClick={() => go('direccion', 'empleados')}>
+          <span className="coach-ico" aria-hidden>🧢</span>
+          <span className="coach-info">
+            <b>{tacticsLabel(formation, style)}</b>
+            {coachOf(s) ? (
+              <small>
+                {coachOf(s)!.name} <Stars n={coachOf(s)!.stars} />
+                {' · '}
+                {confidenceLabel(coachOf(s)!.confidence ?? 60).emoji} confianza {confidenceLabel(coachOf(s)!.confidence ?? 60).text.toLowerCase()}
+                {(coachOf(s)!.contract ?? 2) <= 1 && <b className="warn"> · acaba contrato</b>}
+              </small>
+            ) : (
+              <small className="neg">Sin entrenador: el capitán tira de un 4-4-2 y el equipo rinde peor</small>
+            )}
+          </span>
+          <span className="coach-go">{coachOf(s) ? 'Entrenador ›' : 'Contratar ›'}</span>
+        </button>
         <p className="small muted">
           En el once: {xi.filter((p) => fitOf(p, formation, style) > 0).length} encajan ✅ ·{' '}
           {xi.filter((p) => fitOf(p, formation, style) < 0).length} no encajan ❌ con su sistema

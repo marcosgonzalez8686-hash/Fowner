@@ -522,3 +522,11 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .badge.dot { min-width: 9px; width: 9px; height: 9px; padding: 0; top: 6px; right: calc(50% - 16px); background: var(--brand-2); }
 .rating-name[role='button'], .pitch-player[role='button'] { cursor: pointer; }
 .sheet-bg.top { z-index: 50; }
+
+/* acceso al entrenador desde Plantilla */
+.coach-row { display: flex; align-items: center; gap: 10px; width: 100%; margin: 6px 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); text-align: left; }
+.coach-ico { font-size: 1.4rem; }
+.coach-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.coach-info small { color: var(--muted); }
+.coach-go { color: var(--brand-2); font-weight: 700; font-size: 0.85rem; white-space: nowrap; }
+.swipe-area { min-height: 60vh; }
