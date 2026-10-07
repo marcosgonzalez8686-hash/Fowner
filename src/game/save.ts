@@ -4,6 +4,7 @@ import { emptyLedger } from './economy';
 import { defaultIdentity, type Crest } from './identity';
 import { newLand } from './land';
 import { makeStaffCandidates } from './staff';
+import { migrateSponsors } from './sponsor';
 import type { GameState } from './types';
 
 export const SLOTS = [1, 2, 3] as const;
@@ -80,7 +81,7 @@ function migrate(s: GameState) {
   if (!c.seasonLog) c.seasonLog = [];
   if (!c.staff) c.staff = {};
   if (!s.staffMarket) s.staffMarket = makeStaffCandidates(s, s.teams.find((t) => t.id === c.teamId)!.division);
-  if (!s.sponsorOffers) s.sponsorOffers = [];
+  migrateSponsors(s);
   c.ledger = { ...emptyLedger(), ...c.ledger };
   if (c.lastLedger) c.lastLedger = { ...emptyLedger(), ...c.lastLedger };
 }

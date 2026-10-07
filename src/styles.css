@@ -337,3 +337,16 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .dd.current { background: var(--me); border-radius: 10px; padding: 8px 10px; border: 0; }
 .cash > span, .cash { white-space: nowrap; }
 .top > div:first-child { min-width: 0; }
+
+/* Patrocinadores */
+.sp-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); width: 100%; text-align: left; }
+.sp-row.as-btn { background: none; border-width: 0 0 1px; border-style: solid; border-color: var(--line); }
+.sp-row.as-btn:disabled { opacity: 1; }
+.sp-row.locked { opacity: 0.55; }
+.sp-ico { font-size: 1.3rem; width: 28px; text-align: center; flex: none; }
+.sp-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.sp-main small { color: var(--muted); font-size: 0.78rem; }
+.sp-main small.warn { color: #d9822b; }
+.sp-stars .stars { font-size: 0.7rem; }
+.sp-detail { padding: 6px 0 10px 38px; margin: 0; }
+.offers { padding-bottom: 8px; }

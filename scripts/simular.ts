@@ -6,7 +6,7 @@ import { mySquad, myTeam, squadOf, wageBill } from '../src/game/market';
 import { endSeason, playMatchday, startSeason } from '../src/game/season';
 import { setDelegation } from '../src/game/club';
 import type { Task } from '../src/game/types';
-import { chooseSponsor } from '../src/game/sponsor';
+import { signOffer, type SponsorSlot } from '../src/game/sponsor';
 import { hireStaff } from '../src/game/staff';
 import { resolveEvent } from '../src/game/events';
 
@@ -14,7 +14,7 @@ const modo = process.argv[2] ?? 'auto'; // auto | manual
 const temporadas = Number(process.argv[3] ?? 4);
 const s = newGame('CD Pruebas');
 // patrocinador fijo y un entrenador de nivel medio para que la simulación sea realista
-chooseSponsor(s, s.sponsorOffers[0].id);
+signOffer(s, 'camiseta', s.sponsorOffers.camiseta![0].id);
 hireStaff(s, 'entrenador', s.staffMarket.entrenador[1].id);
 
 if (modo === 'auto') {
@@ -37,7 +37,8 @@ for (let temp = 0; temp < temporadas && !s.gameOver; temp++) {
     `ingresos ${fmtMoney(ledgerIncome(l))} gastos ${fmtMoney(ledgerExpense(l))} | caja ${fmtMoney(s.club.cash)} | afición ${myTeam(s).fans}`,
   );
   endSeason(s);
-  if (s.sponsorOffers.length) chooseSponsor(s, s.sponsorOffers[0].id);
+  // firma la oferta intermedia de cada espacio libre
+  for (const [slot, ofertas] of Object.entries(s.sponsorOffers)) if (ofertas?.length) signOffer(s, slot as SponsorSlot, ofertas[1].id);
   console.log('  ', s.history.at(-1));
 }
 console.log('gameOver:', s.gameOver ?? 'no', '| tiempo', Date.now() - t0, 'ms | jugadores', s.players.length);

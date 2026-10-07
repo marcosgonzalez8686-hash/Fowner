@@ -12,8 +12,7 @@ import Crest from '../components/Crest';
 import KitView from '../components/KitView';
 import { rivalCrest } from '../game/identity';
 import { resolveEvent } from '../game/events';
-import { KIND_INFO, chooseSponsor } from '../game/sponsor';
-import { fmtMoney } from '../game/economy';
+import { SlotOffers } from '../components/Sponsors';
 
 const FROM_ICON: Record<Message['from'], string> = { director: '💼', club: '🏛️', liga: '🏆', prensa: '📰' };
 
@@ -28,6 +27,8 @@ function nextMatch(s: GameState) {
 export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const [abierto, setAbierto] = useState<number | null>(null);
   const [verResumen, setVerResumen] = useState(false);
+  const faltaCamiseta = !s.club.sponsors.camiseta && Boolean(s.sponsorOffers.camiseta?.length);
+  const ofertasPendientes = Object.values(s.sponsorOffers).filter((o) => o?.length).length;
   const t = myTeam(s);
   const prox = nextMatch(s);
   const tabla = computeStandings(s.teams.filter((x) => x.division === t.division).map((x) => x.id), s.fixtures[t.division]);
@@ -85,7 +86,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
             )}
             <button
               className="btn primary big"
-              disabled={!s.club.sponsor && s.sponsorOffers.length > 0}
+              disabled={faltaCamiseta}
               onClick={() => {
                 const err = update((g) => startSeason(g));
                 if (err) notify(err);
@@ -93,7 +94,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
             >
               Empezar temporada
             </button>
-            {!s.club.sponsor && s.sponsorOffers.length > 0 && <p className="small muted">Primero elige patrocinador ↓</p>}
+            {faltaCamiseta && <p className="small muted">Primero firma un patrocinador de camiseta ↓</p>}
           </>
         )}
         {prox && (
@@ -159,33 +160,20 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
         </Card>
       )}
 
-      {s.phase === 'pretemporada' && !s.club.sponsor && s.sponsorOffers.length > 0 && (
-        <Card title="🤝 Elige patrocinador">
-          <p className="small muted">Tres empresas quieren poner su nombre en tu camiseta. Solo puedes firmar con una.</p>
-          {s.sponsorOffers.map((o) => (
-            <div key={o.id} className="offer">
-              <div className="offer-head">
-                <b>{o.name}</b>
-                <span className="tag">{KIND_INFO[o.kind].label}</span>
-              </div>
-              <div className="small muted">{o.sector} · {KIND_INFO[o.kind].help}</div>
-              <ul className="offer-terms">
-                <li>{fmtMoney(o.fixed)} por temporada{o.seasons > 1 ? `, durante ${o.seasons} temporadas` : ''}</li>
-                {o.perWin > 0 && <li>+{fmtMoney(o.perWin)} por cada victoria</li>}
-                {o.promotionBonus > 0 && <li>+{fmtMoney(o.promotionBonus)} si ascendemos</li>}
-              </ul>
-              <button
-                className="btn primary full"
-                onClick={() => {
-                  const err = update((g) => chooseSponsor(g, o.id));
-                  notify(err ?? `Firmado con ${o.name}`);
-                }}
-              >
-                Firmar con {o.name}
-              </button>
-            </div>
-          ))}
+      {s.phase === 'pretemporada' && faltaCamiseta && (
+        <Card title="👕 Patrocinador de camiseta">
+          <p className="small muted">
+            Tres empresas quieren poner su nombre en tu camiseta. Elige una para poder empezar la temporada.
+            El resto de patrocinios están en Club → Finanzas.
+          </p>
+          <SlotOffers s={s} slot="camiseta" update={update} notify={notify} />
         </Card>
+      )}
+
+      {ofertasPendientes > 0 && !faltaCamiseta && (
+        <button className="hint as-btn full-w" onClick={() => go('club')}>
+          🤝 Tienes {ofertasPendientes} espacio(s) con ofertas de patrocinio sin firmar. Ver en Club → Finanzas ›
+        </button>
       )}
 
       {miUltimo && (

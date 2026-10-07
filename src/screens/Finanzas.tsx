@@ -5,7 +5,8 @@ import { DIV_PRICE, DIVISION_NAMES, MATCHDAYS, fmtMoney, ledgerExpense, ledgerIn
 import { projectSeason } from '../game/finance';
 import { maintenancePerSeason } from '../game/land';
 import { myTeam, wageBill } from '../game/market';
-import { creditLimit, expectedAttendance, sponsorFor } from '../game/season';
+import { creditLimit, expectedAttendance } from '../game/season';
+import Sponsors from '../components/Sponsors';
 import type { Ledger } from '../game/types';
 import { Card, Money, Stepper } from '../ui';
 
@@ -42,7 +43,7 @@ function Cuentas({ l }: { l: Ledger }) {
   );
 }
 
-export default function Finanzas({ s, update, onMenu, onDelete }: ScreenProps & { onMenu: () => void; onDelete: () => void }) {
+export default function Finanzas({ s, update, notify, onMenu, onDelete }: ScreenProps & { onMenu: () => void; onDelete: () => void }) {
   const t = myTeam(s);
   const c = s.club;
   const prev = projectSeason(s);
@@ -68,6 +69,8 @@ export default function Finanzas({ s, update, onMenu, onDelete }: ScreenProps & 
           <div><b>{fmtMoney(creditLimit(s))}</b><span>deuda máxima</span></div>
         </div>
       </Card>
+
+      <Sponsors s={s} update={update} notify={notify} />
 
       <Card title="📈 Caja de la temporada">
         <CashChart real={c.cashLog} forecast={prev.cashPath} total={MATCHDAYS} />
@@ -139,8 +142,7 @@ export default function Finanzas({ s, update, onMenu, onDelete }: ScreenProps & 
           {c.capacity.toLocaleString('es-ES')} ({fmtMoney(ocupacion * c.ticketPrice)} por partido).
         </p>
         <p className="small muted center">
-          Patrocinio{c.sponsor ? ` (${c.sponsor.name})` : ''}: {fmtMoney(sponsorFor(s))}/temp.
-          {c.sponsor?.perWin ? ` + ${fmtMoney(c.sponsor.perWin)} por victoria` : ''} · Afición: {t.fans.toLocaleString('es-ES')}
+          Afición: {t.fans.toLocaleString('es-ES')} personas
         </p>
       </Card>
 

@@ -12,7 +12,7 @@ import { buildReport } from './report';
 import {
   makeStaffCandidates, marketingFansBonus, scoutDiscoveries, staffAgingFactor, staffMatchBonus, staffWages, youthGrowthBonus,
 } from './staff';
-import { sponsorFixed, sponsorNewSeason } from './sponsor';
+import { refreshSponsorOffers, sponsorFixed, sponsorPerWin, sponsorsEndSeason } from './sponsor';
 import { maybeCreateEvent } from './events';
 import {
   agingFactor, attendanceBonus, commercialPerMatch, fansGrowthBonus, maintenancePerSeason,
@@ -38,7 +38,7 @@ export function expectedAttendance(s: GameState) {
 
 export function startSeason(s: GameState): string | undefined {
   if (s.phase !== 'pretemporada') return;
-  if (!s.club.sponsor && s.sponsorOffers.length) return 'Antes de empezar, elige patrocinador.';
+  if (!s.club.sponsors.camiseta && s.sponsorOffers.camiseta?.length) return 'Antes de empezar, firma un patrocinador de camiseta.';
   // los juveniles sin decidir se van
   for (const y of myYouth(s)) { y.teamId = null; y.youth = false; }
   s.phase = 'temporada';
@@ -121,9 +121,10 @@ export function playMatchday(s: GameState) {
 
   // prima del patrocinador por victoria
   const nuestro = s.fixtures[mio.division][md].find((f) => f.home === mio.id || f.away === mio.id);
-  if (nuestro && c.sponsor?.perWin) {
+  const prima = sponsorPerWin(s);
+  if (nuestro && prima) {
     const gana = nuestro.home === mio.id ? nuestro.hg! > nuestro.ag! : nuestro.ag! > nuestro.hg!;
-    if (gana) { c.cash += c.sponsor.perWin; c.ledger.patrocinio += c.sponsor.perWin; }
+    if (gana) { c.cash += prima; c.ledger.patrocinio += prima; }
   }
   c.ledger.tv += tv;
   c.ledger.patrocinio += patro;
@@ -196,6 +197,8 @@ function finishWorks(s: GameState) {
     addMessage(s, { from: 'club', title: 'Obras del estadio terminadas', body: `Nuevo aforo del ${s.club.identity.stadium}: ${s.club.capacity.toLocaleString('es-ES')} espectadores.` });
   }
   s.club.works = null;
+  // con gradas nuevas, el nombre del estadio ya se puede patrocinar
+  refreshSponsorOffers(s);
 }
 
 /** Evolución de un jugador al cambiar de temporada */
@@ -239,11 +242,6 @@ export function endSeason(s: GameState) {
   // la afición tiende a la media de su categoría
   for (const t of s.teams) t.fans = Math.round(t.fans * 0.85 + DIV_FANS[t.division] * 0.15 * rand(0.7, 1.3));
   mio.fans = Math.round(mio.fans * fansGrowthBonus(s) * marketingFansBonus(s));
-  // prima del patrocinador por ascenso
-  if (mio.division < divAntes && s.club.sponsor?.promotionBonus) {
-    s.club.cash += s.club.sponsor.promotionBonus;
-    s.club.ledger.patrocinio += s.club.sponsor.promotionBonus;
-  }
 
   // 2. jugadores: edad, evolución, retiradas y contratos
   const seVan: Player[] = [];
@@ -332,7 +330,7 @@ export function endSeason(s: GameState) {
   s.directorsMarket = makeDirectors(s, mio.division);
   s.staffMarket = makeStaffCandidates(s, mio.division);
   s.pendingEvent = undefined;
-  sponsorNewSeason(s);
+  sponsorsEndSeason(s);
   scoutDiscoveries(s, () => {
     const p = makePlayer(s, DIV_LEVEL[mio.division] - 6, { age: randInt(17, 20), contract: 0 });
     p.pot = clamp(p.ovr + randInt(14, 24), p.ovr, 95);

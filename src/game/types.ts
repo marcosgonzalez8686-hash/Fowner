@@ -2,7 +2,7 @@ import type { Identity } from './identity';
 import type { Land } from './land';
 import type { MatchReport } from './report';
 import type { Role, Staff } from './staff';
-import type { ActiveSponsor, SponsorDeal } from './sponsor';
+import type { SponsorContract, SponsorSlot } from './sponsor';
 import type { PendingEvent } from './events';
 
 export type Pos = 'POR' | 'DEF' | 'MED' | 'DEL';
@@ -110,7 +110,7 @@ export interface Club {
   lastLedger: Ledger | null;
   land: Land;
   staff: Partial<Record<Role, Staff>>;
-  sponsor?: ActiveSponsor;
+  sponsors: Partial<Record<SponsorSlot, SponsorContract>>;
   cashLog: number[]; // caja al empezar la temporada y tras cada jornada
   seasonLog: { season: number; division: number; ledger: Ledger; cashEnd: number }[];
 }
@@ -134,7 +134,7 @@ export interface GameState {
   club: Club;
   directorsMarket: Director[];
   staffMarket: Record<Role, Staff[]>;
-  sponsorOffers: SponsorDeal[];
+  sponsorOffers: Partial<Record<SponsorSlot, SponsorContract[]>>;
   pendingEvent?: PendingEvent;
   lastEventKey?: string;
   messages: Message[];

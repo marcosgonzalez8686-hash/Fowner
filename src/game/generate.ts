@@ -6,7 +6,7 @@ import { clubName, personName, shortName, townNames } from './names';
 import { clamp, gauss, pick, rand, randInt } from './rng';
 import { STANDING, newLand } from './land';
 import { makeStaffCandidates } from './staff';
-import { makeOffers } from './sponsor';
+import { refreshSponsorOffers } from './sponsor';
 import { defaultIdentity, ownerTitle, type Identity } from './identity';
 import type { DDStyle, Director, GameState, Player, Pos, Team } from './types';
 
@@ -76,7 +76,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, stadium
     club: null as unknown as GameState['club'],
     directorsMarket: [],
     staffMarket: {} as GameState['staffMarket'],
-    sponsorOffers: [],
+    sponsorOffers: {},
     messages: [],
     history: [],
     lastResults: [],
@@ -129,6 +129,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, stadium
     lastLedger: null,
     land: newLand(stadiumPos),
     staff: {},
+    sponsors: {},
     cashLog: [180_000],
     seasonLog: [],
   };
@@ -142,7 +143,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, stadium
   s.fixtures = buildAllFixtures(s);
   s.directorsMarket = makeDirectors(s, ultima);
   s.staffMarket = makeStaffCandidates(s, ultima);
-  s.sponsorOffers = makeOffers(s);
+  refreshSponsorOffers(s);
 
   s.messages.push({
     id: newId(s),
@@ -156,7 +157,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, stadium
       'En Club → Instalaciones puedes construir gradas, comprar terreno y levantar nuevas instalaciones.\n\n' +
       'Puedes llevarlo todo tú o contratar un director deportivo (pestaña Director) y decidir qué tareas le delegas: ' +
       'fichajes, ventas, renovaciones y cantera. Cada una puede estar en Manual, Propone y apruebas, o Automático.\n\n' +
-      'Antes de empezar, elige patrocinador en Inicio y contrata a tus empleados (Club → Empleados): sin entrenador el equipo rinde peor.',
+      'Antes de empezar, firma un patrocinador de camiseta (Club → Finanzas) y contrata a tus empleados (Club → Empleados): sin entrenador el equipo rinde peor.',
     read: false,
   });
   return s;
