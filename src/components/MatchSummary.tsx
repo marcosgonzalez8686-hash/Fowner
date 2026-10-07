@@ -24,16 +24,25 @@ export default function MatchSummary({ s, r, onClose }: { s: GameState; r: Match
   const nuestroLado = r.home === mio ? 'home' : 'away';
   const gf = nuestroLado === 'home' ? r.hg : r.ag;
   const gc = nuestroLado === 'home' ? r.ag : r.hg;
-  const titulo = gf > gc ? '¡Victoria!' : gf < gc ? 'Derrota' : 'Empate';
+  let titulo = gf > gc ? '¡Victoria!' : gf < gc ? 'Derrota' : 'Empate';
+  if (r.pens) {
+    // penaltis: la tanda está en orden local-visitante
+    const [pl, pv] = r.pens.split('-').map(Number);
+    const ganamosPen = nuestroLado === 'home' ? pl > pv : pv > pl;
+    titulo = ganamosPen ? '¡Pasamos en los penaltis!' : 'Fuera en los penaltis';
+  }
 
   return (
-    <Sheet title={`Jornada ${r.matchday} · ${titulo}`} onClose={onClose}>
+    <Sheet title={`${r.label ?? `Jornada ${r.matchday}`} · ${titulo}`} onClose={onClose}>
       <div className="scoreboard">
         <div className={r.home === mio ? 'me' : ''}>
           <Crest c={crest(r.home)} size={46} />
           <span>{team(r.home).name}</span>
         </div>
-        <div className="big-score">{r.hg} - {r.ag}</div>
+        <div className="big-score">
+          {r.hg} - {r.ag}
+          {r.pens && <small className="pens">penaltis {r.pens}</small>}
+        </div>
         <div className={r.away === mio ? 'me' : ''}>
           <Crest c={crest(r.away)} size={46} />
           <span>{team(r.away).name}</span>

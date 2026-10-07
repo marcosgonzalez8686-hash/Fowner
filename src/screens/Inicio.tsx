@@ -13,6 +13,7 @@ import KitView from '../components/KitView';
 import { rivalCrest } from '../game/identity';
 import { resolveEvent } from '../game/events';
 import { SlotOffers } from '../components/Sponsors';
+import { ROUND_NAMES, myCupMatchDue, myTie, playCupRound } from '../game/cup';
 import FansCard, { ObjectivePicker } from '../components/FansCard';
 
 function nextMatch(s: GameState) {
@@ -35,7 +36,8 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const faltaCamiseta = !s.club.sponsors.camiseta && Boolean(s.sponsorOffers.camiseta?.length);
   const ofertasPendientes = Object.entries(s.sponsorOffers).filter(([k, o]) => o?.length && k !== 'camiseta').length;
   const t = myTeam(s);
-  const prox = nextMatch(s);
+  const copaAhora = myCupMatchDue(s);
+  const prox = copaAhora ? null : nextMatch(s);
   const tabla = computeStandings(s.teams.filter((x) => x.division === t.division).map((x) => x.id), s.fixtures[t.division]);
   const pos = tabla.findIndex((r) => r.teamId === t.id) + 1;
   const mia = bestEleven(squadOf(s, t.id)).strength;
@@ -62,6 +64,12 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
     update((g) => playMatchday(g));
     setVerResumen(true);
   };
+  const jugarCopa = () => {
+    update((g) => playCupRound(g));
+    setVerResumen(true);
+  };
+  const tieCopa = copaAhora ? myTie(s) : undefined;
+  const rivalCopa = tieCopa ? teamById(s, tieCopa.a === t.id ? tieCopa.b : tieCopa.a)! : undefined;
 
   const responder = (m: Message, aprobar: boolean) => {
     const err = update((g) => {
@@ -125,6 +133,29 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
             >
               Empezar temporada
             </button>
+          </>
+        )}
+        {tieCopa && rivalCopa && (
+          <>
+            <div className="match-head">
+              <span className="cup-badge">🏆 Copa · {ROUND_NAMES[s.cup.current]}</span>
+              <button className="link" onClick={() => go('equipo', 'copa')}>Cuadro ›</button>
+            </div>
+            <div className="versus">
+              {tieCopa.home === rivalCopa.id ? <><div><Crest c={rivalCrest(rivalCopa.id, rivalCopa.short)} size={44} /><div>{rivalCopa.name}</div></div><div className="vs">vs</div><div className="me"><Crest c={s.club.identity.crest} size={44} /><div>{t.name}</div></div></>
+                : <><div className="me"><Crest c={s.club.identity.crest} size={44} /><div>{t.name}</div></div><div className="vs">vs</div><div><Crest c={rivalCrest(rivalCopa.id, rivalCopa.short)} size={44} /><div>{rivalCopa.name}</div></div></>}
+            </div>
+            <p className="muted center small">
+              Partido entre semana · {rivalCopa.name} juega en {rivalCopa.division + 1}ª división ·{' '}
+              {tieCopa.home === t.id ? 'en casa' : tieCopa.home === null ? 'campo neutral' : 'a domicilio'}
+              {rivalCopa.division < t.division && ' · ¡ocasión para una gesta!'}
+            </p>
+            <div className="row">
+              <button className="btn primary big grow cup-btn" onClick={jugarCopa} disabled={Boolean(s.pendingEvent)}>
+                🏆 Jugar partido de Copa
+              </button>
+            </div>
+            {s.pendingEvent && <p className="small muted center">Decide antes qué hacer con el asunto de esta semana ↓</p>}
           </>
         )}
         {prox && (

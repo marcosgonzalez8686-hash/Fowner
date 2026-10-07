@@ -33,6 +33,8 @@ export interface MatchReport {
   mvp: { name: string; side: 'home' | 'away'; rating: number };
   attendance?: number;
   revenue?: number;
+  label?: string; // p. ej. "Copa · Octavos"
+  pens?: string; // tanda de penaltis (local-visitante)
 }
 
 const PESO_GOL: Record<Player['pos'], number> = { POR: 0.02, DEF: 0.8, MED: 2.2, DEL: 5 };

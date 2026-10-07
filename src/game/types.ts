@@ -5,6 +5,7 @@ import type { Role, Staff } from './staff';
 import type { SponsorContract, SponsorSlot } from './sponsor';
 import type { PendingEvent } from './events';
 import type { Objective } from './fans';
+import type { Cup } from './cup';
 
 export type Pos = 'POR' | 'DEF' | 'MED' | 'DEL';
 
@@ -94,6 +95,7 @@ export interface Ledger {
   comercial: number; // tienda y bar
   mantenimiento: number; // instalaciones
   personal: number; // empleados, multas y otros gastos
+  copa: number; // premios de Copa
 }
 
 export interface Club {
@@ -117,6 +119,7 @@ export interface Club {
   morale: number; // moral del vestuario, 0-100
   objective?: Objective; // objetivo de la temporada en curso
   satLog: { season: number; matchday: number; delta: number; text: string }[];
+  trophies: { season: number; name: string }[];
   staff: Partial<Record<Role, Staff>>;
   sponsors: Partial<Record<SponsorSlot, SponsorContract>>;
   cashLog: number[]; // caja al empezar la temporada y tras cada jornada
@@ -144,6 +147,7 @@ export interface GameState {
   staffMarket: Record<Role, Staff[]>;
   sponsorOffers: Partial<Record<SponsorSlot, SponsorContract[]>>;
   pendingEvent?: PendingEvent;
+  cup: Cup;
   lastEventKey?: string;
   messages: Message[];
   history: { season: number; division: number; position: number }[];

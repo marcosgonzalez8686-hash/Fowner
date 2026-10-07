@@ -7,6 +7,7 @@ import { clamp, gauss, pick, rand, randInt } from './rng';
 import { STANDING, newLand } from './land';
 import { makeStaffCandidates } from './staff';
 import { refreshSponsorOffers } from './sponsor';
+import { newCup } from './cup';
 import { defaultIdentity, ownerTitle, type Identity } from './identity';
 import type { Level, Task } from './types';
 import { STYLE_LABEL, runDirector } from './director';
@@ -87,6 +88,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
     directorsMarket: [],
     staffMarket: {} as GameState['staffMarket'],
     sponsorOffers: {},
+    cup: null as unknown as GameState['cup'],
     messages: [],
     history: [],
     lastResults: [],
@@ -142,6 +144,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
     satisfaction: 60,
     morale: 55,
     satLog: [],
+    trophies: [],
     staff: {},
     sponsors: {},
     cashLog: [180_000],
@@ -157,6 +160,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
   s.fixtures = buildAllFixtures(s);
   s.directorsMarket = makeDirectors(s, ultima);
   s.staffMarket = makeStaffCandidates(s, ultima);
+  s.cup = newCup(s);
   refreshSponsorOffers(s);
 
   s.messages.push({

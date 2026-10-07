@@ -10,6 +10,7 @@ import Bandeja, { unreadCount } from './components/Bandeja';
 import Sponsors from './components/Sponsors';
 import Inicio, { pendingCount } from './screens/Inicio';
 import Liga from './screens/Liga';
+import Copa from './screens/Copa';
 import Plantilla from './screens/Plantilla';
 import Mercado from './screens/Mercado';
 import DirectorScreen from './screens/Director';
@@ -173,12 +174,14 @@ export default function App() {
                 options={[
                   { value: 'plantilla', label: '👕 Plantilla' },
                   { value: 'mercado', label: marketOpen(state) ? '🔁 Mercado' : '🔒 Mercado' },
-                  { value: 'liga', label: '🏆 Liga' },
+                  { value: 'liga', label: '📊 Liga' },
+                  { value: 'copa', label: '🏆 Copa' },
                 ]}
               >
                 {sub.equipo === 'plantilla' && <Plantilla {...props} />}
                 {sub.equipo === 'mercado' && <Mercado {...props} />}
                 {sub.equipo === 'liga' && <Liga {...props} />}
+                {sub.equipo === 'copa' && <Copa {...props} />}
               </Tabs>
             )}
 

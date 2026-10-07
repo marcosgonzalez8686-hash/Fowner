@@ -14,6 +14,7 @@ import {
 } from './staff';
 import { refreshSponsorOffers, sponsorFixed, sponsorPerWin, sponsorsEndSeason } from './sponsor';
 import { maybeCreateEvent } from './events';
+import { cupRoundDue, newCup, playCupRound, stillIn } from './cup';
 import { healOneMatchday, injuryName, isInjured, moraleAfterMatch, moraleBonus, resetSeasonMorale, rollInjuries } from './morale';
 import { changeSatisfaction, attendanceSatisfaction, fansGrowthSatisfaction, satisfactionAfterMatch, satisfactionEndSeason } from './fans';
 import {
@@ -55,6 +56,11 @@ export function startSeason(s: GameState): string | undefined {
 
 export function playMatchday(s: GameState) {
   if (s.phase !== 'temporada' || s.gameOver) return;
+  // si toca Copa: la nuestra se juega aparte; si ya estamos eliminados, se simula sola
+  while (cupRoundDue(s)) {
+    if (stillIn(s)) return;
+    playCupRound(s);
+  }
   const porEquipo = new Map<number, Player[]>();
   for (const p of s.players) {
     if (p.teamId === null) continue;
@@ -365,6 +371,7 @@ export function endSeason(s: GameState) {
   s.phase = 'pretemporada';
   s.fixtures = buildAllFixtures(s);
   s.directorsMarket = makeDirectors(s, mio.division);
+  s.cup = newCup(s);
   s.staffMarket = makeStaffCandidates(s, mio.division);
   s.pendingEvent = undefined;
   sponsorsEndSeason(s);

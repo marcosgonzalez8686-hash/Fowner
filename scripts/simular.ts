@@ -10,6 +10,7 @@ import { signOffer, type SponsorSlot } from '../src/game/sponsor';
 import { hireStaff } from '../src/game/staff';
 import { resolveEvent } from '../src/game/events';
 import { expectedObjective, setObjective } from '../src/game/fans';
+import { myCupMatchDue, playCupRound, ROUND_NAMES } from '../src/game/cup';
 
 const modo = process.argv[2] ?? 'auto'; // auto | manual
 const temporadas = Number(process.argv[3] ?? 4);
@@ -29,6 +30,7 @@ for (let temp = 0; temp < temporadas && !s.gameOver; temp++) {
   setObjective(s, expectedObjective(s));
   startSeason(s);
   while (s.phase === 'temporada' && !s.gameOver) {
+    if (myCupMatchDue(s)) playCupRound(s);
     playMatchday(s);
     if (s.pendingEvent) resolveEvent(s, 0);
   }
@@ -38,6 +40,8 @@ for (let temp = 0; temp < temporadas && !s.gameOver; temp++) {
     `T${s.season} div ${myTeam(s).division} | plantilla ${mySquad(s).length} | salarios ${fmtMoney(wageBill(s))} | ` +
     `ingresos ${fmtMoney(ledgerIncome(l))} gastos ${fmtMoney(ledgerExpense(l))} | caja ${fmtMoney(s.club.cash)} | afición ${myTeam(s).fans} | satisf ${s.club.satisfaction} moral ${s.club.morale} | lesionados ${mySquad(s).filter((p) => (p.injury ?? 0) > 0).length}`,
   );
+  const copa = s.cup.rounds.findIndex((r) => r.some((t) => (t.a === s.club.teamId || t.b === s.club.teamId) && t.winner !== s.club.teamId));
+  console.log('   copa:', copa === -1 ? 'CAMPEÓN' : `eliminado en ${ROUND_NAMES[copa]}`, '| campeón', s.teams.find((t) => t.id === s.cup.champion)?.name, '| premios', s.club.ledger.copa);
   endSeason(s);
   // firma la oferta intermedia de cada espacio libre
   for (const [slot, ofertas] of Object.entries(s.sponsorOffers)) if (ofertas?.length) signOffer(s, slot as SponsorSlot, ofertas[1].id);

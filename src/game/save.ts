@@ -5,6 +5,7 @@ import { defaultIdentity, type Crest } from './identity';
 import { newLand } from './land';
 import { makeStaffCandidates } from './staff';
 import { migrateSponsors } from './sponsor';
+import { newCup } from './cup';
 import type { GameState } from './types';
 
 export const SLOTS = [1, 2, 3] as const;
@@ -83,6 +84,8 @@ function migrate(s: GameState) {
   if (c.satisfaction === undefined) c.satisfaction = 60;
   if (c.morale === undefined) c.morale = 55;
   if (!c.satLog) c.satLog = [];
+  if (!c.trophies) c.trophies = [];
+  if (!s.cup) s.cup = newCup(s);
   // partida a mitad de temporada sin objetivo: se le pone uno moderado
   if (s.phase !== 'pretemporada' && !c.objective) c.objective = 'mitad';
   if (c.staffBudget === undefined) c.staffBudget = 25_000;

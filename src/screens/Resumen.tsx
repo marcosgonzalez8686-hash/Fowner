@@ -14,6 +14,7 @@ const LINEAS: { k: keyof Ledger; label: string; gasto?: boolean }[] = [
   { k: 'tv', label: 'Televisión' },
   { k: 'patrocinio', label: 'Patrocinio' },
   { k: 'traspasosIn', label: 'Ventas' },
+  { k: 'copa', label: 'Premios de Copa' },
   { k: 'salarios', label: 'Salarios', gasto: true },
   { k: 'director', label: 'Director dep.', gasto: true },
   { k: 'mantenimiento', label: 'Mantenimiento', gasto: true },

@@ -389,3 +389,20 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .satlog li { padding: 3px 0; border-bottom: 1px solid var(--line); }
 .satlog span { display: inline-block; min-width: 42px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .btn.option .tag { font-weight: 600; margin-bottom: 2px; }
+
+/* Copa */
+.cup-badge { font-weight: 700; color: #b8860b; }
+@media (prefers-color-scheme: dark) { .cup-badge { color: var(--accent); } }
+.btn.primary.cup-btn { background: #b8860b; border-color: #b8860b; }
+.big-score .pens { display: block; font-size: 0.8rem; font-weight: 600; letter-spacing: 0; color: var(--muted); }
+.cup-tie { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 0.82rem; }
+.cup-tie.mine { background: var(--me); border-radius: 8px; padding: 6px; }
+.cup-tie > .cup-team:last-child { justify-content: flex-end; text-align: right; flex-direction: row-reverse; }
+.cup-team { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.cup-team .cup-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cup-team small { color: var(--muted); }
+.cup-team.me { font-weight: 700; }
+.cup-team.out { opacity: 0.45; }
+.cup-score { text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; }
+.cup-score small { font-weight: 400; color: var(--muted); font-size: 0.7rem; }
+.subtabs .seg button { font-size: 0.75rem; }
