@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { DIVISION_NAMES } from './game/economy';
 import { newGame } from './game/generate';
 import { myTeam } from './game/market';
-import { deleteGame, loadGame, saveGame } from './game/save';
+import { deleteGame, loadGame, saveGame, type Slot } from './game/save';
 import type { GameState } from './game/types';
 import { Money } from './ui';
 import Inicio from './screens/Inicio';
@@ -26,21 +26,23 @@ const TABS = [
 type TabId = (typeof TABS)[number]['id'];
 
 export default function App() {
-  const [state, setState] = useState<GameState | null>(() => loadGame());
+  // al entrar siempre se muestra el menú de partidas
+  const [slot, setSlot] = useState<Slot | null>(null);
+  const [state, setState] = useState<GameState | null>(null);
   const [tab, setTab] = useState<TabId>('inicio');
   const [toast, setToast] = useState<string | null>(null);
 
   // Todas las acciones trabajan sobre una copia y la guardan en el móvil
   const update: Update = useCallback(
     (fn) => {
-      if (!state) return;
+      if (!state || !slot) return;
       const copia = structuredClone(state);
       const result = fn(copia);
-      saveGame(copia);
+      if (!saveGame(slot, copia)) setToast('⚠️ No se ha podido guardar la partida en este navegador');
       setState(copia);
       return result;
     },
-    [state],
+    [state, slot],
   );
 
   useEffect(() => {
@@ -49,12 +51,28 @@ export default function App() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  if (!state) {
+  const salirAlMenu = () => {
+    setState(null);
+    setSlot(null);
+  };
+
+  if (!state || !slot) {
     return (
       <Start
-        onStart={(nombre) => {
+        onNew={(n, nombre) => {
           const s = newGame(nombre);
-          saveGame(s);
+          saveGame(n, s);
+          setSlot(n);
+          setState(s);
+          setTab('inicio');
+        }}
+        onLoad={(n) => {
+          const s = loadGame(n);
+          if (!s) {
+            alert('No se ha podido cargar esta partida.');
+            return;
+          }
+          setSlot(n);
           setState(s);
           setTab('inicio');
         }}
@@ -76,9 +94,14 @@ export default function App() {
             {state.phase === 'pretemporada' ? 'Pretemporada' : `J${state.matchday}/38`}
           </div>
         </div>
-        <div className="cash">
-          <div className="sub">Caja</div>
-          <Money v={state.club.cash} />
+        <div className="top-right">
+          <div className="cash">
+            <div className="sub">Caja</div>
+            <Money v={state.club.cash} />
+          </div>
+          <button className="menu-btn" onClick={salirAlMenu} aria-label="Menú de partidas" title="Menú de partidas">
+            ☰
+          </button>
         </div>
       </header>
 
@@ -90,11 +113,14 @@ export default function App() {
             <button
               className="btn primary"
               onClick={() => {
-                deleteGame();
-                setState(null);
+                deleteGame(slot);
+                salirAlMenu();
               }}
             >
-              Empezar de nuevo
+              Borrar partida y volver al menú
+            </button>
+            <button className="btn full" onClick={salirAlMenu}>
+              Volver al menú
             </button>
           </div>
         ) : (
@@ -106,9 +132,10 @@ export default function App() {
             {tab === 'club' && (
               <ClubScreen
                 {...props}
-                onQuit={() => {
-                  deleteGame();
-                  setState(null);
+                onMenu={salirAlMenu}
+                onDelete={() => {
+                  deleteGame(slot);
+                  salirAlMenu();
                 }}
               />
             )}

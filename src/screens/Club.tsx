@@ -41,7 +41,7 @@ const FACILITY_INFO = {
   academy: { label: 'Cantera', help: 'Salen juveniles mejores y con más potencial.' },
 } as const;
 
-export default function ClubScreen({ s, update, notify, onQuit }: ScreenProps & { onQuit: () => void }) {
+export default function ClubScreen({ s, update, notify, onMenu, onDelete }: ScreenProps & { onMenu: () => void; onDelete: () => void }) {
   const t = myTeam(s);
   const c = s.club;
   const ampliaciones = [250, 1000, 5000];
@@ -133,13 +133,16 @@ export default function ClubScreen({ s, update, notify, onQuit }: ScreenProps & 
         <p className="small muted center">Salarios actuales: {fmtMoney(wageBill(s))}/temp.</p>
       </Card>
 
+      <button className="btn full" onClick={onMenu}>
+        Volver al menú de partidas
+      </button>
       <button
         className="btn danger full"
         onClick={() => {
-          if (confirm('¿Seguro? Se borrará la partida guardada.')) onQuit();
+          if (confirm('¿Seguro? Se borrará esta partida y no se puede deshacer.')) onDelete();
         }}
       >
-        Vender el club y empezar de cero
+        Vender el club (borrar esta partida)
       </button>
     </>
   );
