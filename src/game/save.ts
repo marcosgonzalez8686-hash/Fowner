@@ -1,5 +1,6 @@
 import { DIVISION_NAMES } from './economy';
 import { SAVE_VERSION } from './generate';
+import { defaultIdentity, type Crest } from './identity';
 import type { GameState } from './types';
 
 export const SLOTS = [1, 2, 3] as const;
@@ -15,6 +16,7 @@ export interface SlotMeta {
   cash: number;
   gameOver: boolean;
   savedAt: number;
+  crest?: Crest;
 }
 
 const gameKey = (n: Slot) => `fowner-partida-${n}`;
@@ -32,6 +34,7 @@ function metaOf(s: GameState): SlotMeta {
     cash: s.club.cash,
     gameOver: Boolean(s.gameOver),
     savedAt: Date.now(),
+    crest: s.club.identity?.crest,
   };
 }
 
@@ -70,7 +73,10 @@ export function loadGame(slot: Slot): GameState | null {
     const raw = localStorage.getItem(gameKey(slot));
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === SAVE_VERSION ? s : null;
+    if (s.version !== SAVE_VERSION) return null;
+    // partidas anteriores a la identidad del club
+    if (!s.club.identity) s.club.identity = defaultIdentity(s.teams.find((t) => t.id === s.club.teamId)?.name);
+    return s;
   } catch {
     return null;
   }

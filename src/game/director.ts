@@ -5,6 +5,7 @@ import {
 } from './market';
 import { FORMACION } from './match';
 import { gauss } from './rng';
+import { ownerTitle } from './identity';
 import type { Director, GameState, Level, Player, Pos, Proposal, Task } from './types';
 
 export const TASK_LABEL: Record<Task, string> = {
@@ -285,7 +286,7 @@ export function hireDirector(s: GameState, id: number) {
   addMessage(s, {
     from: 'director',
     title: `${d.name} es el nuevo director deportivo`,
-    body: `Encantado, presidente. Mi estilo: ${STYLE_LABEL[d.style].toLowerCase()}. Dime qué tareas me encargas en la pestaña Director.`,
+    body: `Encantado, ${ownerTitle(s.club.identity)}. Mi estilo: ${STYLE_LABEL[d.style].toLowerCase()}. Dime qué tareas me encargas en la pestaña Director.`,
   });
   runDirector(s, 'cambio');
 }

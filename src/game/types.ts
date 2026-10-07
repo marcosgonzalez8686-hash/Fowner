@@ -1,3 +1,5 @@
+import type { Identity } from './identity';
+
 export type Pos = 'POR' | 'DEF' | 'MED' | 'DEL';
 
 export interface Player {
@@ -85,6 +87,7 @@ export interface Ledger {
 
 export interface Club {
   teamId: number;
+  identity: Identity;
   cash: number;
   ticketPrice: number;
   capacity: number;

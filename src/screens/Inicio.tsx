@@ -7,6 +7,9 @@ import { bestEleven, computeStandings, form } from '../game/match';
 import { endSeason, playMatchday, startSeason } from '../game/season';
 import type { GameState, Message } from '../game/types';
 import { Card } from '../ui';
+import Crest from '../components/Crest';
+import KitView from '../components/KitView';
+import { rivalCrest } from '../game/identity';
 
 const FROM_ICON: Record<Message['from'], string> = { director: '💼', club: '🏛️', liga: '🏆', prensa: '📰' };
 
@@ -28,6 +31,19 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const pendientes = s.messages.filter((m) => m.status === 'pendiente');
   const resto = s.messages.filter((m) => m.status !== 'pendiente').slice(0, 25);
   const miUltimo = s.lastResults.find((r) => r.home === t.id || r.away === t.id);
+
+  const nosotros = prox && (
+    <div className="me">
+      <Crest c={s.club.identity.crest} size={44} />
+      <div>{t.name}</div>
+    </div>
+  );
+  const ellos = prox && (
+    <div>
+      <Crest c={rivalCrest(prox.rival.id, prox.rival.short)} size={44} />
+      <div>{prox.rival.name}</div>
+    </div>
+  );
 
   const jugar = (n: number) => {
     update((g) => {
@@ -75,9 +91,15 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
               <span className="muted">{pos}º en la liga</span>
             </div>
             <div className="versus">
-              <div className={prox.casa ? 'me' : ''}>{prox.casa ? t.name : prox.rival.name}</div>
+              {prox.casa ? nosotros : ellos}
               <div className="vs">vs</div>
-              <div className={!prox.casa ? 'me' : ''}>{prox.casa ? prox.rival.name : t.name}</div>
+              {prox.casa ? ellos : nosotros}
+            </div>
+            <div className="kit-line">
+              <KitView k={prox.casa ? s.club.identity.home : s.club.identity.away} size={26} />
+              <span className="muted small">
+                {prox.casa ? `En casa, en el ${s.club.identity.stadium}, con la titular` : 'Fuera de casa, con la suplente'}
+              </span>
             </div>
             <p className="muted center">
               Nuestro once: {mia.toFixed(1)} · Rival: {bestEleven(squadOf(s, prox.rival.id)).strength.toFixed(1)}
@@ -116,7 +138,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
                   <span className="score">{r.hg} - {r.ag}</span>
                   <span className="a">{teamById(s, r.away)!.name}</span>
                   {mine && r.attendance !== undefined && (
-                    <span className="att">👥 {r.attendance.toLocaleString('es-ES')} espectadores</span>
+                    <span className="att">👥 {r.attendance.toLocaleString('es-ES')} espectadores en el {s.club.identity.stadium}</span>
                   )}
                 </li>
               );

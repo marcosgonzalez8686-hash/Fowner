@@ -5,6 +5,7 @@ import { myTeam, wageBill } from '../game/market';
 import { creditLimit, expectedAttendance, sponsorFor } from '../game/season';
 import type { Ledger } from '../game/types';
 import { Card, Money, Stepper } from '../ui';
+import Identidad from './Identidad';
 
 const LINEAS: { k: keyof Ledger; label: string; gasto?: boolean }[] = [
   { k: 'taquilla', label: 'Taquilla' },
@@ -41,7 +42,7 @@ const FACILITY_INFO = {
   academy: { label: 'Cantera', help: 'Salen juveniles mejores y con más potencial.' },
 } as const;
 
-export default function ClubScreen({ s, update, notify, onMenu, onDelete }: ScreenProps & { onMenu: () => void; onDelete: () => void }) {
+export default function ClubScreen({ s, update, notify, go, onMenu, onDelete }: ScreenProps & { onMenu: () => void; onDelete: () => void }) {
   const t = myTeam(s);
   const c = s.club;
   const ampliaciones = [250, 1000, 5000];
@@ -49,6 +50,8 @@ export default function ClubScreen({ s, update, notify, onMenu, onDelete }: Scre
 
   return (
     <>
+      <Identidad s={s} update={update} notify={notify} go={go} />
+
       <Card title="Finanzas">
         <div className="kpis">
           <div><b><Money v={c.cash} /></b><span>caja</span></div>
@@ -74,7 +77,7 @@ export default function ClubScreen({ s, update, notify, onMenu, onDelete }: Scre
         </p>
       </Card>
 
-      <Card title="🏟️ Estadio">
+      <Card title={`🏟️ ${c.identity.stadium}`}>
         <p>Aforo: <b>{c.capacity.toLocaleString('es-ES')}</b></p>
         {c.works ? (
           <p className="hint">🚧 Obras en marcha: +{c.works.amount} asientos, faltan {c.works.matchdaysLeft} jornadas.</p>

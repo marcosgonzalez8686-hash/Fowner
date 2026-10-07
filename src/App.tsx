@@ -5,6 +5,7 @@ import { myTeam } from './game/market';
 import { deleteGame, loadGame, saveGame, type Slot } from './game/save';
 import type { GameState } from './game/types';
 import { Money } from './ui';
+import Crest from './components/Crest';
 import Inicio from './screens/Inicio';
 import Liga from './screens/Liga';
 import Plantilla from './screens/Plantilla';
@@ -59,8 +60,8 @@ export default function App() {
   if (!state || !slot) {
     return (
       <Start
-        onNew={(n, nombre) => {
-          const s = newGame(nombre);
+        onNew={(n, nombre, identity) => {
+          const s = newGame(nombre, identity);
           saveGame(n, s);
           setSlot(n);
           setState(s);
@@ -87,11 +88,14 @@ export default function App() {
   return (
     <div className="app">
       <header className="top">
-        <div>
+        <div className="top-left">
+          <Crest c={state.club.identity.crest} size={34} />
+          <div>
           <div className="club-name">{team.name}</div>
           <div className="sub">
             {DIVISION_NAMES[team.division]} · T{state.season} ·{' '}
             {state.phase === 'pretemporada' ? 'Pretemporada' : `J${state.matchday}/38`}
+          </div>
           </div>
         </div>
         <div className="top-right">

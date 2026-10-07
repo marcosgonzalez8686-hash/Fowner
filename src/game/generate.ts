@@ -4,6 +4,7 @@ import {
 import { roundRobin } from './match';
 import { clubName, personName, shortName, townNames } from './names';
 import { clamp, gauss, pick, rand, randInt } from './rng';
+import { defaultIdentity, ownerTitle, type Identity } from './identity';
 import type { DDStyle, Director, GameState, Player, Pos, Team } from './types';
 
 export const SAVE_VERSION = 1;
@@ -60,7 +61,7 @@ export function makeDirectors(s: GameState, division: number): Director[] {
   }));
 }
 
-export function newGame(clubNameInput: string): GameState {
+export function newGame(clubNameInput: string, identityInput?: Identity): GameState {
   const s: GameState = {
     version: SAVE_VERSION,
     season: 1,
@@ -105,8 +106,10 @@ export function newGame(clubNameInput: string): GameState {
   s.players = s.players.filter((p) => p.teamId !== mio.id);
   makeSquad(s, mio.id, DIV_LEVEL[ultima] - 1);
 
+  const identity = identityInput ?? defaultIdentity(nombre);
   s.club = {
     teamId: mio.id,
+    identity,
     cash: 120_000,
     ticketPrice: DIV_PRICE[ultima],
     capacity: 1_200,
@@ -135,9 +138,9 @@ export function newGame(clubNameInput: string): GameState {
     season: 1,
     matchday: 0,
     from: 'club',
-    title: '¡Bienvenido, presidente!',
+    title: `¡Bienvenido, ${ownerTitle(identity)}!`,
     body:
-      `Acabas de comprar el ${nombre}. Estamos en la ${'Liga Comarcal'} y la caja está justa.\n\n` +
+      `Acabas de comprar el ${nombre}. Jugamos en el ${identity.stadium}, estamos en la Liga Comarcal y la caja está justa.\n\n` +
       'Puedes llevarlo todo tú o contratar un director deportivo (pestaña Director) y decidir qué tareas le delegas: ' +
       'fichajes, ventas, renovaciones y cantera. Cada una puede estar en Manual, Propone y apruebas, o Automático.\n\n' +
       'Cuando estés listo, empieza la temporada desde Inicio.',
