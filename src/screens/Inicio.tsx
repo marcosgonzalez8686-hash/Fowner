@@ -18,6 +18,7 @@ import OffersCard from '../components/OffersCard';
 import Previa, { type MatchSetup } from '../components/Previa';
 import LiveMatch from '../components/LiveMatch';
 import { ROUND_NAMES, myCupMatchDue, myTie, playCupRound } from '../game/cup';
+import { CONT_NAME, CONT_ROUNDS, FLAG, SUPER_NAME, myContDue, myContTie, mySuperDue, playContinentalRound, playSupercopa } from '../game/continental';
 import { seasonTicketForecast } from '../game/tickets';
 import { fmtMoney } from '../game/economy';
 import FansCard, { ObjectivePicker } from '../components/FansCard';
@@ -43,7 +44,19 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const ofertasPendientes = Object.entries(s.sponsorOffers).filter(([k, o]) => o?.length && k !== 'camiseta').length;
   const t = myTeam(s);
   const copaAhora = myCupMatchDue(s);
-  const prox = copaAhora ? null : nextMatch(s);
+  // Supercopa (antes de la jornada 1) y Copa de Campeones (entre semana)
+  const especial = (() => {
+    if (mySuperDue(s)) {
+      const sc = s.supercopa!;
+      return { comp: 'super' as const, icon: '🏅', label: SUPER_NAME, rivalId: sc.a === t.id ? sc.b : sc.a, home: null as number | null };
+    }
+    if (!copaAhora && myContDue(s)) {
+      const tie = myContTie(s)!;
+      return { comp: 'europa' as const, icon: '🌍', label: `${CONT_NAME} · ${CONT_ROUNDS[s.continental!.current]}`, rivalId: tie.a === t.id ? tie.b : tie.a, home: tie.home };
+    }
+    return null;
+  })();
+  const prox = copaAhora || especial ? null : nextMatch(s);
   const tabla = computeStandings(s.teams.filter((x) => x.division === t.division).map((x) => x.id), s.fixtures[t.division]);
   const pos = tabla.findIndex((r) => r.teamId === t.id) + 1;
   const mia = ourPlan(s).strength;
@@ -70,7 +83,9 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const [fase, setFase] = useState<null | { tipo: 'previa'; setup: MatchSetup } | { tipo: 'directo' }>(null);
   const abrirPrevia = (setup: MatchSetup) => setFase({ tipo: 'previa', setup });
   const disputar = (comp: MatchSetup['comp'], enDirecto: boolean) => {
-    update((g) => (comp === 'copa' ? playCupRound(g) : playMatchday(g)));
+    update((g) =>
+      comp === 'copa' ? playCupRound(g) : comp === 'super' ? playSupercopa(g) : comp === 'europa' ? playContinentalRound(g) : playMatchday(g),
+    );
     if (enDirecto) setFase({ tipo: 'directo' });
     else {
       setFase(null);
@@ -163,6 +178,47 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
             </button>
           </>
         )}
+        {especial && (() => {
+          const rival = teamById(s, especial.rivalId)!;
+          const local = especial.home === null ? t.id : especial.home;
+          const yo = <div className="me"><Crest c={s.club.identity.crest} size={44} /><div>{t.name}</div></div>;
+          const el = <div><Crest c={rivalCrest(rival.id, rival.short)} size={44} /><div>{rival.name}</div></div>;
+          return (
+            <>
+              <div className="match-head">
+                <span className="cup-badge">{especial.icon} {especial.label}</span>
+                <button className="link" onClick={() => go('equipo', 'copa')}>Cuadro ›</button>
+              </div>
+              <div className="versus">
+                {local === t.id ? yo : el}
+                <div className="vs">vs</div>
+                {local === t.id ? el : yo}
+              </div>
+              <p className="muted center small">
+                {rival.country ? `${FLAG[rival.country] ?? ''} ${rival.country}` : `${rival.division + 1}ª división`} ·{' '}
+                {especial.home === null ? 'campo neutral' : especial.home === t.id ? 'en casa' : 'a domicilio'}
+              </p>
+              <div className="row">
+                <button
+                  className="btn primary big grow cup-btn"
+                  disabled={Boolean(s.pendingEvent)}
+                  onClick={() =>
+                    abrirPrevia({
+                      comp: especial.comp,
+                      label: especial.label,
+                      homeId: local,
+                      awayId: local === t.id ? rival.id : t.id,
+                      neutral: especial.home === null,
+                    })
+                  }
+                >
+                  {especial.icon} Jugar {especial.comp === 'super' ? 'la Supercopa' : 'partido europeo'}
+                </button>
+              </div>
+              {s.pendingEvent && <p className="small muted center">Decide antes qué hacer con el asunto de esta semana ↓</p>}
+            </>
+          );
+        })()}
         {tieCopa && rivalCopa && (
           <>
             <div className="match-head">

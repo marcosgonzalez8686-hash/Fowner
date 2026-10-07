@@ -19,6 +19,7 @@ export interface SeasonRecord {
   cup?: string; // "Campeón", "Octavos"...
   topScorer?: { name: string; goals: number };
   bestPlayer?: { name: string; rating: number; apps: number };
+  leagueTopScorer?: { name: string; goals: number; ours: boolean }; // pichichi de la liga
   promoted?: boolean;
   relegated?: boolean;
   champion?: boolean;

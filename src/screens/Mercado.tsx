@@ -7,6 +7,8 @@ import type { Player, Pos } from '../game/types';
 import { Card, Ovr, Segmented, Sheet } from '../ui';
 import OffersCard from '../components/OffersCard';
 import { PlayerTags, ProfileDetail } from '../components/Traits';
+import { requestReport, shownPot } from '../game/scouting';
+import { MAX_LOANS_IN, loanAnswer, loanFee, loanIn } from '../game/loans';
 
 type Filtro = 'TODOS' | Pos;
 
@@ -20,7 +22,7 @@ export default function Mercado({ s, update, notify }: ScreenProps) {
 
   const lista = useMemo(() => {
     return s.players
-      .filter((p) => p.teamId !== s.club.teamId && !p.youth)
+      .filter((p) => p.teamId !== s.club.teamId && !p.youth && !p.loan)
       .filter((p) => pos === 'TODOS' || p.pos === pos)
       .filter((p) => !libres || p.teamId === null)
       .filter((p) => willJoin(s, p))
@@ -74,11 +76,11 @@ export default function Mercado({ s, update, notify }: ScreenProps) {
       {sel && (
         <Sheet title={sel.name} onClose={() => setSel(null)}>
           <p className="muted">
-            {sel.pos} · {sel.age} años · media {sel.ovr} · potencial {sel.pot}
+            {sel.pos} · {sel.age} años · media {sel.ovr} · potencial {shownPot(s, sel)}
             <br />
             {sel.teamId === null ? 'Agente libre' : teamById(s, sel.teamId)!.name}
           </p>
-          <ProfileDetail s={s} p={sel} fichaje />
+          <ProfileDetail s={s} p={sel} fichaje onReport={() => notify(update((g) => requestReport(g, sel.id)) ?? '')} />
           <div className="kpis">
             <div><b>{fmtMoney(askingPrice(sel))}</b><span>traspaso</span></div>
             <div><b>{fmtMoney(askingSalary(s, sel))}</b><span>ficha/temp.</span></div>
@@ -99,6 +101,30 @@ export default function Mercado({ s, update, notify }: ScreenProps) {
           >
             Fichar
           </button>
+          {sel.teamId !== null && (() => {
+            const r = loanAnswer(s, sel);
+            return (
+              <>
+                <h4>Cesión</h4>
+                {r.ok ? (
+                  <>
+                    <p className="small muted">Hasta final de temporada. Cuota {fmtMoney(loanFee(sel))} y pagas su ficha ({fmtMoney(sel.salary)}). Máximo {MAX_LOANS_IN} cedidos.</p>
+                    <button
+                      className="btn full"
+                      onClick={() => {
+                        notify(update((g) => loanIn(g, sel.id)) ?? '');
+                        setSel(null);
+                      }}
+                    >
+                      🔁 Pedir cedido
+                    </button>
+                  </>
+                ) : (
+                  <p className="small muted">{r.reason}</p>
+                )}
+              </>
+            );
+          })()}
         </Sheet>
       )}
     </>

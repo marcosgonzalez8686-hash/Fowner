@@ -482,7 +482,7 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .legends { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .rank { margin: 0; padding-left: 20px; font-size: 0.82rem; }
 .rank li { padding: 3px 0; border-bottom: 1px solid var(--line); }
-.rank li span { display: inline-block; max-width: calc(100% - 30px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.rank li > span { display: inline-block; max-width: calc(100% - 30px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 .rank li b { float: right; font-variant-numeric: tabular-nums; }
 
 /* notas de los jugadores */
@@ -503,3 +503,4 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 /* perfil de juego y rasgos */
 .tags { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 2px; font-size: 0.72rem; color: var(--muted); }
 .tags span + span { margin-left: 0; }
+.rank li.me > span, .rank li.me > b { color: var(--brand-2); font-weight: 700; }

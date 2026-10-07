@@ -7,12 +7,16 @@ import { buildAllFixtures, makeDirectors, makePlayer } from './generate';
 import { addMessage, myTeam, mySquad, myYouth, teamById, wageBill } from './market';
 import { bestEleven, chooseStyle, computeStandings, simulate, type Formation } from './match';
 import { conflictAfterMatch, newIdols } from './traits';
+import { contDue, myContDue, mySuperDue, newContinental, newSupercopa, playContinentalRound, playSupercopa, superDue } from './continental';
+import { returnLoans } from './loans';
+import { markKnown, scoutingNewSeason } from './scouting';
 import { announceRetirements, develop, farewells, retireChance } from './aging';
 import { coachAfterMatch, coachEndSeason, ourPlan, ourTactics } from './coach';
 import { chance, clamp, gauss, rand, randInt } from './rng';
 import type { GameState, MatchResult, Player, Standing, Team } from './types';
 import { recordMatch, recordSeason } from './history';
-import { buildReport } from './report';
+import { buildReport, type MatchReport } from './report';
+import { bestXIOf, emptyStats, harvest, leaders } from './stats';
 import {
   makeStaffCandidates, marketingFansBonus, scoutDiscoveries, staffAgingFactor, staffMatchBonus, staffWages, youthGrowthBonus,
 } from './staff';
@@ -61,9 +65,18 @@ export function startSeason(s: GameState): string | undefined {
 export function playMatchday(s: GameState) {
   if (s.phase !== 'temporada' || s.gameOver) return;
   // si toca Copa: la nuestra se juega aparte; si ya estamos eliminados, se simula sola
+  // la Supercopa abre la temporada; la Copa de Campeones va entre semana
+  if (superDue(s)) {
+    if (mySuperDue(s)) return;
+    playSupercopa(s);
+  }
   while (cupRoundDue(s)) {
     if (stillIn(s)) return;
     playCupRound(s);
+  }
+  while (contDue(s)) {
+    if (myContDue(s)) return;
+    playContinentalRound(s);
   }
   const porEquipo = new Map<number, Player[]>();
   for (const p of s.players) {
@@ -85,6 +98,8 @@ export function playMatchday(s: GameState) {
   const md = s.matchday;
   s.lastResults = [];
 
+  if (s.leagueStats?.season !== s.season) s.leagueStats = emptyStats(s.season);
+  const informes: MatchReport[][] = Array.from({ length: DIVISIONS }, () => []);
   for (let d = 0; d < DIVISIONS; d++) {
     for (const f of s.fixtures[d][md]) {
       // pequeño factor anímico aleatorio por partido
@@ -110,15 +125,20 @@ export function playMatchday(s: GameState) {
         s.club.ledger.taquilla += ingreso;
         s.club.ledger.comercial += comercial;
       }
+      // informe de cada partido: goleadores, asistencias y notas para las estadísticas de la liga
+      const rep = buildReport(
+        { season: s.season, matchday: md + 1, home: f.home, away: f.away, hg, ag },
+        once(f.home).xi,
+        once(f.away).xi,
+        fh,
+        fa,
+        { home: { formation: once(f.home).formation, style: sh }, away: { formation: once(f.away).formation, style: sa } },
+      );
+      harvest(s, rep);
+      // partidos de los cedidos (en ambos sentidos)
+      for (const p of [...once(f.home).xi, ...once(f.away).xi]) if (p.loan) p.loan.apps++;
+      informes[d].push(rep);
       if (f.home === mio.id || f.away === mio.id) {
-        const rep = buildReport(
-          { season: s.season, matchday: md + 1, home: f.home, away: f.away, hg, ag },
-          once(f.home).xi,
-          once(f.away).xi,
-          fh,
-          fa,
-          { home: { formation: once(f.home).formation, style: sh }, away: { formation: once(f.away).formation, style: sa } },
-        );
         if (r.attendance !== undefined) {
           rep.attendance = r.attendance;
           rep.abonados = r.abonados;
@@ -163,6 +183,7 @@ export function playMatchday(s: GameState) {
         t.fans = Math.max(100, Math.round(t.fans * factor));
       }
     }
+    s.leagueStats.bestXI[d] = { matchday: md + 1, xi: bestXIOf(informes[d]) };
   }
 
   // ingresos y gastos fijos repartidos por jornada
@@ -288,9 +309,13 @@ export function endSeason(s: GameState) {
   const movimientos: { team: Team; to: number }[] = [];
   let miPos = 0;
   let miFila: Standing | undefined;
+  let primera: number[] = [];
+  // pichichi de nuestra liga (antes de que los equipos cambien de categoría)
+  const pichichi = leaders(s, divAntes).goles[0];
   for (let d = 0; d < DIVISIONS; d++) {
     const ids = s.teams.filter((t) => t.division === d).map((t) => t.id);
     const tabla = computeStandings(ids, s.fixtures[d]);
+    if (d === 0) primera = tabla.map((r) => r.teamId);
     tabla.forEach((row, i) => {
       const t = teamById(s, row.teamId)!;
       if (t.id === mio.id) {
@@ -309,6 +334,14 @@ export function endSeason(s: GameState) {
   }
   // la temporada pasa a la historia del club (y los títulos, a la sala de trofeos)
   recordSeason(s, divAntes, mio.division, miPos, miFila);
+  if (pichichi) {
+    const ultima = s.club.records.seasons.at(-1)!;
+    ultima.leagueTopScorer = { name: pichichi.name, goals: pichichi.goals, ours: pichichi.t === mio.id };
+    if (pichichi.t === mio.id) {
+      addMessage(s, { from: 'liga', title: `👟 ${pichichi.name}, pichichi de la liga`, body: `${pichichi.goals} goles: el máximo goleador de ${DIVISION_NAMES[divAntes]} es nuestro.` });
+    }
+  }
+  s.leagueStats = emptyStats(s.season + 1);
   // la afición tiende a la media de su categoría
   for (const t of s.teams) t.fans = Math.round(t.fans * 0.85 + DIV_FANS[t.division] * 0.15 * rand(0.7, 1.3));
   mio.fans = Math.round(mio.fans * fansGrowthBonus(s) * marketingFansBonus(s) * fansGrowthSatisfaction(s) * seasonTicketFansGrowth(s));
@@ -316,6 +349,9 @@ export function endSeason(s: GameState) {
   resetSeasonMorale(s);
   coachEndSeason(s);
   newIdols(s, (title, body) => addMessage(s, { from: 'club', title, body }));
+
+  // los cedidos vuelven a casa antes de repasar contratos
+  returnLoans(s);
 
   // 2. jugadores: edad, evolución, retiradas y contratos
   const seVan: Player[] = [];
@@ -408,7 +444,14 @@ export function endSeason(s: GameState) {
   s.phase = 'pretemporada';
   s.fixtures = buildAllFixtures(s);
   s.directorsMarket = makeDirectors(s, mio.division);
+  // Supercopa y Copa de Campeones con lo que pasó la temporada pasada
+  const finalCopa = s.cup.rounds.at(-1)?.[0];
+  const copaFinalista = finalCopa && s.cup.champion !== undefined ? (finalCopa.a === s.cup.champion ? finalCopa.b : finalCopa.a) : undefined;
+  const copaCampeon = s.cup.champion;
   s.cup = newCup(s);
+  newSupercopa(s, primera[0], primera[1], copaCampeon, copaFinalista);
+  newContinental(s, primera.slice(0, 4));
+  scoutingNewSeason(s);
   seasonTicketsNewSeason(s, mio.division !== divAntes);
   refreshInvestorOffers(s);
   s.staffMarket = makeStaffCandidates(s, mio.division);
@@ -419,6 +462,7 @@ export function endSeason(s: GameState) {
     const p = makePlayer(s, DIV_LEVEL[mio.division] - 6, { age: randInt(17, 20), contract: 0 });
     p.pot = clamp(p.ovr + randInt(14, 24), p.ovr, 95);
     s.players.push(p);
+    markKnown(s, p.id); // de los descubiertos ya tenemos informe
     return { name: p.name, pos: p.pos, pot: p.pot };
   });
   s.lastResults = [];

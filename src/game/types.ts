@@ -3,6 +3,8 @@ import type { Land } from './land';
 import type { MatchReport } from './report';
 import type { Role, Staff } from './staff';
 import type { Profile, Trait } from './traits';
+import type { LeagueStats } from './stats';
+import type { Continental, Supercopa } from './continental';
 import type { SponsorContract, SponsorSlot } from './sponsor';
 import type { PendingEvent } from './events';
 import type { Objective } from './fans';
@@ -33,6 +35,8 @@ export interface Player {
   profile?: Profile; // perfil de juego: decide cómo encaja en el sistema del entrenador
   traits?: Trait[]; // rasgos de personalidad
   adapt?: { coach: number; apps: number }; // partidos jugados con el entrenador actual (adaptación al sistema)
+  loan?: { from: number; until: number; apps: number }; // cedido: club dueño, temporada en que vuelve y partidos jugados
+  potHidden?: number; // promesa oculta: potencial extra que solo descubre un informe de los ojeadores
   signedSeason?: number; // temporada en la que llegó al club del jugador
 }
 
@@ -42,6 +46,7 @@ export interface Team {
   short: string;
   division: number; // 0 = Primera ... 4 = la más baja
   fans: number;
+  country?: string; // solo clubes extranjeros (Copa de Campeones)
 }
 
 export interface Fixture {
@@ -141,6 +146,8 @@ export interface Club {
   trophies: { season: number; name: string }[];
   records: Records;
   retireCheck?: number; // temporada en la que los veteranos ya decidieron si se retiran
+  scouted?: number[]; // jugadores de otros clubes con informe de los ojeadores
+  reportsUsed?: number; // informes pedidos esta temporada
   staff: Partial<Record<Role, Staff>>;
   sponsors: Partial<Record<SponsorSlot, SponsorContract>>;
   cashLog: number[]; // caja al empezar la temporada y tras cada jornada
@@ -176,6 +183,9 @@ export interface GameState {
   history: { season: number; division: number; position: number }[];
   lastResults: MatchResult[]; // últimos resultados de la división del jugador
   lastReport?: MatchReport; // informe de nuestro último partido
+  leagueStats: LeagueStats; // goleadores, asistentes y notas de la temporada
+  supercopa?: Supercopa;
+  continental?: Continental; // Copa de Campeones (solo si nos clasificamos)
   gameOver?: string;
   nextId: number;
 }

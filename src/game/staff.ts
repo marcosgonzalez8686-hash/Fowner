@@ -39,7 +39,7 @@ export const ROLES: Record<Role, RoleInfo> = {
   segundo: { name: 'Segundo entrenador', icon: '📋', pay: 0.5, help: 'Algo más de rendimiento y los jóvenes progresan más.' },
   preparador: { name: 'Preparador físico', icon: '🏃', pay: 0.45, help: 'El equipo llega fresco a la segunda vuelta de la liga.' },
   fisio: { name: 'Fisioterapeuta', icon: '💆', pay: 0.4, help: 'Los veteranos se cuidan mejor y pierden menos nivel con la edad.' },
-  ojeador: { name: 'Jefe de ojeadores', icon: '🔭', pay: 0.5, help: 'Tu director deportivo acierta más y cada verano descubre jóvenes promesas libres.' },
+  ojeador: { name: 'Jefe de ojeadores', icon: '🔭', pay: 0.5, help: 'Hace informes de jugadores de otros clubes (perfil, carácter y promesas ocultas): 3 por estrella y temporada. Además tu director acierta más y cada verano descubre jóvenes libres.' },
   marketing: { name: 'Responsable de marketing', icon: '📣', pay: 0.45, help: 'Mejores patrocinios y la afición crece más rápido.' },
 };
 

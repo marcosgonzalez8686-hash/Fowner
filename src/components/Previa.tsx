@@ -5,10 +5,11 @@ import { moraleBonus, moraleLabel } from '../game/morale';
 import { staffMatchBonus } from '../game/staff';
 import type { GameState, Player } from '../game/types';
 import Crest from './Crest';
+import { FLAG } from '../game/continental';
 import { coachOf, ourPlan, ourTactics } from '../game/coach';
 
 export interface MatchSetup {
-  comp: 'liga' | 'copa';
+  comp: 'liga' | 'copa' | 'super' | 'europa';
   label: string; // "Jornada 5" o "Copa · Octavos"
   homeId: number;
   awayId: number;
@@ -86,13 +87,13 @@ export default function Previa({ s, setup, onPlay, onSkip, onClose }: {
           <div className={h.mio ? 'me' : ''}>
             <Crest c={crest(h)} size={52} />
             <span>{h.t.name}</span>
-            <small className="muted">{h.t.division + 1}ª división</small>
+            <small className="muted">{h.t.country ? `${FLAG[h.t.country] ?? ''} ${h.t.country}` : `${h.t.division + 1}ª división`}</small>
           </div>
           <div className="vs">vs</div>
           <div className={a.mio ? 'me' : ''}>
             <Crest c={crest(a)} size={52} />
             <span>{a.t.name}</span>
-            <small className="muted">{a.t.division + 1}ª división</small>
+            <small className="muted">{a.t.country ? `${FLAG[a.t.country] ?? ''} ${a.t.country}` : `${a.t.division + 1}ª división`}</small>
           </div>
         </div>
 

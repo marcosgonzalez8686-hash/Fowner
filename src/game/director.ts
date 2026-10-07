@@ -163,7 +163,7 @@ function doSignings(s: GameState, maxOps: number) {
 
     let mejor: { p: Player; fee: number; salary: number; score: number; perc: number } | null = null;
     for (const p of s.players) {
-      if (p.teamId === s.club.teamId || p.pos !== pos || p.age > 33) continue;
+      if (p.teamId === s.club.teamId || p.pos !== pos || p.age > 33 || p.loan) continue;
       if (alreadyProposed(s, p.id) || !willJoin(s, p)) continue;
       const fee = roundMoney(askingPrice(p) * rebaja);
       const salary = roundMoney(askingSalary(s, p) * rebaja);
@@ -203,7 +203,7 @@ function doSignings(s: GameState, maxOps: number) {
 function doSales(s: GameState) {
   const d = s.club.director!;
   if (pendingFor(s, 'vender').length >= 2) return;
-  const squad = mySquad(s);
+  const squad = mySquad(s).filter((p) => !p.loan); // los cedidos no son nuestros
   if (squad.length <= 18) return;
   let candidato: Player | null = null;
   let motivo = '';
@@ -239,7 +239,7 @@ function doRenewals(s: GameState) {
   const squad = mySquad(s);
   const top = new Set([...squad].sort((a, b) => b.ovr - a.ovr).slice(0, 16).map((p) => p.id));
   for (const p of squad) {
-    if (p.contract !== 1 || alreadyProposed(s, p.id)) continue;
+    if (p.contract !== 1 || p.loan || alreadyProposed(s, p.id)) continue;
     const joven = p.age <= 23 && p.pot - p.ovr >= 5;
     if (!top.has(p.id) && !(joven && d.style === 'cantera')) continue;
     if (p.age >= 34) continue;

@@ -2,9 +2,11 @@ import { coachOf, ourTactics } from '../game/coach';
 import { STYLES } from '../game/match';
 import { ADAPT_APPS, FIT_ICON, PROFILES, TRAITS, adaptProgress, fitBonus, fitOf, profileHelp } from '../game/traits';
 import type { GameState, Player } from '../game/types';
+import { isKnown, reportCapacity, reportsLeft, shownPot } from '../game/scouting';
 
 /** Línea compacta: perfil, encaje con el sistema del entrenador y rasgos */
 export function PlayerTags({ s, p }: { s: GameState; p: Player }) {
+  if (!isKnown(s, p)) return <small className="tags">❓ Sin informe de los ojeadores</small>;
   const t = ourTactics(s);
   const f = fitOf(p, t.formation, t.style);
   return (
@@ -19,7 +21,23 @@ export function PlayerTags({ s, p }: { s: GameState; p: Player }) {
 }
 
 /** Bloque para la ficha: perfil y encaje explicados, adaptación y rasgos */
-export function ProfileDetail({ s, p, fichaje }: { s: GameState; p: Player; fichaje?: boolean }) {
+export function ProfileDetail({ s, p, fichaje, onReport }: { s: GameState; p: Player; fichaje?: boolean; onReport?: () => void }) {
+  if (!isKnown(s, p)) {
+    const quedan = reportsLeft(s);
+    return (
+      <>
+        <h4>Perfil y carácter</h4>
+        <p className="small muted">❓ Sin informe: no sabes cómo encajaría en el sistema ni qué carácter tiene (ni si esconde más potencial).</p>
+        {reportCapacity(s) > 0 ? (
+          <button className="btn full" style={{ marginBottom: 12 }} onClick={onReport} disabled={quedan <= 0}>
+            🔭 Pedir informe a los ojeadores ({quedan} {quedan === 1 ? 'queda' : 'quedan'} esta temporada)
+          </button>
+        ) : (
+          <p className="small">Contrata un jefe de ojeadores (Dirección → Empleados) o construye la oficina de ojeadores para pedir informes.</p>
+        )}
+      </>
+    );
+  }
   const t = ourTactics(s);
   const coach = coachOf(s)?.id ?? 0;
   const f = fitOf(p, t.formation, t.style);
@@ -46,6 +64,9 @@ export function ProfileDetail({ s, p, fichaje }: { s: GameState; p: Player; fich
         </p>
       )}
       {f < 0 && fichaje && <p className="small muted">🔄 Llegaría sin adaptar: necesita {ADAPT_APPS} partidos para acostumbrarse.</p>}
+      {(p.potHidden ?? 0) > 0 && (
+        <p className="small">💎 <b>Promesa oculta:</b> su potencial real es {shownPot(s, p)}, no {p.pot} como creen los demás.</p>
+      )}
       {(p.traits?.length ?? 0) > 0 && (
         <>
           <h4>Carácter</h4>

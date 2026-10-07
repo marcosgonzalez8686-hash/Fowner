@@ -178,7 +178,7 @@ export default function App() {
                   { value: 'plantilla', label: '👕 Plantilla' },
                   { value: 'mercado', label: marketOpen(state) ? '🔁 Mercado' : '🔒 Mercado' },
                   { value: 'liga', label: '📊 Liga' },
-                  { value: 'copa', label: '🏆 Copa' },
+                  { value: 'copa', label: '🏆 Copas' },
                 ]}
               >
                 {sub.equipo === 'plantilla' && <Plantilla {...props} />}

@@ -31,13 +31,15 @@ export const TREND_TEXT: Record<Trend, { icon: string; text: string }> = {
 export function develop(p: Player, training: number, aging = 1, growth = 1) {
   p.age++;
   const pico = PEAK[p.pos];
+  // el techo real incluye la promesa oculta
+  const tope = p.pot + (p.potHidden ?? 0);
   if (p.age <= 23) {
-    const crece = Math.max(0, p.pot - p.ovr) * rand(0.15, 0.4) * (0.75 + training * 0.1) * growth;
-    p.ovr = Math.min(p.pot, Math.round(p.ovr + crece));
+    const crece = Math.max(0, tope - p.ovr) * rand(0.15, 0.4) * (0.75 + training * 0.1) * growth;
+    p.ovr = Math.min(tope, Math.round(p.ovr + crece));
   } else if (p.age <= pico - 3) {
     // aún le queda algo por pulir
-    const crece = Math.max(0, p.pot - p.ovr) * rand(0.05, 0.25) * (0.75 + training * 0.1);
-    p.ovr = clamp(Math.round(p.ovr + crece) + randInt(-1, 1), 20, p.pot);
+    const crece = Math.max(0, tope - p.ovr) * rand(0.05, 0.25) * (0.75 + training * 0.1);
+    p.ovr = clamp(Math.round(p.ovr + crece) + randInt(-1, 1), 20, tope);
   } else if (p.age <= pico) {
     p.ovr = clamp(p.ovr + randInt(-1, 1), 20, p.pot);
   } else {
@@ -45,7 +47,11 @@ export function develop(p: Player, training: number, aging = 1, growth = 1) {
     const baja = (rand(0.5, 2) + (p.age - pico) * 0.7) * aging * (hasTrait(p, 'profesional') ? 0.6 : 1);
     p.ovr = Math.max(20, Math.round(p.ovr - baja));
   }
-  p.pot = Math.max(p.pot, p.ovr);
+  // si supera el potencial que se veía, la promesa oculta va saliendo a la luz
+  if (p.ovr > p.pot) {
+    p.potHidden = Math.max(0, (p.potHidden ?? 0) - (p.ovr - p.pot));
+    p.pot = p.ovr;
+  }
 }
 
 /** Probabilidad de colgar las botas este verano */
@@ -64,7 +70,7 @@ export function announceRetirements(s: GameState) {
   if (s.club.retireCheck === s.season) return;
   s.club.retireCheck = s.season;
   for (const p of mySquad(s)) {
-    if (p.youth || p.retiring || !chance(retireChance(p))) continue;
+    if (p.youth || p.loan || p.retiring || !chance(retireChance(p))) continue;
     p.retiring = true;
     p.persuaded = false; // cada adiós anunciado se puede intentar frenar una vez
     const h = s.club.records.players[p.id];

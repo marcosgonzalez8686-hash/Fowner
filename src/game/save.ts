@@ -1,3 +1,4 @@
+import { emptyStats } from './stats';
 import { DIVISION_NAMES } from './economy';
 import { SAVE_VERSION } from './generate';
 import { emptyLedger } from './economy';
@@ -98,6 +99,7 @@ function migrate(s: GameState) {
   }
   if (!s.cup) s.cup = newCup(s);
   if (!s.incomingOffers) s.incomingOffers = [];
+  if (!s.leagueStats) s.leagueStats = emptyStats(s.season);
   if (!c.seasonTickets) c.seasonTickets = defaultSeasonTickets(s);
   if (!c.bank) {
     c.bank = emptyBank();

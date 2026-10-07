@@ -57,6 +57,8 @@ export const hasTrait = (p: Player, t: Trait) => Boolean(p.traits?.includes(t));
 /** Perfil y rasgos de un jugador nuevo (o de partidas antiguas que no los tenían) */
 export function rollIdentity(p: Player) {
   p.profile ??= pick(profilesFor(p.pos));
+  // algunos jóvenes esconden más potencial del que aparentan (0 = ya decidido que no)
+  p.potHidden ??= p.age <= 21 && chance(0.1) ? 6 + Math.floor(Math.random() * 7) : 0;
   if (p.traits) return;
   const n = chance(0.12) ? 2 : chance(0.4) ? 1 : 0;
   const traits: Trait[] = [];

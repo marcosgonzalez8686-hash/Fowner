@@ -1,3 +1,4 @@
+import { emptyStats } from './stats';
 import { rollIdentity } from './traits';
 import {
   DIV_FANS, DIV_LEVEL, DIV_PRICE, DIVISIONS, TEAMS_PER_DIV, emptyLedger, fairSalary,
@@ -22,7 +23,7 @@ import type { DDStyle, Director, GameState, Player, Pos, Team } from './types';
 export const SAVE_VERSION = 1;
 
 /** Reparto de posiciones en una plantilla de 22 */
-const PLANTILLA: Pos[] = [
+export const PLANTILLA: Pos[] = [
   'POR', 'POR', 'POR',
   'DEF', 'DEF', 'DEF', 'DEF', 'DEF', 'DEF', 'DEF',
   'MED', 'MED', 'MED', 'MED', 'MED', 'MED', 'MED',
@@ -95,6 +96,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
     staffMarket: {} as GameState['staffMarket'],
     sponsorOffers: {},
     incomingOffers: [],
+    leagueStats: emptyStats(1),
     cup: null as unknown as GameState['cup'],
     messages: [],
     history: [],

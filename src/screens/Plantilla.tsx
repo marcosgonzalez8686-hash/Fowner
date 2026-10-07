@@ -4,7 +4,7 @@ import { levelOf } from '../game/director';
 import { DIV_LEVEL, fmtMoney, roundMoney } from '../game/economy';
 import {
   marketOpen, myTeam, mySquad, myYouth, promoteYouth, releasePlayer, renewPlayer, renewSalary, sellPlayer, sellPrice,
-  wageBill,
+  teamById, wageBill,
 } from '../game/market';
 import { FORMACION } from '../game/match';
 import { coachOf, ourPlan, ourShape, tacticsLabel } from '../game/coach';
@@ -14,6 +14,7 @@ import { moraleLabel } from '../game/morale';
 import { seasonAverage } from '../game/history';
 import { FormStrip, RatingBadge } from '../components/Rating';
 import { PlayerTags, ProfileDetail } from '../components/Traits';
+import { LOAN_GROWTH_APPS, loanOut, loanTarget, loanedOut } from '../game/loans';
 import { fitOf } from '../game/traits';
 import { PEAK, TREND_TEXT, persuadeVeteran, trendOf } from '../game/aging';
 
@@ -29,6 +30,8 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
   const forma = ourShape(s);
   const faltan = (Object.keys(forma) as Pos[]).filter((pos) => squad.filter((p) => p.pos === pos && !p.youth).length < forma[pos]);
   const titulares = new Set(xi.map((p) => p.id));
+  const cedidoA = Boolean(sel?.loan && sel.loan.from !== s.club.teamId);
+  const destino = sel && !sel.loan ? loanTarget(s, sel) : undefined;
 
   const run = (fn: () => string | undefined | void, ok: string) => {
     const err = fn();
@@ -97,6 +100,7 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
                   <small>
                     {(p.injury ?? 0) > 0 && <b className="neg">Lesionado {p.injury} j. · </b>}
                     {p.retiring && <b className="warn">👴 se retira · </b>}
+                    {p.loan && <b>🔁 cedido por {teamById(s, p.loan.from)?.short} · </b>}
                     {p.age} años {TREND_TEXT[trendOf(p)].icon} · {fmtMoney(p.salary)} · {p.contract <= 1 ? <b className="warn">acaba contrato</b> : `${p.contract} temp.`}
                   </small>
                   <PlayerTags s={s} p={p} />
@@ -112,6 +116,22 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
             ))}
         </Card>
       ))}
+
+      {loanedOut(s).length > 0 && (
+        <Card title="🔁 Cedidos en otros clubes">
+          {loanedOut(s).map((p) => (
+            <div key={p.id} className="player">
+              <span className="pos">{p.pos}</span>
+              <span className="name">
+                {p.name}
+                <small>{teamById(s, p.teamId)?.name} ({(teamById(s, p.teamId)?.division ?? 0) + 1}ª) · {p.loan!.apps} partidos · {p.age} años</small>
+              </span>
+              <Ovr v={p.ovr} base={nivel} />
+            </div>
+          ))}
+          <p className="small muted">Vuelven al acabar la temporada.</p>
+        </Card>
+      )}
 
       {sel && (
         <Sheet title={sel.name} onClose={() => setSel(null)}>
@@ -156,43 +176,63 @@ export default function Plantilla({ s, update, notify }: ScreenProps) {
             <p className="small muted">Aún no ha jugado esta temporada.</p>
           )}
 
-          {!sel.retiring && (
+          {cedidoA ? (
+            <p className="hint">🔁 Cedido por el {teamById(s, sel.loan!.from)?.name} hasta final de temporada. Luego vuelve a su club.</p>
+          ) : (
             <>
-              <h4>Renovar</h4>
-              <p className="small">Pide {fmtMoney(renewSalary(sel))}/temp.</p>
-              <Segmented
-                value={anos}
-                onChange={setAnos}
-                options={['1', '2', '3', '4'].map((v) => ({ value: v, label: `${v} año${v === '1' ? '' : 's'}` }))}
-              />
+              {!sel.retiring && (
+                <>
+                  <h4>Renovar</h4>
+                  <p className="small">Pide {fmtMoney(renewSalary(sel))}/temp.</p>
+                  <Segmented
+                    value={anos}
+                    onChange={setAnos}
+                    options={['1', '2', '3', '4'].map((v) => ({ value: v, label: `${v} año${v === '1' ? '' : 's'}` }))}
+                  />
+                  <button
+                    className="btn primary full"
+                    onClick={() => run(() => update((g) => renewPlayer(g, sel.id, renewSalary(sel), Number(anos)).error), 'Renovado')}
+                  >
+                    Renovar
+                  </button>
+                </>
+              )}
+
+              <h4>Vender</h4>
+              {marketOpen(s) ? (
+                <button
+                  className="btn full"
+                  onClick={() => run(() => update((g) => sellPlayer(g, sel.id, sellPrice(sel)).error), `Vendido por ${fmtMoney(sellPrice(sel))}`)}
+                >
+                  Aceptar oferta de {fmtMoney(sellPrice(sel))}
+                </button>
+              ) : (
+                <p className="small muted">El mercado está cerrado.</p>
+              )}
+
+              <h4>Rescindir</h4>
               <button
-                className="btn primary full"
-                onClick={() => run(() => update((g) => renewPlayer(g, sel.id, renewSalary(sel), Number(anos)).error), 'Renovado')}
+                className="btn danger full"
+                onClick={() => run(() => update((g) => releasePlayer(g, sel.id).error), `${sel.name} queda libre`)}
               >
-                Renovar
+                Rescindir (cuesta {fmtMoney(roundMoney((sel.salary * Math.max(sel.contract, 1)) / 2))})
               </button>
+
+              <h4>Ceder</h4>
+              {marketOpen(s) && destino ? (
+                <>
+                  <p className="small muted">
+                    Una temporada en el {destino.team.name} ({destino.division + 1}ª), que paga su ficha. Si tiene 23 años o menos y juega {LOAN_GROWTH_APPS} partidos o más, vuelve mejor.
+                  </p>
+                  <button className="btn full" onClick={() => run(() => update((g) => loanOut(g, sel.id)), '')}>
+                    🔁 Ceder al {destino.team.name}
+                  </button>
+                </>
+              ) : (
+                <p className="small muted">{marketOpen(s) ? 'Nadie lo quiere cedido.' : 'Solo con el mercado abierto.'}</p>
+              )}
             </>
           )}
-
-          <h4>Vender</h4>
-          {marketOpen(s) ? (
-            <button
-              className="btn full"
-              onClick={() => run(() => update((g) => sellPlayer(g, sel.id, sellPrice(sel)).error), `Vendido por ${fmtMoney(sellPrice(sel))}`)}
-            >
-              Aceptar oferta de {fmtMoney(sellPrice(sel))}
-            </button>
-          ) : (
-            <p className="small muted">El mercado está cerrado.</p>
-          )}
-
-          <h4>Rescindir</h4>
-          <button
-            className="btn danger full"
-            onClick={() => run(() => update((g) => releasePlayer(g, sel.id).error), `${sel.name} queda libre`)}
-          >
-            Rescindir (cuesta {fmtMoney(roundMoney((sel.salary * Math.max(sel.contract, 1)) / 2))})
-          </button>
         </Sheet>
       )}
     </>

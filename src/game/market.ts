@@ -7,8 +7,9 @@ import { changeSatisfaction } from './fans';
 import { changeMorale } from './morale';
 
 export const myTeam = (s: GameState) => s.teams.find((t) => t.id === s.club.teamId)!;
-export const teamById = (s: GameState, id: number | null) => s.teams.find((t) => t.id === id);
-export const squadOf = (s: GameState, teamId: number) => s.players.filter((p) => p.teamId === teamId);
+// los clubes extranjeros de la Copa de Campeones viven aparte, con su plantilla
+export const teamById = (s: GameState, id: number | null) => s.teams.find((t) => t.id === id) ?? s.continental?.foreign.find((t) => t.id === id);
+export const squadOf = (s: GameState, teamId: number) => s.continental?.squads[teamId] ?? s.players.filter((p) => p.teamId === teamId);
 export const mySquad = (s: GameState) => squadOf(s, s.club.teamId).filter((p) => !p.youth);
 export const myYouth = (s: GameState) => squadOf(s, s.club.teamId).filter((p) => p.youth);
 export const wageBill = (s: GameState) => mySquad(s).reduce((a, p) => a + p.salary, 0);
@@ -46,6 +47,7 @@ export function canBuy(s: GameState, p: Player, fee: number): BuyResult {
   if (mySquad(s).length >= SQUAD_MAX) return { ok: false, error: `La plantilla está llena (máximo ${SQUAD_MAX}).` };
   if (s.club.cash < fee) return { ok: false, error: 'No hay dinero suficiente en caja.' };
   if (!s.players.includes(p)) return { ok: false, error: 'El jugador ya no está disponible.' };
+  if (p.loan) return { ok: false, error: 'Está cedido: no se puede fichar hasta que vuelva a su club.' };
   return { ok: true };
 }
 
@@ -95,6 +97,7 @@ export function sellPlayer(s: GameState, playerId: number, fee: number, toTeamId
   if (!marketOpen(s)) return { ok: false, error: 'El mercado está cerrado.' };
   const p = s.players.find((x) => x.id === playerId && x.teamId === s.club.teamId);
   if (!p) return { ok: false, error: 'El jugador ya no está en el club.' };
+  if (p.loan) return { ok: false, error: 'Está cedido: no es nuestro.' };
   const comprador = teamById(s, toTeamId ?? null) ?? findBuyer(s, p);
   // vender a uno de los tres mejores no gusta nada
   const top3 = [...mySquad(s)].sort((a, b) => b.ovr - a.ovr).slice(0, 3);
@@ -119,6 +122,7 @@ export function sellPlayer(s: GameState, playerId: number, fee: number, toTeamId
 export function releasePlayer(s: GameState, playerId: number): BuyResult {
   const p = s.players.find((x) => x.id === playerId && x.teamId === s.club.teamId);
   if (!p) return { ok: false, error: 'El jugador ya no está en el club.' };
+  if (p.loan) return { ok: false, error: 'Está cedido: no es nuestro.' };
   const indemnizacion = roundMoney((p.salary * Math.max(p.contract, 1)) / 2);
   s.club.cash -= indemnizacion;
   s.club.ledger.salarios += indemnizacion;
@@ -137,6 +141,7 @@ export function renewSalary(p: Player) {
 export function renewPlayer(s: GameState, playerId: number, salary: number, years: number): BuyResult {
   const p = s.players.find((x) => x.id === playerId && x.teamId === s.club.teamId);
   if (!p) return { ok: false, error: 'El jugador ya no está en el club.' };
+  if (p.loan) return { ok: false, error: 'Está cedido: no es nuestro.' };
   if (p.age >= 33 && years > 1) years = 1;
   p.salary = salary;
   p.contract = years + (s.phase === 'pretemporada' ? 0 : 1);

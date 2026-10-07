@@ -95,7 +95,7 @@ export function cupRoundDue(s: GameState) {
 /** ¿Tiene que jugarla el usuario (seguimos vivos)? */
 export const myCupMatchDue = (s: GameState) => cupRoundDue(s) && stillIn(s);
 
-function penalties(fa: number, fb: number): { a: number; b: number } {
+export function penalties(fa: number, fb: number): { a: number; b: number } {
   let a = 0;
   let b = 0;
   const pa = 0.75 + (fa - fb) / 200;
