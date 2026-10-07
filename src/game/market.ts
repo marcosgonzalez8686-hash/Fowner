@@ -48,6 +48,7 @@ export function canBuy(s: GameState, p: Player, fee: number): BuyResult {
   if (s.club.cash < fee) return { ok: false, error: 'No hay dinero suficiente en caja.' };
   if (!s.players.includes(p)) return { ok: false, error: 'El jugador ya no está disponible.' };
   if (p.loan) return { ok: false, error: 'Está cedido: no se puede fichar hasta que vuelva a su club.' };
+  if (fee > 0 && s.club.transferBan === s.season) return { ok: false, error: 'Sanción por deuda: esta temporada solo puedes fichar jugadores libres.' };
   return { ok: true };
 }
 

@@ -2,6 +2,8 @@ import { DIV_TV, MATCHDAYS, emptyLedger } from './economy';
 import { commercialPerMatch, maintenancePerSeason } from './land';
 import { myTeam, wageBill } from './market';
 import { staffWages } from './staff';
+import { TAX_RATE, competitionPerMatchday, stadiumFine } from './costs';
+import { operatingResult } from './bank';
 import { sponsorFor } from './season';
 import { leagueAttendance, seasonTicketForecast } from './tickets';
 import type { GameState, Ledger } from './types';
@@ -29,6 +31,7 @@ export function projectSeason(s: GameState): Projection {
     director: (s.club.director?.salary ?? 0) / MATCHDAYS,
     mantenimiento: maintenancePerSeason(s) / MATCHDAYS,
     personal: staffWages(s) / MATCHDAYS,
+    competicion: competitionPerMatchday(t.division),
   };
   // préstamos: cuotas pendientes jornada a jornada
   const prestamos = s.club.bank.loans.map((l) => ({ ...l }));
@@ -42,7 +45,8 @@ export function projectSeason(s: GameState): Projection {
   let homeMatches = 0;
   for (let md = desde; md < MATCHDAYS; md++) {
     const enCasa = s.fixtures[t.division][md].some((f) => f.home === t.id);
-    let delta = porJornada.tv + porJornada.patrocinio - porJornada.salarios - porJornada.director - porJornada.mantenimiento - porJornada.personal;
+    let delta = porJornada.tv + porJornada.patrocinio - porJornada.salarios - porJornada.director - porJornada.mantenimiento - porJornada.personal - porJornada.competicion;
+    pending.competicion += porJornada.competicion;
     pending.tv += porJornada.tv;
     pending.patrocinio += porJornada.patrocinio;
     pending.salarios += porJornada.salarios;
@@ -70,6 +74,14 @@ export function projectSeason(s: GameState): Projection {
     caja += delta;
     cashPath.push(Math.round(caja));
   }
+  // al cerrar la temporada: multa por estadio e impuesto sobre el beneficio previsto
+  pending.multas = stadiumFine(s, t.division);
+  caja -= pending.multas;
+  const total = { ...s.club.ledger };
+  for (const k of Object.keys(pending) as (keyof Ledger)[]) total[k] += pending[k];
+  pending.impuestos = Math.max(0, operatingResult(total)) * TAX_RATE;
+  caja -= pending.impuestos;
+  if (cashPath.length) cashPath[cashPath.length - 1] = Math.round(caja);
   for (const k of Object.keys(pending) as (keyof Ledger)[]) pending[k] = Math.round(pending[k]);
   return { pending, cashPath, cashEnd: Math.round(caja), homeMatches };
 }

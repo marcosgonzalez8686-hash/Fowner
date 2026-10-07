@@ -1,8 +1,10 @@
 import { Suspense, lazy, useMemo, useState } from 'react';
 import type { ScreenProps } from '../App';
+import { STADIUM_REQ, stadiumFine } from '../game/costs';
 import type { MapModel } from '../components/Map3D';
 import { expandStadium, stadiumCost } from '../game/club';
 import { fmtMoney } from '../game/economy';
+import { myTeam } from '../game/market';
 import {
   BUILDINGS, LAND_SIZE, STANDING, buildingLevel, buyParcel, canBuyParcel, construct, isBuilt, maintenancePerSeason,
   nextLevelCost, parcelCost, upgrade, type BuildingKind,
@@ -67,6 +69,21 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
           {parcela.stadium && (
             <>
               <p>Aforo: <b>{c.capacity.toLocaleString('es-ES')}</b> espectadores.</p>
+              {(() => {
+                const d = myTeam(s).division;
+                const req = STADIUM_REQ[d];
+                const sig = d > 0 ? STADIUM_REQ[d - 1] : 0;
+                return (
+                  <p className="small">
+                    {req > c.capacity ? (
+                      <b className="neg">⚠️ La liga exige {req.toLocaleString('es-ES')}: multa de {fmtMoney(stadiumFine(s, d))} al acabar la temporada.</b>
+                    ) : (
+                      <span className="muted">Cumple el mínimo de la liga ({req.toLocaleString('es-ES')}).</span>
+                    )}
+                    {sig > c.capacity && <span className="muted"> Si ascendemos, harán falta {sig.toLocaleString('es-ES')}.</span>}
+                  </p>
+                );
+              })()}
               <p className="small muted">
                 {c.capacity <= STANDING
                   ? `Todavía no hay gradas: caben ${STANDING} personas de pie alrededor de la valla. Amplía el aforo para construir la primera grada.`

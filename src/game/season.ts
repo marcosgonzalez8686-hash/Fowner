@@ -10,6 +10,7 @@ import { conflictAfterMatch, newIdols } from './traits';
 import { matchKeys } from './insights';
 import { contDue, myContDue, mySuperDue, newContinental, newSupercopa, playContinentalRound, playSupercopa, superDue } from './continental';
 import { returnLoans } from './loans';
+import { competitionPerMatchday, promotionClauses, seasonFinances, stadiumFine, STADIUM_REQ } from './costs';
 import { markKnown, scoutingNewSeason } from './scouting';
 import { announceRetirements, develop, farewells, retireChance } from './aging';
 import { coachAfterMatch, coachEndSeason, ourPlan, ourTactics } from './coach';
@@ -28,7 +29,7 @@ import { expireOffers, generateOffers } from './offers';
 import { payDividends, payLoans, refreshInvestorOffers } from './bank';
 import { leagueAttendance, seasonTicketFansGrowth, seasonTicketLoyalty, seasonTicketsNewSeason, sellSeasonTickets } from './tickets';
 import { changeMorale, healOneMatchday, injuryName, isInjured, moraleAfterMatch, moraleBonus, resetSeasonMorale, rollInjuries } from './morale';
-import { changeSatisfaction, fansGrowthSatisfaction, satisfactionAfterMatch, satisfactionEndSeason } from './fans';
+import { changeSatisfaction, fansGrowthSatisfaction, objectiveTarget, satisfactionAfterMatch, satisfactionEndSeason } from './fans';
 import {
   agingFactor, commercialPerMatch, fansGrowthBonus, maintenancePerSeason,
 } from './land';
@@ -61,6 +62,16 @@ export function startSeason(s: GameState): string | undefined {
     title: `Arranca la temporada ${s.season}`,
     body: `Jugamos en ${DIVISION_NAMES[myTeam(s).division]}. El mercado cierra hasta el parón de invierno (jornadas 19 a 21).`,
   });
+  const d = myTeam(s).division;
+  if (stadiumFine(s, d) > 0) {
+    addMessage(s, {
+      from: 'liga',
+      title: '⚠️ El estadio no cumple el aforo mínimo',
+      body:
+        `${DIVISION_NAMES[d]} exige ${STADIUM_REQ[d].toLocaleString('es-ES')} espectadores y tenemos ${s.club.capacity.toLocaleString('es-ES')}. ` +
+        `Si al acabar la liga seguimos así, multa de ${fmtMoney(stadiumFine(s, d))}. Amplía el estadio en Club → Instalaciones.`,
+    });
+  }
 }
 
 export function playMatchday(s: GameState) {
@@ -206,7 +217,9 @@ export function playMatchday(s: GameState) {
   const dd = c.director ? Math.round(c.director.salary / MATCHDAYS) : 0;
   const mant = Math.round(maintenancePerSeason(s) / MATCHDAYS);
   const pers = Math.round(staffWages(s) / MATCHDAYS);
-  c.cash += tv + patro - sal - dd - mant - pers;
+  const comp = Math.round(competitionPerMatchday(mio.division));
+  c.cash += tv + patro - sal - dd - mant - pers - comp;
+  c.ledger.competicion += comp;
   c.ledger.mantenimiento += mant;
   c.ledger.personal += pers;
   payLoans(s);
@@ -346,6 +359,7 @@ export function endSeason(s: GameState) {
   }
   // la temporada pasa a la historia del club (y los títulos, a la sala de trofeos)
   recordSeason(s, divAntes, mio.division, miPos, miFila);
+  promotionClauses(s, divAntes, mio.division);
   if (pichichi) {
     const ultima = s.club.records.seasons.at(-1)!;
     ultima.leagueTopScorer = { name: pichichi.name, goals: pichichi.goals, ours: pichichi.t === mio.id };
@@ -357,6 +371,7 @@ export function endSeason(s: GameState) {
   // la afición tiende a la media de su categoría
   for (const t of s.teams) t.fans = Math.round(t.fans * 0.85 + DIV_FANS[t.division] * 0.15 * rand(0.7, 1.3));
   mio.fans = Math.round(mio.fans * fansGrowthBonus(s) * marketingFansBonus(s) * fansGrowthSatisfaction(s) * seasonTicketFansGrowth(s));
+  const objetivoFallado = Boolean(s.club.objective) && miPos > objectiveTarget(s.club.objective!, divAntes);
   const fuerzanVenta = satisfactionEndSeason(s, miPos, divAntes, mio.division);
   resetSeasonMorale(s);
   coachEndSeason(s);
@@ -445,6 +460,7 @@ export function endSeason(s: GameState) {
 
   // 6. economía y nueva temporada
   payDividends(s);
+  seasonFinances(s, divAntes, objetivoFallado);
   const l = s.club.ledger;
   s.club.lastLedger = l;
   s.club.seasonLog.push({ season: s.season, division: divAntes, ledger: l, cashEnd: s.club.cash });

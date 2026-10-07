@@ -31,6 +31,7 @@ export const emptyLedger = (): Ledger => ({
   taquilla: 0, tv: 0, patrocinio: 0, traspasosIn: 0, traspasosOut: 0, salarios: 0, director: 0, obras: 0,
   comercial: 0, mantenimiento: 0, personal: 0, copa: 0, abonos: 0,
   financiacion: 0, cuotas: 0, intereses: 0, inversores: 0,
+  competicion: 0, multas: 0, impuestos: 0,
 });
 
 /** Valor de mercado orientativo de un jugador */
@@ -65,4 +66,4 @@ export function fmtMoney(v: number) {
 }
 
 export const ledgerIncome = (l: Ledger) => l.taquilla + l.tv + l.patrocinio + l.traspasosIn + (l.comercial ?? 0) + (l.copa ?? 0) + (l.abonos ?? 0) + (l.financiacion ?? 0);
-export const ledgerExpense = (l: Ledger) => l.traspasosOut + l.salarios + l.director + l.obras + (l.mantenimiento ?? 0) + (l.personal ?? 0) + (l.cuotas ?? 0) + (l.intereses ?? 0) + (l.inversores ?? 0);
+export const ledgerExpense = (l: Ledger) => l.traspasosOut + l.salarios + l.director + l.obras + (l.mantenimiento ?? 0) + (l.personal ?? 0) + (l.cuotas ?? 0) + (l.intereses ?? 0) + (l.inversores ?? 0) + (l.competicion ?? 0) + (l.multas ?? 0) + (l.impuestos ?? 0);

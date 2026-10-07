@@ -67,6 +67,7 @@ export function loanIn(s: GameState, id: number): string {
   const r = loanAnswer(s, p);
   if (!r.ok) return r.reason!;
   const cuota = loanFee(p);
+  if (s.club.transferBan === s.season) return 'Sanción por deuda: esta temporada no puedes pagar cuotas de cesión.';
   if (s.club.cash < cuota) return 'No hay dinero en caja para la cuota de cesión.';
   const club = teamById(s, p.teamId)!;
   s.club.cash -= cuota;

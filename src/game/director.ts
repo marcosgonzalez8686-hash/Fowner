@@ -170,7 +170,8 @@ function doSignings(s: GameState, maxOps: number) {
     const listón = tit.length >= ourShape(s)[pos] ? tit[tit.length - 1].ovr : 0;
     const necesitaHueco = corta || squad.filter((p) => p.pos === pos).length < MIN_POS[pos];
 
-    const presupuesto = Math.min(s.club.transferBudget, s.club.cash);
+    // con sanción por deuda solo puede traer libres
+    const presupuesto = s.club.transferBan === s.season ? 0 : Math.min(s.club.transferBudget, s.club.cash);
     // en una emergencia (menos de 18) puede pasarse un 10% del tope salarial
     // si la masa salarial ya pasa del tope, al menos puede traer jugadores baratos para completar
     const barato = roundMoney(s.club.wageCap * 0.03);

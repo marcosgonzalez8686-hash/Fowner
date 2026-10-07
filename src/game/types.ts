@@ -118,6 +118,9 @@ export interface Ledger {
   cuotas: number; // capital devuelto de préstamos
   intereses: number; // intereses y comisiones de préstamos
   inversores: number; // reparto de beneficios y recompras a inversores
+  competicion: number; // desplazamientos, arbitrajes, seguridad y licencias
+  multas: number; // multas de la liga
+  impuestos: number; // impuesto sobre beneficios
 }
 
 export interface Club {
@@ -148,6 +151,7 @@ export interface Club {
   retireCheck?: number; // temporada en la que los veteranos ya decidieron si se retiran
   scouted?: number[]; // jugadores de otros clubes con informe de los ojeadores
   reportsUsed?: number; // informes pedidos esta temporada
+  transferBan?: number; // temporada en la que no se pueden pagar traspasos (sanción por deuda)
   staff: Partial<Record<Role, Staff>>;
   sponsors: Partial<Record<SponsorSlot, SponsorContract>>;
   cashLog: number[]; // caja al empezar la temporada y tras cada jornada
