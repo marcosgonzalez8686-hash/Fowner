@@ -61,15 +61,18 @@ export function preMatchKeys(s: GameState, xi: Player[]): string[] {
   if (encaje >= 0.6) out.push(`🧩 El once encaja muy bien en el ${t.formation}.`);
   if (mal.length) out.push(`🧩 No terminan de encajar en el ${t.formation}: ${mal.map((p) => apellido(p.name)).join(', ')}.`);
   // titulares de siempre que se pierden el partido
-  const sano = elevenFor(mySquad(s).map((p) => ({ ...p, injury: 0 })), t.formation as Formation, (p) => p.ovr + fitBonus(p, t.formation, t.style, coach)).xi;
+  const sano = elevenFor(mySquad(s).map((p) => ({ ...p, injury: 0, suspended: 0 })), t.formation as Formation, (p) => p.ovr + fitBonus(p, t.formation, t.style, coach)).xi;
   const enXi = new Set(xi.map((p) => p.id));
   const lesionados = new Set(mySquad(s).filter((p) => (p.injury ?? 0) > 0).map((p) => p.id));
   const bajas = sano.filter((p) => !enXi.has(p.id) && lesionados.has(p.id));
   if (bajas.length) out.push(`🤕 Bajas en el once: ${bajas.map((p) => `${apellido(p.name)} (${p.ovr})`).join(', ')}.`);
+  const sancionadosIds = new Set(mySquad(s).filter((p) => (p.suspended ?? 0) > 0).map((p) => p.id));
+  const sancionados = sano.filter((p) => !enXi.has(p.id) && sancionadosIds.has(p.id));
+  if (sancionados.length) out.push(`🟥 Sancionados: ${sancionados.map((p) => `${apellido(p.name)} (${p.ovr})`).join(', ')}.`);
   // cansancio: titulares fatigados y quién descansa por rotación
   const cansados = xi.filter((p) => fatiguePenalty(p) >= 0.5);
   if (cansados.length) out.push(`🪫 Llegan cansados: ${cansados.map((p) => `${apellido(p.name)} (${condition(p)}%)`).join(', ')}.`);
-  const sinCansancio = elevenFor(mySquad(s).filter((p) => !(p.injury && p.injury > 0)), t.formation, (p) => p.ovr + fitBonus(p, t.formation, t.style, coach)).xi;
+  const sinCansancio = elevenFor(mySquad(s).filter((p) => !(p.injury && p.injury > 0) && !(p.suspended && p.suspended > 0)), t.formation, (p) => p.ovr + fitBonus(p, t.formation, t.style, coach)).xi;
   const descansan = sinCansancio.filter((p) => !enXi.has(p.id));
   if (descansan.length) out.push(`🔄 Rotación: descansan ${descansan.map((p) => `${apellido(p.name)} (${condition(p)}%)`).join(', ')}.`);
   const mb = moraleBonus(s);

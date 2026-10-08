@@ -1,4 +1,5 @@
 import { DIVISION_NAMES, TEAMS_PER_DIV } from './economy';
+import { applyCards } from './discipline';
 import { ROUND_NAMES } from './cup';
 import { addMessage, teamById } from './market';
 import type { MatchReport } from './report';
@@ -62,6 +63,7 @@ export function recordMatch(s: GameState, r: MatchReport, xi: Player[]) {
     rec.current[e.pid] = (rec.current[e.pid] ?? 0) + 1;
   }
   rateOurPlayers(s, r, lado);
+  applyCards(s, r, lado);
   adaptAfterMatch(s, xi.map((p) => p.id));
   const gf = lado === 'home' ? r.hg : r.ag;
   const gc = lado === 'home' ? r.ag : r.hg;

@@ -28,6 +28,8 @@ import { maybeCreateEvent } from './events';
 import { cupRoundDue, newCup, playCupRound, stillIn } from './cup';
 import { generateOffers } from './offers';
 import { growFacilities } from './rivals';
+import { resetYellows } from './discipline';
+import { aiTransfers } from './aitransfers';
 import { finishPlayoffs, myPlayoffDue, playoffWinner, startPlayoffs } from './playoff';
 import { PRE_WEEKS, executeAgreed, tickNegotiations } from './negotiation';
 import { payDividends, payLoans, refreshInvestorOffers } from './bank';
@@ -57,6 +59,7 @@ export function advanceWeek(s: GameState): string | undefined {
   if ((s.preWeek ?? 0) >= PRE_WEEKS - 1) return 'Es la última semana de pretemporada: toca empezar la liga.';
   s.preWeek = (s.preWeek ?? 0) + 1;
   tickNegotiations(s);
+  aiTransfers(s);
   generateOffers(s, 1);
   runDirector(s, 'pretemporada');
 }
@@ -288,7 +291,10 @@ export function playMatchday(s: GameState) {
   // y se hace efectivo lo acordado mientras el mercado estaba cerrado
   if (s.matchday === 18) executeAgreed(s);
   tickNegotiations(s);
-  if (marketOpen(s)) generateOffers(s, 1);
+  if (marketOpen(s)) {
+    aiTransfers(s);
+    generateOffers(s, 1);
+  }
   runDirector(s, 'jornada');
   expireProposals(s);
   if (s.matchday < MATCHDAYS) maybeCreateEvent(s);
@@ -401,6 +407,7 @@ export function endSeason(s: GameState) {
   s.leagueStats = emptyStats(s.season + 1);
   // la afición tiende a la media de su categoría
   for (const t of s.teams) t.fans = Math.round(t.fans * 0.85 + DIV_FANS[t.division] * 0.15 * rand(0.7, 1.3));
+  resetYellows(s);
   // los demás clubes amplían estadio e instalaciones según su nueva categoría
   growFacilities(s);
   mio.fans = Math.round(mio.fans * fansGrowthBonus(s) * marketingFansBonus(s) * fansGrowthSatisfaction(s) * seasonTicketFansGrowth(s));

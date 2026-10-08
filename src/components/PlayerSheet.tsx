@@ -7,6 +7,7 @@ import {
 } from '../game/market';
 import type { GameState, Player } from '../game/types';
 import { Segmented, Sheet, Stepper } from '../ui';
+import { YELLOW_LIMIT } from '../game/discipline';
 import { seasonAverage } from '../game/history';
 import { FormStrip, RatingBadge } from './Rating';
 import { ProfileDetail } from './Traits';
@@ -87,6 +88,8 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
           <br />
           <Condicion p={sel} />
           <br />
+          {(sel.suspended ?? 0) > 0 && <><b className="neg">🟥 Sancionado: se pierde {sel.suspended! > 1 ? `los próximos ${sel.suspended} partidos` : 'el próximo partido'}</b><br /></>}
+          {(sel.yellows ?? 0) > 0 && <>🟨 {sel.yellows} amarilla{sel.yellows! > 1 ? 's' : ''} esta temporada (con {YELLOW_LIMIT}, un partido de sanción)<br /></>}
           {TREND_TEXT[trendOf(sel)].icon} Está {TREND_TEXT[trendOf(sel)].text}
         </p>
         {sel.retiring && (

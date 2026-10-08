@@ -1,3 +1,4 @@
+import { facilitiesOf } from '../game/rivals';
 import { rivalCrest } from '../game/identity';
 import { squadOf, teamById } from '../game/market';
 import { STYLES, bestEleven, chooseStyle, computeStandings, form, type Formation } from '../game/match';
@@ -55,7 +56,7 @@ function teamInfo({ s, id, rivalId, home, neutral }: { s: GameState; id: number;
   const rival = planDe(rivalId);
   const extra = (x: number) => (x === s.club.teamId ? staffMatchBonus(s) + moraleBonus(s) : 0);
   const estilo = mio ? ourTactics(s).style : chooseStyle(plan.strength + extra(id), rival.strength + extra(rivalId), home && !neutral);
-  const bajas = squadOf(s, id).filter((p) => (p.injury ?? 0) > 0);
+  const bajas = squadOf(s, id).filter((p) => (p.injury ?? 0) > 0 || (p.suspended ?? 0) > 0);
   return { t, mio, plan, estilo, bajas };
 }
 
@@ -76,7 +77,7 @@ export default function Previa({ s, setup, onPlay, onSkip, onClose }: {
       })()
     : null;
   const maxF = Math.max(h.plan.strength, a.plan.strength);
-  const estadio = setup.neutral ? 'Campo neutral' : h.mio ? s.club.identity.stadium : `Estadio del ${h.t.name}`;
+  const estadio = setup.neutral ? 'Campo neutral' : h.mio ? s.club.identity.stadium : facilitiesOf(h.t).stadium;
   const nuestro = h.mio ? h : a.mio ? a : null;
 
   return (
@@ -189,7 +190,7 @@ export default function Previa({ s, setup, onPlay, onSkip, onClose }: {
           <p className="small muted">
             🤕 Bajas:{' '}
             {[h, a]
-              .flatMap((x) => x.bajas.map((p) => `${p.name} (${x.t.short}, ${p.injury} j.)`))
+              .flatMap((x) => x.bajas.map((p) => `${p.name} (${x.t.short}, ${(p.injury ?? 0) > 0 ? `${p.injury} j.` : '🟥 sancionado'})`))
               .join(', ')}
           </p>
         )}

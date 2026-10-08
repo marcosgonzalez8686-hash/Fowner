@@ -16,6 +16,7 @@ import { loanedOut } from '../game/loans';
 import { TREND_TEXT, trendOf } from '../game/aging';
 import { condition } from '../game/fatigue';
 import { potLabel } from '../game/scouting';
+import { YELLOW_LIMIT } from '../game/discipline';
 import { negFor } from '../game/negotiation';
 
 /** Marcas de salida: transferible, cesión o venta en marcha, renovación */
@@ -82,7 +83,7 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
           </p>
         )}
         <p className="small muted">
-          ⭐ titular · 🤕 lesionado · 🔋 condición física · ✅ encaja en el sistema · ➖ normal · ❌ no encaja · 🏷️ transferible · 🔁 ofrecido cedido. Toca un jugador para ver su perfil y su carácter.
+          ⭐ titular · 🤕 lesionado · 🟥 sancionado · 🔋 condición física · ✅ encaja en el sistema · ➖ normal · ❌ no encaja · 🏷️ transferible · 🔁 ofrecido cedido. Toca un jugador para ver su perfil y su carácter.
         </p>
       </Card>
 
@@ -112,12 +113,14 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
             .sort((a, b) => b.ovr - a.ovr)
             .map((p) => (
               <button key={p.id} className="player as-btn" onClick={() => openPlayer(p.id)}>
-                <span className="pos">{(p.injury ?? 0) > 0 ? '🤕' : titulares.has(p.id) ? '⭐' : ''}</span>
+                <span className="pos">{(p.injury ?? 0) > 0 ? '🤕' : (p.suspended ?? 0) > 0 ? '🟥' : titulares.has(p.id) ? '⭐' : ''}</span>
                 <span className="name">
                   {p.name}
                   {marcas(s, p).map((m) => <span key={m.text} className={`mark ${m.cls}`}>{m.text}</span>)}
                   <small>
                     {(p.injury ?? 0) > 0 && <b className="neg">Lesionado {p.injury} j. · </b>}
+                    {(p.suspended ?? 0) > 0 && <b className="neg">🟥 Sancionado {p.suspended} partido{p.suspended! > 1 ? 's' : ''} · </b>}
+                    {(p.yellows ?? 0) >= YELLOW_LIMIT - 1 && <b className="warn">🟨 {p.yellows} amarillas: a una de la sanción · </b>}
                     {p.retiring && <b className="warn">👴 se retira · </b>}
                     {p.loan && <b>🔁 cedido por {teamById(s, p.loan.from)?.short} · </b>}
                     {p.age} años {TREND_TEXT[trendOf(p)].icon} · {fmtMoney(p.salary)} · {p.contract <= 1 ? <b className="warn">acaba contrato</b> : `${p.contract} temp.`}

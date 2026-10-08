@@ -11,7 +11,7 @@ export interface MatchEvent {
   detail?: 'parada' | 'fuera' | 'palo'; // cómo acaba una ocasión
   player: string;
   assist?: string;
-  pid?: number; // id del goleador (para la historia del club)
+  pid?: number; // id del goleador o del amonestado
 }
 
 export interface SideStats {
@@ -113,8 +113,14 @@ export function buildReport(
   const tarjetas = (st: SideStats, xi: Player[], side: 'home' | 'away') => {
     const campo = xi.filter((p) => p.pos !== 'POR');
     if (!campo.length) return;
-    for (const min of minutes(st.yellows)) events.push({ min, side, type: 'amarilla', player: pick(campo).name });
-    if (st.reds) events.push({ min: randInt(30, 89), side, type: 'roja', player: pick(campo).name });
+    for (const min of minutes(st.yellows)) {
+      const p = pick(campo);
+      events.push({ min, side, type: 'amarilla', player: p.name, pid: p.id });
+    }
+    if (st.reds) {
+      const p = pick(campo);
+      events.push({ min: randInt(30, 89), side, type: 'roja', player: p.name, pid: p.id });
+    }
   };
   tarjetas(home, xiHome, 'home');
   tarjetas(away, xiAway, 'away');

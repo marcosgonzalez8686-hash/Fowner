@@ -197,6 +197,13 @@ export function newSaleOffer(s: GameState, p: Player, buyerId: number, fee: numb
   return n;
 }
 
+/** Otro club se lleva al jugador: se rompen nuestras negociaciones de compra o cesión por él. Devuelve si había alguna. */
+export function breakNegotiationsFor(s: GameState, playerId: number, motivo: string) {
+  const abiertas = s.negotiations.filter((n) => enCurso(n) && n.playerId === playerId && (n.kind === 'compra' || n.kind === 'cesion'));
+  for (const n of abiertas) rompe(s, n, motivo);
+  return abiertas.length > 0;
+}
+
 // ---------- nuestras respuestas ----------
 
 const busca = (s: GameState, id: number) => s.negotiations.find((n) => n.id === id && n.state === 'tu_turno');
