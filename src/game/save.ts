@@ -1,4 +1,5 @@
 import { emptyStats } from './stats';
+import { ensureFacilities } from './rivals';
 import { DIVISION_NAMES } from './economy';
 import { SAVE_VERSION } from './generate';
 import { emptyLedger } from './economy';
@@ -128,6 +129,8 @@ function migrate(s: GameState) {
   // perfil de juego y rasgos para los jugadores de antes
   for (const p of s.players) rollIdentity(p);
   migrateSponsors(s);
+  // instalaciones de los rivales (partidas de antes)
+  ensureFacilities(s.teams.filter((t) => t.id !== c.teamId));
   c.ledger = { ...emptyLedger(), ...c.ledger };
   if (c.lastLedger) c.lastLedger = { ...emptyLedger(), ...c.lastLedger };
 }

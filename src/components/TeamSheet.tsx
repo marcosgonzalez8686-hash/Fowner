@@ -8,6 +8,8 @@ import { Ovr, Sheet } from '../ui';
 import Crest from './Crest';
 import { PlayerTags } from './Traits';
 import { useNav } from '../nav/context';
+import { facilitiesOf } from '../game/rivals';
+import { BUILDINGS, buildingLevel, type BuildingKind } from '../game/land';
 
 const LINEAS: { pos: Pos; name: string }[] = [
   { pos: 'POR', name: 'Porteros' },
@@ -64,6 +66,33 @@ export default function TeamSheet({ s, id, onClose }: { s: GameState; id: number
         <div><b className={plan.strength > nuestro ? 'neg' : 'pos'}>{plan.strength > nuestro ? '+' : ''}{(plan.strength - nuestro).toFixed(1)}</b><span>respecto a nuestro once</span></div>
         <div><b>{squad.length}</b><span>jugadores</span></div>
       </div>
+      {(() => {
+        const f = facilitiesOf(t);
+        const kinds = Object.keys(BUILDINGS) as BuildingKind[];
+        return (
+          <>
+            <h4>Instalaciones</h4>
+            <p className="small">
+              🏟️ <b>{f.stadium}</b> · {f.capacity.toLocaleString('es-ES')} espectadores
+              {!t.country && <span className="muted"> (el nuestro: {s.club.capacity.toLocaleString('es-ES')})</span>}
+            </p>
+            <div className="fac-grid">
+              {kinds.map((k) => {
+                const suyo = f.levels[k] ?? 0;
+                const mio = buildingLevel(s, k);
+                return (
+                  <div key={k} className={`fac${suyo ? '' : ' none'}`}>
+                    <span aria-hidden>{BUILDINGS[k].icon}</span>
+                    <span className="fac-name">{BUILDINGS[k].name}</span>
+                    <b>{suyo ? `${suyo}/${BUILDINGS[k].maxLevel}` : '—'}</b>
+                    {!t.country && <small className={mio > suyo ? 'pos' : mio < suyo ? 'neg' : 'muted'}>tú {mio || '—'}</small>}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        );
+      })()}
       <p className="small muted">Su entrenador elige el estilo según el rival (de {STYLES.defensivo.label.toLowerCase()} a {STYLES.ofensivo.label.toLowerCase()}). ⭐ titular. Toca un jugador para ver su ficha.</p>
       {LINEAS.map(({ pos, name }) => {
         const deEsa = squad.filter((p) => p.pos === pos).sort((a, b) => b.ovr - a.ovr);

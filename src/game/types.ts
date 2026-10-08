@@ -50,6 +50,7 @@ export interface Team {
   division: number; // 0 = Primera ... 4 = la más baja
   fans: number;
   country?: string; // solo clubes extranjeros (Copa de Campeones)
+  fac?: import('./rivals').RivalFacilities; // estadio y edificios (los rivales)
 }
 
 export interface Fixture {

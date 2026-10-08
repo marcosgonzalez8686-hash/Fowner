@@ -1,4 +1,5 @@
 import { fansExpectationMessage } from './fans';
+import { ensureFacilities } from './rivals';
 import { emptyStats } from './stats';
 import { rollIdentity } from './traits';
 import {
@@ -170,6 +171,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
     s.players.push(makePlayer(s, DIV_LEVEL[d] - 3, { contract: 0 }));
   }
 
+  ensureFacilities(s.teams.filter((t) => t.id !== s.club.teamId));
   s.fixtures = buildAllFixtures(s);
   s.directorsMarket = makeDirectors(s, ultima);
   s.staffMarket = makeStaffCandidates(s, ultima);

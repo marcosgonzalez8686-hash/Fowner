@@ -27,6 +27,7 @@ import { refreshSponsorOffers, sponsorFixed, sponsorPerWin, sponsorsEndSeason } 
 import { maybeCreateEvent } from './events';
 import { cupRoundDue, newCup, playCupRound, stillIn } from './cup';
 import { generateOffers } from './offers';
+import { growFacilities } from './rivals';
 import { finishPlayoffs, myPlayoffDue, playoffWinner, startPlayoffs } from './playoff';
 import { PRE_WEEKS, executeAgreed, tickNegotiations } from './negotiation';
 import { payDividends, payLoans, refreshInvestorOffers } from './bank';
@@ -400,6 +401,8 @@ export function endSeason(s: GameState) {
   s.leagueStats = emptyStats(s.season + 1);
   // la afición tiende a la media de su categoría
   for (const t of s.teams) t.fans = Math.round(t.fans * 0.85 + DIV_FANS[t.division] * 0.15 * rand(0.7, 1.3));
+  // los demás clubes amplían estadio e instalaciones según su nueva categoría
+  growFacilities(s);
   mio.fans = Math.round(mio.fans * fansGrowthBonus(s) * marketingFansBonus(s) * fansGrowthSatisfaction(s) * seasonTicketFansGrowth(s));
   const objetivoFallado = Boolean(s.club.objective) && !objectiveMet(s.club.objective!, divAntes, miPos, mio.division);
   const fuerzanVenta = satisfactionEndSeason(s, miPos, divAntes, mio.division);

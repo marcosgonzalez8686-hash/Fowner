@@ -25,6 +25,7 @@ import { TeamLink } from '../nav/context';
 import { CONT_NAME, CONT_ROUNDS, FLAG, SUPER_NAME, myContDue, myContTie, mySuperDue, playContinentalRound, playSupercopa } from '../game/continental';
 import FansCard from '../components/FansCard';
 import Pretemporada from '../components/Pretemporada';
+import { facilitiesOf } from '../game/rivals';
 
 function nextMatch(s: GameState) {
   const t = myTeam(s);
@@ -218,7 +219,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
             <div className="kit-line">
               <KitView k={prox.casa ? s.club.identity.home : s.club.identity.away} size={26} />
               <span className="muted small">
-                {prox.casa ? `En casa (${s.club.identity.stadium}), con la titular` : 'Fuera de casa, con la suplente'}
+                {prox.casa ? `En casa (${s.club.identity.stadium}), con la titular` : `Fuera de casa (${facilitiesOf(prox.rival).stadium}), con la suplente`}
               </span>
             </div>
             <p className="muted center">
