@@ -10,9 +10,10 @@ import { Segmented, Sheet } from '../ui';
 import { seasonAverage } from '../game/history';
 import { FormStrip, RatingBadge } from './Rating';
 import { ProfileDetail } from './Traits';
-import { LOAN_GROWTH_APPS, MAX_LOANS_IN, loanAnswer, loanFee, loanIn, loanOut, loanTarget } from '../game/loans';
-import { PEAK, TREND_TEXT, persuadeVeteran, trendOf } from '../game/aging';
+import { MAX_LOANS_IN, loanAnswer, loanFee, loanIn, loanOut, loanTarget } from '../game/loans';
+import { TREND_TEXT, persuadeVeteran, trendOf } from '../game/aging';
 import { requestReport, shownPot } from '../game/scouting';
+import { potLabel } from '../game/scouting';
 import { FLAG } from '../game/continental';
 import { condition } from '../game/fatigue';
 import { fatiguePenalty } from '../game/match';
@@ -25,7 +26,7 @@ export function Condicion({ p }: { p: Player }) {
   return (
     <span className={c < 55 ? 'neg' : c < 70 ? 'warn' : undefined}>
       🔋 Condición física: <b>{c}%</b>
-      {pen >= 0.1 ? ` (cansado: −${pen.toFixed(1).replace('.', ',')} en el campo; el entrenador puede darle descanso)` : ''}
+      {pen >= 0.1 ? ' · cansado: el entrenador puede darle descanso' : ''}
     </span>
   );
 }
@@ -61,7 +62,7 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
     return (
       <Sheet title={sel.name} onClose={onClose} top>
         <p className="muted">
-          {sel.pos} · {sel.age} años · media {sel.ovr} · potencial {sel.pot}
+          {sel.pos} · {sel.age} años · media {sel.ovr} · {potLabel(sel.ovr, shownPot(s, sel))}
           <br />
           Cobra {fmtMoney(sel.salary)}/temp. · contrato: {sel.contract} temp.
           <br />
@@ -70,7 +71,6 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
           <Condicion p={sel} />
           <br />
           {TREND_TEXT[trendOf(sel)].icon} Está {TREND_TEXT[trendOf(sel)].text}
-          {trendOf(sel) !== 'crece' && ` (un ${sel.pos === 'POR' ? 'portero' : sel.pos === 'DEF' ? 'defensa' : sel.pos === 'MED' ? 'centrocampista' : 'delantero'} aguanta hasta los ${PEAK[sel.pos]})`}
         </p>
         {sel.retiring && (
           <div className="hint warn-bg">
@@ -151,7 +151,7 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
             {marketOpen(s) && destino ? (
               <>
                 <p className="small muted">
-                  Una temporada en el {destino.team.name} ({destino.division + 1}ª), que paga su ficha. Si tiene 23 años o menos y juega {LOAN_GROWTH_APPS} partidos o más, vuelve mejor.
+                  Una temporada en el {destino.team.name} ({destino.division + 1}ª), que paga su ficha. A los jóvenes, jugar minutos les viene bien.
                 </p>
                 <button className="btn full" onClick={() => run(() => update((g) => loanOut(g, sel.id)), '')}>
                   🔁 Ceder al {destino.team.name}
@@ -173,7 +173,7 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
   return (
     <Sheet title={sel.name} onClose={onClose} top>
       <p className="muted">
-        {sel.pos} · {sel.age} años · media {sel.ovr} · potencial {shownPot(s, sel)}
+        {sel.pos} · {sel.age} años · media {sel.ovr} · {potLabel(sel.ovr, shownPot(s, sel))}
         <br />
         💰 Valor de mercado: <b>{fmtMoney(playerValue(sel))}</b>
         <br />

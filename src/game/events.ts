@@ -1,4 +1,5 @@
 import { DIV_SPONSOR, fmtMoney, roundMoney } from './economy';
+import { potLabel } from './scouting';
 import { makePlayer } from './generate';
 import { addMessage, myTeam, mySquad } from './market';
 import { chance, pick, randInt } from './rng';
@@ -252,7 +253,7 @@ const TEMPLATES: Template[] = [
       const p = makePlayer(s, nivel, { age: 16, teamId: s.club.teamId, contract: 3 });
       p.pot = Math.min(95, p.ovr + randInt(18, 30));
       s.players.push(p);
-      return `${p.name} (${p.pos}) se une al club. Media ${p.ovr}, potencial ${p.pot}.`;
+      return `${p.name} (${p.pos}) se une al club. Media ${p.ovr}, ${potLabel(p.ovr, p.pot)}.`;
     },
   },
   {

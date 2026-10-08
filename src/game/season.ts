@@ -150,7 +150,6 @@ export function playMatchday(s: GameState) {
       harvest(s, rep);
       // partidos de los cedidos (en ambos sentidos)
       for (const p of [...once(f.home).xi, ...once(f.away).xi]) if (p.loan) p.loan.apps++;
-      tire(s, [...once(f.home).xi, ...once(f.away).xi]);
       informes[d].push(rep);
       if (f.home === mio.id || f.away === mio.id) {
         if (r.attendance !== undefined) {
@@ -185,6 +184,8 @@ export function playMatchday(s: GameState) {
         satisfactionAfterMatch(s, gf, gc, casa);
         coachAfterMatch(s, gf, gc);
       }
+      // el partido cansa (después de las claves, que cuentan cómo llegaban)
+      tire(s, [...once(f.home).xi, ...once(f.away).xi]);
       // lesiones de los titulares de ambos equipos
       for (const id of [f.home, f.away]) {
         const nuevas = rollInjuries(s, once(id).xi, id);

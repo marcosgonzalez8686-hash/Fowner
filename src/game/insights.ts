@@ -48,7 +48,6 @@ export function winProbs(first: number, second: number, s1: Style, s2: Style) {
 }
 
 const n1 = (x: number) => x.toFixed(1).replace('.', ',');
-const signo = (x: number) => `${x > 0 ? '+' : x < 0 ? '−' : ''}${n1(Math.abs(x))}`;
 const apellido = (n: string) => n.split(' ').slice(1).join(' ') || n;
 
 /** Lo que pesa antes de jugar: encaje, bajas, moral y banquillo */
@@ -56,14 +55,11 @@ export function preMatchKeys(s: GameState, xi: Player[]): string[] {
   const t = ourTactics(s);
   const coach = coachOf(s)?.id ?? 0;
   const out: string[] = [];
-  const bien = xi.filter((p) => fitOf(p, t.formation, t.style) > 0).length;
-  const mal = xi.filter((p) => fitOf(p, t.formation, t.style) < 0);
+  // sin cifras: solo cómo encaja el once en el sistema y quién no está cómodo
+  const mal = xi.filter((p) => fitOf(p, t.formation, t.style) < 0 && fitBonus(p, t.formation, t.style, coach) < -1);
   const encaje = xi.reduce((a, p) => a + fitBonus(p, t.formation, t.style, coach), 0) / 11;
-  if (Math.abs(encaje) >= 0.3) {
-    out.push(
-      `🧩 Encaje en el ${t.formation}: ${bien} titulares encajan${mal.length ? ` y ${mal.length} no (${mal.map((p) => apellido(p.name)).join(', ')})` : ''}: ${signo(encaje)} al once.`,
-    );
-  }
+  if (encaje >= 0.6) out.push(`🧩 El once encaja muy bien en el ${t.formation}.`);
+  if (mal.length) out.push(`🧩 No terminan de encajar en el ${t.formation}: ${mal.map((p) => apellido(p.name)).join(', ')}.`);
   // titulares de siempre que se pierden el partido
   const sano = elevenFor(mySquad(s).map((p) => ({ ...p, injury: 0 })), t.formation as Formation, (p) => p.ovr + fitBonus(p, t.formation, t.style, coach)).xi;
   const enXi = new Set(xi.map((p) => p.id));
@@ -72,20 +68,14 @@ export function preMatchKeys(s: GameState, xi: Player[]): string[] {
   if (bajas.length) out.push(`🤕 Bajas en el once: ${bajas.map((p) => `${apellido(p.name)} (${p.ovr})`).join(', ')}.`);
   // cansancio: titulares fatigados y quién descansa por rotación
   const cansados = xi.filter((p) => fatiguePenalty(p) >= 0.5);
-  if (cansados.length) {
-    const resta = xi.reduce((a, p) => a + fatiguePenalty(p), 0) / 11;
-    out.push(`🪫 Cansancio: ${cansados.map((p) => `${apellido(p.name)} (${condition(p)}%)`).join(', ')}: ${signo(-resta)} al once.`);
-  }
+  if (cansados.length) out.push(`🪫 Llegan cansados: ${cansados.map((p) => `${apellido(p.name)} (${condition(p)}%)`).join(', ')}.`);
   const sinCansancio = elevenFor(mySquad(s).filter((p) => !(p.injury && p.injury > 0)), t.formation, (p) => p.ovr + fitBonus(p, t.formation, t.style, coach)).xi;
   const descansan = sinCansancio.filter((p) => !enXi.has(p.id));
   if (descansan.length) out.push(`🔄 Rotación: descansan ${descansan.map((p) => `${apellido(p.name)} (${condition(p)}%)`).join(', ')}.`);
   const mb = moraleBonus(s);
-  if (Math.abs(mb) >= 0.75) out.push(`${mb > 0 ? '😀 Moral alta' : '😞 Moral baja'}: ${signo(mb)}.`);
-  if (!coachOf(s)) out.push('🧢 Sin entrenador: el equipo pierde 2 puntos.');
-  else {
-    const st = staffMatchBonus(s);
-    if (st >= 3) out.push(`🧢 El cuerpo técnico suma ${signo(st)}.`);
-  }
+  if (Math.abs(mb) >= 0.75) out.push(mb > 0 ? '😀 El vestuario está con la moral por las nubes.' : '😞 El vestuario está tocado.');
+  if (!coachOf(s)) out.push('🧢 Se nota la falta de entrenador.');
+  else if (staffMatchBonus(s) >= 3) out.push('🧢 El cuerpo técnico tiene al equipo bien trabajado.');
   return out;
 }
 
@@ -107,7 +97,7 @@ export function matchKeys(s: GameState, c: MatchContext): string[] {
   const out: string[] = [];
   const extras = staffMatchBonus(s) + moraleBonus(s);
   out.push(
-    `📊 Nivel del once: ${n1(c.ours - extras)} contra ${n1(c.rival)}; con cuerpo técnico y moral, ${n1(c.ours)} (${signo(c.ours - c.rival)})` +
+    `📊 Nivel del once: ${n1(c.ours - extras)} contra ${n1(c.rival)}` +
       `${c.home === true ? ', en casa' : c.home === false ? ', fuera' : ', en campo neutral'}.`,
   );
   out.push(...preMatchKeys(s, c.xi));
@@ -115,8 +105,8 @@ export function matchKeys(s: GameState, c: MatchContext): string[] {
     out.push(`♟️ Planteamientos: nosotros ${STYLES[t.style].label.toLowerCase()}, ellos ${STYLES[c.rivalStyle].label.toLowerCase()}.`);
   }
   const dia = c.oursDay - c.ours - (c.rivalDay - c.rival);
-  if (dia >= 2) out.push(`🔥 Día inspirado: el equipo rindió por encima de lo normal (${signo(dia)}).`);
-  else if (dia <= -2) out.push(`🥶 Día gris: el equipo rindió por debajo de lo normal (${signo(dia)}).`);
+  if (dia >= 2) out.push('🔥 Día inspirado: el equipo rindió por encima de lo normal.');
+  else if (dia <= -2) out.push('🥶 Día gris: el equipo rindió por debajo de lo normal.');
   // ventaja de campo como en la liga (+2 para el local)
   const casa = c.home === true ? 2 : c.home === false ? -2 : 0;
   const p = winProbs(c.ours + casa, c.rival, t.style, c.rivalStyle);

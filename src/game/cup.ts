@@ -130,7 +130,6 @@ export function playCupRound(s: GameState) {
     const plan = (id: number) => (id === mio.id ? ourPlan(s, porEquipo.get(id) ?? []) : bestEleven(porEquipo.get(id) ?? []));
     const xiA = plan(tie.a);
     const xiB = plan(tie.b);
-    tire(s, [...xiA.xi, ...xiB.xi]);
     const casaA = tie.home === tie.a ? 3 : 0;
     const casaB = tie.home === tie.b ? 3 : 0;
     // magia de Copa: a partido único las diferencias se acortan y el pequeño se crece en casa
@@ -154,6 +153,7 @@ export function playCupRound(s: GameState) {
     if (tie.a === mio.id || tie.b === mio.id) {
       ourMatch(s, tie, ronda, xiA.xi, xiB.xi, fa, fb, { formation: xiA.formation, style: stA }, { formation: xiB.formation, style: stB }, ra, rb);
     }
+    tire(s, [...xiA.xi, ...xiB.xi]);
   }
 
   // siguiente ronda o campeón

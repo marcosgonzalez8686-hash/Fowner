@@ -1,8 +1,8 @@
 import { coachOf, ourTactics } from '../game/coach';
 import { STYLES } from '../game/match';
-import { ADAPT_APPS, FIT_ICON, PROFILES, TRAITS, adaptProgress, fitBonus, fitOf, profileHelp } from '../game/traits';
+import { FIT_ICON, PROFILES, TRAITS, adaptProgress, fitOf } from '../game/traits';
 import type { GameState, Player } from '../game/types';
-import { isKnown, reportCapacity, reportsLeft, shownPot } from '../game/scouting';
+import { isKnown, reportCapacity, reportsLeft } from '../game/scouting';
 
 /** Línea compacta: perfil, encaje con el sistema del entrenador y rasgos */
 export function PlayerTags({ s, p }: { s: GameState; p: Player }) {
@@ -41,31 +41,29 @@ export function ProfileDetail({ s, p, fichaje, onReport }: { s: GameState; p: Pl
   const t = ourTactics(s);
   const coach = coachOf(s)?.id ?? 0;
   const f = fitOf(p, t.formation, t.style);
-  // un fichaje llega sin adaptar
-  const bonus = fitBonus(p, t.formation, t.style, fichaje ? -1 : coach);
   const prog = adaptProgress(p, coach);
   return (
     <>
       <h4>Perfil de juego</h4>
       {p.profile && (
         <p className="small">
-          <b>{PROFILES[p.profile].name}</b> · <span className="muted">{profileHelp(p.profile)}</span>
+          <b>{PROFILES[p.profile].name}</b>
         </p>
       )}
       <p className="small">
         {FIT_ICON[f]} Con el {t.formation} {STYLES[t.style].label.toLowerCase()}{coachOf(s) ? ` de ${coachOf(s)!.name}` : ''}:{' '}
-        <b className={bonus > 0 ? 'pos' : bonus < 0 ? 'neg' : ''}>
-          {f > 0 ? 'encaja' : f < 0 ? 'no encaja' : 'neutro'} ({bonus > 0 ? '+' : ''}{Number.isInteger(bonus) ? bonus : bonus.toFixed(1)})
+        <b className={f > 0 ? 'pos' : f < 0 ? 'neg' : ''}>
+          {f > 0 ? 'encaja' : f < 0 ? (prog >= 1 && !fichaje ? 'ya se ha adaptado' : 'no encaja') : 'normal'}
         </b>
       </p>
       {f < 0 && !fichaje && (
         <p className="small muted">
-          🔄 Adaptándose: {Math.round(prog * ADAPT_APPS)}/{ADAPT_APPS} partidos con este entrenador (al final solo restará 1).
+          🔄 {prog >= 1 ? 'Con los partidos se ha ido acostumbrando al sistema.' : 'Se está adaptando al sistema poco a poco.'}
         </p>
       )}
-      {f < 0 && fichaje && <p className="small muted">🔄 Llegaría sin adaptar: necesita {ADAPT_APPS} partidos para acostumbrarse.</p>}
+      {f < 0 && fichaje && <p className="small muted">🔄 Le costaría adaptarse al sistema.</p>}
       {(p.potHidden ?? 0) > 0 && (
-        <p className="small">💎 <b>Promesa oculta:</b> su potencial real es {shownPot(s, p)}, no {p.pot} como creen los demás.</p>
+        <p className="small">💎 <b>Promesa oculta:</b> los ojeadores creen que puede llegar mucho más lejos de lo que todos piensan.</p>
       )}
       {(p.traits?.length ?? 0) > 0 && (
         <>

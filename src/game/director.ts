@@ -3,9 +3,10 @@ import {
   addMessage, askingPrice, askingSalary, buyPlayer, describeMoney, marketOpen, myTeam, mySquad, myYouth,
   promoteYouth, releasePlayer, renewPlayer, renewSalary, sellPlayer, sellPrice, wageBill, willJoin,
 } from './market';
-import { FORMACION, elevenFor } from './match';
+import { FORMACION } from './match';
 import { ourShape, ourTactics, tacticsLabel } from './coach';
 import { FIT_ICON, PROFILES, TRAITS, fitBonus, fitOf } from './traits';
+import { potLabel } from './scouting';
 import { gauss } from './rng';
 import { ownerTitle } from './identity';
 import { scoutingFactor } from './land';
@@ -207,7 +208,7 @@ function doSignings(s: GameState, maxOps: number) {
       s, 'fichajes',
       { kind: 'fichar', playerId: p.id, fee, salary, years },
       `fichar a ${p.name} (${p.pos}, ${p.ovr})`,
-      `${p.name}, ${p.age} años, ${p.pos} de media ${p.ovr} (potencial ${p.pot}).\n` +
+      `${p.name}, ${p.age} años, ${p.pos} de media ${p.ovr} (${potLabel(p.ovr, p.pot)}).\n` +
       describeProfile(s, p) +
         `${describeMoney(fee, salary)}, ${years} temporada(s).\n` +
         `Yo le veo un nivel de ${Math.round(perc)}. ` +
@@ -286,7 +287,7 @@ function doYouth(s: GameState) {
     const vale = perceived(s, d, y) >= objetivo - 6 || y.pot >= objetivo + exigencia;
     if (vale && squad.length < 26) {
       act(s, 'cantera', { kind: 'cantera', playerId: y.id }, `subir a ${y.name} (${y.pos}, ${y.ovr})`,
-        `Juvenil de ${y.age} años, media ${y.ovr} y potencial ${y.pot}. Creo que puede aportar.`);
+        `Juvenil de ${y.age} años, media ${y.ovr} y ${potLabel(y.ovr, y.pot)}. Creo que puede aportar.`);
     } else if (levelOf(s, 'cantera') === 'auto') {
       releasePlayer(s, y.id);
     }
@@ -324,7 +325,7 @@ function doStaff(s: GameState) {
       `${actual ? 'sustituir' : 'contratar'} ${ROLES[role].name.toLowerCase()}: ${mejor.name} (${mejor.stars}★)`,
       `${mejor.name}, ${mejor.stars} estrella(s). ${mejor.trait}. Sueldo: ${fmtMoney(mejor.salary)}/temporada.` +
         (mejor.formation && mejor.style
-          ? `\nJuega ${tacticsLabel(mejor.formation, mejor.style)}: con su sistema nuestro once tendría ${elevenFor(mySquad(s), mejor.formation).strength.toFixed(1)} de media.`
+          ? `\nJuega ${tacticsLabel(mejor.formation, mejor.style)}.`
           : '') +
         (actual ? `\nSustituiría a ${actual.name} (${actual.stars}★), con indemnización.` : '') +
         `\nTras esto quedarían ${fmtMoney(Math.max(0, margen))} libres del tope de empleados.`,

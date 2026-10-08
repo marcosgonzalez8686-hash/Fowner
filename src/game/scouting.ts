@@ -13,6 +13,16 @@ export function isKnown(s: GameState, p: Player) {
   return p.teamId === s.club.teamId || p.loan?.from === s.club.teamId || Boolean(s.club.scouted?.includes(p.id));
 }
 
+/** Potencial en palabras: nunca se muestra la cifra, solo cuánto margen parece tener */
+export function potLabel(ovr: number, pot: number) {
+  const margen = pot - ovr;
+  if (margen >= 15) return 'potencial enorme';
+  if (margen >= 9) return 'mucho potencial';
+  if (margen >= 4) return 'aún puede mejorar';
+  if (margen >= 1) return 'cerca de su techo';
+  return 'en su techo';
+}
+
 /** Potencial que vemos: el real si lo conocemos (incluida la promesa oculta) */
 export const shownPot = (s: GameState, p: Player) => p.pot + (isKnown(s, p) ? (p.potHidden ?? 0) : 0);
 
@@ -38,7 +48,7 @@ export function requestReport(s: GameState, id: number): string {
     title: `🔭 Informe: ${p.name}`,
     body:
       `Perfil: ${p.profile ? PROFILES[p.profile].name : '—'}. Carácter: ${rasgos}.` +
-      (p.potHidden ? `\n💎 ¡Promesa oculta! Su potencial real es ${p.pot + p.potHidden}, no ${p.pot}.` : ''),
+      (p.potHidden ? '\n💎 ¡Promesa oculta! Los ojeadores creen que puede llegar mucho más lejos de lo que todos piensan.' : ''),
   });
   return p.potHidden ? `💎 ${p.name} es una promesa oculta` : `Informe de ${p.name} listo`;
 }

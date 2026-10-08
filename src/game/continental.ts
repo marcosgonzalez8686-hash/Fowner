@@ -203,7 +203,6 @@ function playTie(s: GameState, tie: CupTie, label: string, atractivo: number) {
   const plan = (id: number) => (id === mio.id ? ourPlan(s, squadOf(s, id)) : bestEleven(squadOf(s, id)));
   const pa = plan(tie.a);
   const pb = plan(tie.b);
-  tire(s, [...pa.xi, ...pb.xi]);
   const ra = pa.strength + (tie.a === mio.id ? extra : 0);
   const rb = pb.strength + (tie.b === mio.id ? extra : 0);
   const fa = ra + (tie.home === tie.a ? 2 : 0) + gauss(0, 2);
@@ -219,7 +218,10 @@ function playTie(s: GameState, tie: CupTie, label: string, atractivo: number) {
     tie.pens = `${p.a}-${p.b}`;
     tie.winner = p.a > p.b ? tie.a : tie.b;
   }
-  if (tie.a !== mio.id && tie.b !== mio.id) return;
+  if (tie.a !== mio.id && tie.b !== mio.id) {
+    tire(s, [...pa.xi, ...pb.xi]);
+    return;
+  }
 
   const somosA = tie.a === mio.id;
   const local = tie.home ?? tie.a;
@@ -263,4 +265,5 @@ function playTie(s: GameState, tie: CupTie, label: string, atractivo: number) {
   });
   s.lastReport = rep;
   recordMatch(s, rep, nuestros);
+  tire(s, [...pa.xi, ...pb.xi]);
 }

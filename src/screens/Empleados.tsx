@@ -1,35 +1,16 @@
 import type { ScreenProps } from '../App';
 import { fmtMoney } from '../game/economy';
 import { ROLES, ROLE_ORDER, coachSeverance, fireStaff, hireStaff, staffWages, type Role, type Staff } from '../game/staff';
-import { coachRenewal, confidenceLabel, ourPlan, renewCoach, tacticsLabel } from '../game/coach';
-import { elevenFor } from '../game/match';
-import { fitBonus, fitOf } from '../game/traits';
-import { mySquad } from '../game/market';
+import { coachRenewal, confidenceLabel, renewCoach, tacticsLabel } from '../game/coach';
 import { Card, Stars } from '../ui';
 
 export default function Empleados({ s, update, notify }: ScreenProps) {
   const staff = s.club.staff;
-  const mediaActual = ourPlan(s).strength;
-  /** Sistema de un entrenador y cómo quedaría nuestro once con él */
+  /** Sistema y estilo de un entrenador */
   const sistema = (c: Staff) => {
     if (!c.formation || !c.style) return null;
-    // con un entrenador nuevo nadie está adaptado; con el actual se respeta lo ya adaptado
-    const f = c.formation;
-    const st = c.style;
-    const plan = elevenFor(mySquad(s), f, (p) => p.ovr + fitBonus(p, f, st, c.id));
-    const media = plan.strength;
-    const bien = plan.xi.filter((p) => fitOf(p, f, st) > 0).length;
-    const mal = plan.xi.filter((p) => fitOf(p, f, st) < 0).length;
-    const dif = media - mediaActual;
-    return (
-      <div className="small">
-        🧢 {tacticsLabel(c.formation, c.style)} · once con su sistema: <b>{media.toFixed(1)}</b>
-        {staff.entrenador && staff.entrenador.id !== c.id && Math.abs(dif) >= 0.1 && (
-          <span className={dif > 0 ? 'pos' : 'neg'}> ({dif > 0 ? '+' : ''}{dif.toFixed(1)})</span>
-        )}
-        <div className="muted">En su once: {bien} encajan ✅ · {mal} no encajan ❌</div>
-      </div>
-    );
+    // solo su sistema y su estilo: cómo encaja con la plantilla lo tiene que juzgar el dueño
+    return <div className="small">🧢 {tacticsLabel(c.formation, c.style)}</div>;
   };
   const contratar = (role: Role, id: number, nombre: string) => {
     const err = update((g) => hireStaff(g, role, id));
@@ -73,7 +54,7 @@ export default function Empleados({ s, update, notify }: ScreenProps) {
                     {role === 'entrenador' && sistema(actual)}
                     {role === 'entrenador' && actual.confidence !== undefined && (
                       <div className="small">
-                        {confidenceLabel(actual.confidence).emoji} Confianza: <b>{confidenceLabel(actual.confidence).text}</b> ({Math.round(actual.confidence)})
+                        {confidenceLabel(actual.confidence).emoji} Confianza: <b>{confidenceLabel(actual.confidence).text}</b>
                       </div>
                     )}
                   </div>

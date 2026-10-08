@@ -38,14 +38,14 @@ export const profilesFor = (pos: Pos) => (Object.keys(PROFILES) as Profile[]).fi
 export type Trait = 'lider' | 'profesional' | 'fragil' | 'conflictivo' | 'idolo' | 'ambicioso' | 'fiel' | 'polivalente';
 
 export const TRAITS: Record<Trait, { name: string; icon: string; help: string }> = {
-  lider: { name: 'Líder', icon: '👑', help: 'Tira del vestuario: tras una derrota, la moral cae menos.' },
-  profesional: { name: 'Profesional', icon: '🧘', help: 'Se cuida: envejece más despacio y se lesiona menos.' },
-  fragil: { name: 'Frágil', icon: '🩹', help: 'Se lesiona con facilidad.' },
-  conflictivo: { name: 'Conflictivo', icon: '😤', help: 'Si no juega, protesta y enrarece el vestuario. Rechazar una oferta por él sienta peor.' },
-  idolo: { name: 'Ídolo de la afición', icon: '🙌', help: 'Vende camisetas en cada partido, pero venderlo enfada a la grada.' },
-  ambicioso: { name: 'Ambicioso', icon: '🦅', help: 'Pide más al renovar y los clubes grandes se fijan antes en él; quiere dar el salto.' },
-  fiel: { name: 'Fiel al club', icon: '💙', help: 'Renueva más barato, nunca fuerza su salida y le basta con 40 partidos para el homenaje.' },
-  polivalente: { name: 'Polivalente', icon: '🔀', help: 'Se adapta a cualquier sistema: nunca encaja mal.' },
+  lider: { name: 'Líder', icon: '👑', help: 'Tira del vestuario y los demás le escuchan.' },
+  profesional: { name: 'Profesional', icon: '🧘', help: 'Se cuida mucho dentro y fuera del campo.' },
+  fragil: { name: 'Frágil', icon: '🩹', help: 'Su cuerpo no siempre le acompaña.' },
+  conflictivo: { name: 'Conflictivo', icon: '😤', help: 'Tiene mucho carácter y no lleva bien las cosas que no le gustan.' },
+  idolo: { name: 'Ídolo de la afición', icon: '🙌', help: 'La grada le adora.' },
+  ambicioso: { name: 'Ambicioso', icon: '🦅', help: 'Quiere llegar lo más alto posible.' },
+  fiel: { name: 'Fiel al club', icon: '💙', help: 'Siente los colores del club.' },
+  polivalente: { name: 'Polivalente', icon: '🔀', help: 'Se apaña en cualquier sitio.' },
 };
 
 /** Rasgos incompatibles entre sí */

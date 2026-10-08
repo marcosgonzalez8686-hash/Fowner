@@ -39,7 +39,7 @@ export function ObjectivePicker({ s, update, notify }: { s: GameState; update: U
                 {info.icon} {info.label}
               </b>
               <small>
-                {objectiveText(o, division)} · si lo cumples +{info.reward}, si no {info.penalty} de satisfacción
+                {objectiveText(o, division)}
               </small>
             </button>
           );
@@ -55,7 +55,7 @@ function Meter({ value, label, emoji, text }: { value: number; label: string; em
       <div className="mood-head">
         <span>{label}</span>
         <b>
-          {emoji} {text} · {Math.round(value)}
+          {emoji} {text}
         </b>
       </div>
       <div className={`meter${value < 30 ? ' over' : ''}`}>
@@ -80,10 +80,10 @@ export default function FansCard({ s, goPlantilla, goEmpleados }: { s: GameState
   const lejos = pos !== null && objetivoPos !== null && pos > objetivoPos + 3;
   // de un vistazo: cada dato en una ficha; en rojo lo que pide atención
   const fichas: { ico: string; valor: string; label: string; mal: boolean; onClick?: () => void }[] = [
-    { ico: sat.emoji, valor: `${Math.round(s.club.satisfaction)}`, label: 'afición', mal: s.club.satisfaction < 30 },
-    { ico: mor.emoji, valor: `${Math.round(s.club.morale)}`, label: 'moral', mal: s.club.morale < 30 },
+    { ico: sat.emoji, valor: '', label: `afición ${sat.text.toLowerCase()}`, mal: s.club.satisfaction < 30 },
+    { ico: mor.emoji, valor: '', label: `moral ${mor.text.toLowerCase()}`, mal: s.club.morale < 30 },
     coach
-      ? { ico: confidenceLabel(conf).emoji, valor: `${Math.round(conf)}`, label: 'entrenador', mal: conf < 30, onClick: goEmpleados }
+      ? { ico: confidenceLabel(conf).emoji, valor: '', label: `entrenador: ${confidenceLabel(conf).text.toLowerCase()}`, mal: conf < 30, onClick: goEmpleados }
       : { ico: '🧢', valor: '—', label: 'sin entrenador', mal: true, onClick: goEmpleados },
     ...(obj && objetivoPos !== null
       ? [{ ico: OBJECTIVES[obj].icon, valor: pos !== null ? `${pos}º` : '—', label: `objetivo ${objetivoPos}º`, mal: lejos }]
@@ -132,7 +132,7 @@ export default function FansCard({ s, goPlantilla, goEmpleados }: { s: GameState
           <ul className="satlog">
             {s.club.satLog.slice(0, 8).map((x, i) => (
               <li key={i}>
-                <span className={x.delta >= 0 ? 'pos' : 'neg'}>{x.delta > 0 ? '+' : ''}{x.delta.toString().replace('.', ',')}</span> {x.text}
+                <span className={x.delta >= 0 ? 'pos' : 'neg'}>{x.delta >= 0 ? '▲' : '▼'}</span> {x.text}
               </li>
             ))}
           </ul>

@@ -35,12 +35,12 @@ export interface RoleInfo {
 }
 
 export const ROLES: Record<Role, RoleInfo> = {
-  entrenador: { name: 'Entrenador', icon: '🧢', pay: 1, help: 'Hace rendir más al equipo en cada partido. Sin entrenador el equipo juega peor.' },
-  segundo: { name: 'Segundo entrenador', icon: '📋', pay: 0.5, help: 'Algo más de rendimiento y los jóvenes progresan más.' },
-  preparador: { name: 'Preparador físico', icon: '🏃', pay: 0.45, help: 'El equipo llega fresco a la segunda vuelta y los jugadores se cansan menos en cada partido.' },
-  fisio: { name: 'Fisioterapeuta', icon: '💆', pay: 0.4, help: 'Los veteranos se cuidan mejor y pierden menos nivel con la edad.' },
-  ojeador: { name: 'Jefe de ojeadores', icon: '🔭', pay: 0.5, help: 'Hace informes de jugadores de otros clubes (perfil, carácter y promesas ocultas): 3 por estrella y temporada. Además tu director acierta más y cada verano descubre jóvenes libres.' },
-  marketing: { name: 'Responsable de marketing', icon: '📣', pay: 0.45, help: 'Mejores patrocinios y la afición crece más rápido.' },
+  entrenador: { name: 'Entrenador', icon: '🧢', pay: 1, help: 'Dirige al equipo: su sistema y su estilo son los que se juegan.' },
+  segundo: { name: 'Segundo entrenador', icon: '📋', pay: 0.5, help: 'Ayuda al entrenador y trabaja con los jóvenes.' },
+  preparador: { name: 'Preparador físico', icon: '🏃', pay: 0.45, help: 'Se encarga de la forma física de la plantilla.' },
+  fisio: { name: 'Fisioterapeuta', icon: '💆', pay: 0.4, help: 'Cuida a los jugadores, sobre todo a los veteranos.' },
+  ojeador: { name: 'Jefe de ojeadores', icon: '🔭', pay: 0.5, help: 'Hace informes de jugadores de otros clubes y busca jóvenes promesas. Ayuda a tu director a acertar.' },
+  marketing: { name: 'Responsable de marketing', icon: '📣', pay: 0.45, help: 'Patrocinios y crecimiento de la afición.' },
 };
 
 export const ROLE_ORDER = Object.keys(ROLES) as Role[];
@@ -148,7 +148,7 @@ export function scoutDiscoveries(s: GameState, makeYoung: () => { name: string; 
     title: 'El jefe de ojeadores ha encontrado promesas',
     body:
       `Están libres en el mercado:\n` +
-      hallazgos.map((p) => `• ${p.name} (${p.pos}, potencial ${p.pot})`).join('\n') +
+      hallazgos.map((p) => `• ${p.name} (${p.pos})`).join('\n') +
       `\n\nBúscalos en Mercado → Solo libres.`,
   });
 }

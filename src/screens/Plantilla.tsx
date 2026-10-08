@@ -13,9 +13,9 @@ import { FormStrip } from '../components/Rating';
 import { PlayerTags } from '../components/Traits';
 import { useNav } from '../nav/context';
 import { loanedOut } from '../game/loans';
-import { fitOf } from '../game/traits';
 import { TREND_TEXT, trendOf } from '../game/aging';
 import { condition } from '../game/fatigue';
+import { potLabel } from '../game/scouting';
 
 const POS_NAME: Record<Pos, string> = { POR: 'Porteros', DEF: 'Defensas', MED: 'Centrocampistas', DEL: 'Delanteros' };
 
@@ -40,9 +40,8 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
         <div className="kpis">
           <div><b>{squad.length}</b><span>jugadores</span></div>
           <div><b>{strength.toFixed(1)}</b><span>media del once</span></div>
-          <div><b>{nivel}</b><span>media de la liga</span></div>
           <div><b>{fmtMoney(wageBill(s))}</b><span>salarios/temp.</span></div>
-          <div><b>{moraleLabel(s.club.morale).emoji} {s.club.morale}</b><span>moral del vestuario</span></div>
+          <div><b>{moraleLabel(s.club.morale).emoji} {moraleLabel(s.club.morale).text}</b><span>moral del vestuario</span></div>
           <div><b>{squad.filter((p) => (p.injury ?? 0) > 0).length}</b><span>lesionados</span></div>
           <div><b>{Math.round(xi.reduce((a, p) => a + condition(p), 0) / Math.max(1, xi.length))}%</b><span>condición del once</span></div>
           <div><b>{fmtMoney(squad.reduce((a, p) => a + playerValue(p), 0))}</b><span>valor de la plantilla</span></div>
@@ -65,17 +64,13 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
           </span>
           <span className="coach-go">{coachOf(s) ? 'Entrenador ›' : 'Contratar ›'}</span>
         </button>
-        <p className="small muted">
-          En el once: {xi.filter((p) => fitOf(p, formation, style) > 0).length} encajan ✅ ·{' '}
-          {xi.filter((p) => fitOf(p, formation, style) < 0).length} no encajan ❌ con su sistema
-        </p>
         {faltan.length > 0 && (
           <p className="hint warn-bg small">
             ⚠️ Para su {formation} faltan jugadores en: {faltan.map((pos) => POS_NAME[pos].toLowerCase()).join(', ')}. Juegan fuera de posición y rinden menos.
           </p>
         )}
         <p className="small muted">
-          ⭐ titular · 🤕 lesionado · 🔋 condición física (cansados rinden menos y el entrenador los rota) · ✅ encaja en el sistema (+2) · ➖ neutro · ❌ no encaja (−3, menos al adaptarse). Toca un jugador para ver su perfil y su carácter.
+          ⭐ titular · 🤕 lesionado · 🔋 condición física · ✅ encaja en el sistema · ➖ normal · ❌ no encaja. Toca un jugador para ver su perfil y su carácter.
         </p>
       </Card>
 
@@ -89,7 +84,7 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
           {youth.map((p) => (
             <div key={p.id} className="player">
               <span className="pos">{p.pos}</span>
-              <span className="name">{p.name}<small>{p.age} años · potencial {p.pot}</small></span>
+              <span className="name">{p.name}<small>{p.age} años · {potLabel(p.ovr, p.pot)}</small></span>
               <Ovr v={p.ovr} base={nivel} />
               <button className="btn small primary" onClick={() => run(() => update((g) => promoteYouth(g, p.id).error), `${p.name} sube al primer equipo`)}>Subir</button>
               <button className="btn small" onClick={() => run(() => update((g) => releasePlayer(g, p.id).error), `${p.name} se marcha`)}>✕</button>
