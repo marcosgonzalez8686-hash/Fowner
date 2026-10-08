@@ -1,5 +1,5 @@
 import {
-  DIV_FANS, DIV_LEVEL, DIV_SPONSOR, DIV_TV, DIVISION_NAMES, DIVISIONS, MATCHDAYS, PROMOTE,
+  DIV_FANS, DIV_LEVEL, DIV_SPONSOR, DIV_TV, DIVISION_NAMES, DIVISIONS, MATCHDAYS, PROMOTE, DIRECT_UP, PLAYOFF_FROM, PLAYOFF_TO,
   SQUAD_TARGET, emptyLedger, fmtMoney, ledgerExpense, ledgerIncome, roundMoney,
 } from './economy';
 import { expireProposals, levelOf, runDirector } from './director';
@@ -27,11 +27,12 @@ import { refreshSponsorOffers, sponsorFixed, sponsorPerWin, sponsorsEndSeason } 
 import { maybeCreateEvent } from './events';
 import { cupRoundDue, newCup, playCupRound, stillIn } from './cup';
 import { generateOffers } from './offers';
+import { finishPlayoffs, myPlayoffDue, playoffWinner, startPlayoffs } from './playoff';
 import { PRE_WEEKS, executeAgreed, tickNegotiations } from './negotiation';
 import { payDividends, payLoans, refreshInvestorOffers } from './bank';
 import { leagueAttendance, seasonTicketFansGrowth, seasonTicketLoyalty, seasonTicketsNewSeason, sellSeasonTickets } from './tickets';
 import { changeMorale, healOneMatchday, injuryName, isInjured, moraleAfterMatch, moraleBonus, resetSeasonMorale, rollInjuries } from './morale';
-import { changeSatisfaction, fansExpectationMessage, fansGrowthSatisfaction, objectiveTarget, satisfactionAfterMatch, satisfactionEndSeason } from './fans';
+import { changeSatisfaction, fansExpectationMessage, fansGrowthSatisfaction, objectiveMet, satisfactionAfterMatch, satisfactionEndSeason } from './fans';
 import {
   agingFactor, commercialPerMatch, fansGrowthBonus, maintenancePerSeason,
 } from './land';
@@ -311,15 +312,19 @@ export function playMatchday(s: GameState) {
     s.phase = 'fin';
     const tabla = computeStandings(s.teams.filter((t) => t.division === mio.division).map((t) => t.id), s.fixtures[mio.division]);
     const pos = tabla.findIndex((x) => x.teamId === mio.id) + 1;
+    const enPlayoff = mio.division > 0 && pos >= PLAYOFF_FROM && pos <= PLAYOFF_TO;
     addMessage(s, {
       from: 'liga',
       title: `Fin de liga: acabamos ${pos}º`,
-      body: pos <= PROMOTE && mio.division > 0
-        ? '¡Ascenso! Cierra la temporada para pasar a la siguiente.'
-        : pos > 20 - PROMOTE && mio.division < DIVISIONS - 1
-          ? 'Descendemos. Toca reconstruir.'
-          : 'Cierra la temporada para pasar a la pretemporada.',
+      body: pos <= DIRECT_UP && mio.division > 0
+        ? '¡Ascenso directo! Cierra la temporada para pasar a la siguiente.'
+        : enPlayoff
+          ? `Nos jugamos el ascenso en el playoff (del ${PLAYOFF_FROM}º al ${PLAYOFF_TO}º). Juégalo desde Inicio.`
+          : pos > 20 - PROMOTE && mio.division < DIVISIONS - 1
+            ? 'Descendemos. Toca reconstruir.'
+            : 'Cierra la temporada para pasar a la pretemporada.',
     });
+    startPlayoffs(s);
   }
 }
 
@@ -346,6 +351,10 @@ function resumenEvolucion(ev: { name: string; d: number }[]) {
 
 export function endSeason(s: GameState) {
   if (s.phase !== 'fin') return;
+  // partidas guardadas antes de existir el playoff: se monta ahora
+  if (!s.playoffs) startPlayoffs(s);
+  if (myPlayoffDue(s)) return 'Antes, juega el playoff de ascenso.';
+  finishPlayoffs(s);
   const mio = myTeam(s);
   const divAntes = mio.division;
 
@@ -366,10 +375,12 @@ export function endSeason(s: GameState) {
         miPos = i + 1;
         miFila = row;
       }
-      if (d > 0 && i < PROMOTE) movimientos.push({ team: t, to: d - 1 });
+      // suben los dos primeros y el ganador del playoff
+      if (d > 0 && (i < DIRECT_UP || t.id === playoffWinner(s, d))) movimientos.push({ team: t, to: d - 1 });
       if (d < DIVISIONS - 1 && i >= tabla.length - PROMOTE) movimientos.push({ team: t, to: d + 1 });
     });
   }
+  s.playoffs = undefined;
   s.history.push({ season: s.season, division: divAntes, position: miPos });
   for (const m of movimientos) {
     const sube = m.to < m.team.division;
@@ -390,7 +401,7 @@ export function endSeason(s: GameState) {
   // la afición tiende a la media de su categoría
   for (const t of s.teams) t.fans = Math.round(t.fans * 0.85 + DIV_FANS[t.division] * 0.15 * rand(0.7, 1.3));
   mio.fans = Math.round(mio.fans * fansGrowthBonus(s) * marketingFansBonus(s) * fansGrowthSatisfaction(s) * seasonTicketFansGrowth(s));
-  const objetivoFallado = Boolean(s.club.objective) && miPos > objectiveTarget(s.club.objective!, divAntes);
+  const objetivoFallado = Boolean(s.club.objective) && !objectiveMet(s.club.objective!, divAntes, miPos, mio.division);
   const fuerzanVenta = satisfactionEndSeason(s, miPos, divAntes, mio.division);
   resetSeasonMorale(s);
   coachEndSeason(s);

@@ -147,11 +147,14 @@ p { margin: 6px 0; }
 .table tr.down td:first-child { box-shadow: inset 3px 0 var(--neg); }
 .table tr.up { background: var(--up); }
 .table tr.down { background: var(--down); }
+.table tr.playoff td:first-child { box-shadow: inset 3px 0 var(--accent); }
+.table tr.playoff { background: rgba(245, 197, 66, 0.12); }
 .table tr.me { background: var(--me); font-weight: 700; }
 .table.money tr.total td { font-weight: 700; border-bottom: 0; }
-.legend { display: flex; gap: 14px; font-size: 0.75rem; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.75rem; color: var(--muted); }
 .up-dot::before, .down-dot::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 .up-dot::before { background: var(--pos); }
+.po-dot::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; background: var(--accent); }
 .down-dot::before { background: var(--neg); }
 
 .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }

@@ -197,7 +197,7 @@ const marcador = (s: GameState, t: CupTie) => {
 };
 
 /** Juega una eliminatoria a partido único; si es nuestra, deja el informe para el resumen */
-function playTie(s: GameState, tie: CupTie, label: string, atractivo: number) {
+export function playTie(s: GameState, tie: CupTie, label: string, atractivo: number) {
   const mio = myTeam(s);
   const extra = staffMatchBonus(s) + moraleBonus(s);
   const plan = (id: number) => (id === mio.id ? ourPlan(s, squadOf(s, id)) : bestEleven(squadOf(s, id)));

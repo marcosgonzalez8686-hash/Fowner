@@ -16,6 +16,7 @@ import { resolveEvent } from '../game/events';
 import { SlotOffers } from '../components/Sponsors';
 import NegotiationsCard from '../components/Negotiations';
 import { myTurn } from '../game/negotiation';
+import { PLAYOFF_NAME, myPlayoffDue, myPlayoffTie, playPlayoffRound, playoffRoundName } from '../game/playoff';
 import Previa, { type MatchSetup } from '../components/Previa';
 import LiveMatch from '../components/LiveMatch';
 import { levelOf } from '../game/director';
@@ -48,6 +49,10 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const copaAhora = myCupMatchDue(s);
   // Supercopa (antes de la jornada 1) y Copa de Campeones (entre semana)
   const especial = (() => {
+    if (myPlayoffDue(s)) {
+      const tie = myPlayoffTie(s)!;
+      return { comp: 'playoff' as const, icon: '🔥', label: `${PLAYOFF_NAME} · ${playoffRoundName(s)}`, rivalId: tie.a === t.id ? tie.b : tie.a, home: tie.home };
+    }
     if (mySuperDue(s)) {
       const sc = s.supercopa!;
       return { comp: 'super' as const, icon: '🏅', label: SUPER_NAME, rivalId: sc.a === t.id ? sc.b : sc.a, home: null as number | null };
@@ -85,7 +90,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const abrirPrevia = (setup: MatchSetup) => setFase({ tipo: 'previa', setup });
   const disputar = (comp: MatchSetup['comp'], enDirecto: boolean) => {
     update((g) =>
-      comp === 'copa' ? playCupRound(g) : comp === 'super' ? playSupercopa(g) : comp === 'europa' ? playContinentalRound(g) : playMatchday(g),
+      comp === 'copa' ? playCupRound(g) : comp === 'super' ? playSupercopa(g) : comp === 'europa' ? playContinentalRound(g) : comp === 'playoff' ? playPlayoffRound(g) : playMatchday(g),
     );
     if (enDirecto) setFase({ tipo: 'directo' });
     else {
@@ -144,7 +149,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
             <>
               <div className="match-head">
                 <span className="cup-badge">{especial.icon} {especial.label}</span>
-                <button className="link" onClick={() => go('equipo', 'copa')}>Cuadro ›</button>
+                <button className="link" onClick={() => go('equipo', especial.comp === 'playoff' ? 'liga' : 'copa')}>Cuadro ›</button>
               </div>
               <div className="versus">
                 {local === t.id ? yo : el}
@@ -152,7 +157,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
                 {local === t.id ? el : yo}
               </div>
               <p className="muted center small">
-                {rival.country ? `${FLAG[rival.country] ?? ''} ${rival.country}` : `${rival.division + 1}ª división`} ·{' '}
+                {rival.country ? `${FLAG[rival.country] ?? ''} ${rival.country}` : especial.comp === 'playoff' ? `${computeStandings(s.teams.filter((x) => x.division === t.division).map((x) => x.id), s.fixtures[t.division]).findIndex((r) => r.teamId === rival.id) + 1}º en la liga` : `${rival.division + 1}ª división`} ·{' '}
                 {especial.home === null ? 'campo neutral' : especial.home === t.id ? 'en casa' : 'a domicilio'}
               </p>
               <div className="row">
@@ -169,7 +174,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
                     })
                   }
                 >
-                  {especial.icon} Jugar {especial.comp === 'super' ? 'la Supercopa' : 'partido europeo'}
+                  {especial.icon} Jugar {especial.comp === 'super' ? 'la Supercopa' : especial.comp === 'playoff' ? `la ${playoffRoundName(s).toLowerCase()}` : 'partido europeo'}
                 </button>
               </div>
               {s.pendingEvent && <p className="small muted center">Decide antes qué hacer con el asunto de esta semana ↓</p>}
@@ -231,11 +236,25 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
             )}
           </>
         )}
-        {s.phase === 'fin' && (
+        {s.phase === 'fin' && !especial && (
           <>
             <h2>Liga terminada</h2>
-            <p className="muted">Acabamos {pos}º. Revisa la clasificación y cierra la temporada.</p>
-            <button className="btn primary big" onClick={() => update((g) => endSeason(g))}>
+            <p className="muted">
+              Acabamos {pos}º.{' '}
+              {(() => {
+                const po = s.playoffs?.find((p) => p.division === t.division);
+                if (!po || !po.seeds.includes(t.id)) return null;
+                return po.winner === t.id ? <b className="pos">¡Ascendemos por el playoff! </b> : <>Caímos en el playoff. </>;
+              })()}
+              Revisa la clasificación y cierra la temporada.
+            </p>
+            <button
+              className="btn primary big"
+              onClick={() => {
+                const err = update((g) => endSeason(g));
+                if (err) notify(err);
+              }}
+            >
               Cerrar temporada
             </button>
           </>

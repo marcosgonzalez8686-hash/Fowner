@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ScreenProps } from '../App';
-import { DIVISION_NAMES, DIVISIONS, PROMOTE } from '../game/economy';
+import { DIRECT_UP, DIVISION_NAMES, DIVISIONS, PLAYOFF_FROM, PLAYOFF_TO, PROMOTE } from '../game/economy';
+import { PLAYOFF_NAME, PLAYOFF_ROUNDS } from '../game/playoff';
 import { myTeam, teamById } from '../game/market';
 import { computeStandings } from '../game/match';
 import { Card, Segmented } from '../ui';
@@ -98,7 +99,7 @@ export default function Liga({ s }: ScreenProps) {
           <tbody>
             {tabla.map((r, i) => {
               const t = teamById(s, r.teamId)!;
-              const zona = div > 0 && i < PROMOTE ? 'up' : div < DIVISIONS - 1 && i >= n - PROMOTE ? 'down' : '';
+              const zona = div > 0 && i < DIRECT_UP ? 'up' : div > 0 && i >= PLAYOFF_FROM - 1 && i < PLAYOFF_TO ? 'playoff' : div < DIVISIONS - 1 && i >= n - PROMOTE ? 'down' : '';
               return (
                 <tr key={r.teamId} className={`${zona} ${t.id === mia.id ? 'me' : ''}`}>
                   <td>{i + 1}</td>
@@ -113,10 +114,41 @@ export default function Liga({ s }: ScreenProps) {
         </table>
         <p className="legend">
           {div > 0 && <span className="up-dot">Ascenso</span>}
+          {div > 0 && <span className="po-dot">Playoff ({PLAYOFF_FROM}º-{PLAYOFF_TO}º)</span>}
           {div < DIVISIONS - 1 && <span className="down-dot">Descenso</span>}
         </p>
       </Card>
       )}
+      {vista === 'tabla' && <CuadroPlayoff s={s} div={div} />}
     </>
+  );
+}
+
+/** Cuadro del playoff de ascenso de una categoría (al acabar la liga) */
+function CuadroPlayoff({ s, div }: { s: GameState; div: number }) {
+  const p = s.playoffs?.find((x) => x.division === div);
+  if (!p) return null;
+  const nombre = (id: number) => <TeamLink id={id}>{teamById(s, id)?.name ?? '—'}</TeamLink>;
+  return (
+    <Card title={`🔥 ${PLAYOFF_NAME}`}>
+      {p.rounds.map((ronda, i) => (
+        <div key={i}>
+          <h4>{PLAYOFF_ROUNDS[i]}</h4>
+          <ul className="results">
+            {ronda.map((tie, j) => (
+              <li key={j} className={tie.a === s.club.teamId || tie.b === s.club.teamId ? 'me' : ''}>
+                <span className="h">{nombre(tie.a)}</span>
+                <span className="score">{tie.winner === undefined ? 'vs' : `${tie.ga} - ${tie.gb}`}</span>
+                <span className="a">{nombre(tie.b)}</span>
+                {tie.pens && <span className="att">Penaltis: {tie.pens}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      <p className="small muted">
+        {p.winner !== undefined ? <>⬆️ Sube: <b>{teamById(s, p.winner)?.name}</b></> : 'A partido único, en casa del mejor clasificado. El ganador de la final sube.'}
+      </p>
+    </Card>
   );
 }

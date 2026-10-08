@@ -4,6 +4,7 @@ import { fmtMoney, ledgerExpense, ledgerIncome } from '../src/game/economy';
 import { newGame } from '../src/game/generate';
 import { mySquad, myTeam, squadOf, wageBill } from '../src/game/market';
 import { advanceWeek, endSeason, playMatchday, startSeason } from '../src/game/season';
+import { myPlayoffDue, playPlayoffRound } from '../src/game/playoff';
 import { setDelegation } from '../src/game/club';
 import type { Task } from '../src/game/types';
 import { signOffer, type SponsorSlot } from '../src/game/sponsor';
@@ -48,6 +49,10 @@ for (let temp = 0; temp < temporadas && !s.gameOver; temp++) {
   console.log('   entrenador:', ent ? `${ent.name} ${ent.stars}★ ${ent.formation} ${ent.style} · contrato ${ent.contract} · confianza ${ent.confidence}` : 'ninguno');
   const negs = s.negotiations.filter((n) => n.season === s.season);
   console.log('   negociaciones:', negs.length, '| cerradas', negs.filter((n) => n.state === 'cerrada').length, '| rotas', negs.filter((n) => n.state === 'rota').length, '| tipos', [...new Set(negs.map((n) => n.kind))].join(','));
+  while (myPlayoffDue(s)) {
+    playPlayoffRound(s);
+    console.log('   playoff:', s.messages[0].title);
+  }
   endSeason(s);
   // firma la oferta intermedia de cada espacio libre
   for (const [slot, ofertas] of Object.entries(s.sponsorOffers)) if (ofertas?.length) signOffer(s, slot as SponsorSlot, ofertas[1].id);
@@ -57,6 +62,7 @@ console.log('gameOver:', s.gameOver ?? 'no', '| tiempo', Date.now() - t0, 'ms | 
 
 // comprobaciones de integridad
 const tallas = s.teams.map((t) => squadOf(s, t.id).length);
+console.log('equipos por categoría', [0, 1, 2, 3, 4].map((d) => s.teams.filter((t) => t.division === d).length).join('/'));
 console.log('plantillas min/max', Math.min(...tallas), Math.max(...tallas));
 for (let d = 0; d < 5; d++) console.log('div', d, s.teams.filter((t) => t.division === d).length, 'equipos');
 console.log('tamaño guardado', Math.round(JSON.stringify(s).length / 1024), 'KB');

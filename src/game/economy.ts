@@ -6,6 +6,9 @@ export const MATCHDAYS = (TEAMS_PER_DIV - 1) * 2;
 export const SQUAD_TARGET = 22;
 export const SQUAD_MAX = 28;
 export const PROMOTE = 3; // ascensos / descensos por división
+export const DIRECT_UP = 2; // suben directos; el tercero sale del playoff entre el 3º y el 6º
+export const PLAYOFF_FROM = 3;
+export const PLAYOFF_TO = 6;
 
 // Nombres neutros para no usar marcas reales de competiciones
 export const DIVISION_NAMES = ['Primera División', 'Segunda División', 'Tercera Categoría', 'Cuarta Categoría', 'Liga Comarcal'];

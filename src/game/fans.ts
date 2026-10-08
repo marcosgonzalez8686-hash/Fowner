@@ -25,8 +25,14 @@ export function objectiveTarget(obj: Objective, division: number) {
 
 export function objectiveText(obj: Objective, division: number) {
   const pos = objectiveTarget(obj, division);
-  if (obj === 'ascenso') return division === 0 ? 'Ganar la liga' : `Acabar entre los ${pos} primeros`;
+  if (obj === 'ascenso') return division === 0 ? 'Ganar la liga' : 'Subir: top 2 o ganar el playoff (3º-6º)';
   return `Acabar ${pos}º o mejor`;
+}
+
+/** ¿Se ha cumplido? El ascenso cuenta si se sube (directo o por playoff) */
+export function objectiveMet(obj: Objective, divAntes: number, posFinal: number, divDespues: number) {
+  if (obj === 'ascenso' && divAntes > 0) return divDespues < divAntes;
+  return posFinal <= objectiveTarget(obj, divAntes);
 }
 
 /** Puesto actual de nuestro club en su liga */
@@ -144,7 +150,7 @@ export function satisfactionAfterMatch(s: GameState, gf: number, gc: number, enC
 export function satisfactionEndSeason(s: GameState, posFinal: number, divAntes: number, divDespues: number) {
   const obj = s.club.objective;
   if (obj) {
-    const cumplido = posFinal <= objectiveTarget(obj, divAntes);
+    const cumplido = objectiveMet(obj, divAntes, posFinal, divDespues);
     const info = OBJECTIVES[obj];
     changeSatisfaction(s, cumplido ? info.reward : info.penalty, `${cumplido ? 'Objetivo cumplido' : 'Objetivo fallado'}: ${info.label.toLowerCase()}`);
     addMessage(s, {

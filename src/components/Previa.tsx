@@ -12,7 +12,7 @@ import { preMatchKeys, winProbs } from '../game/insights';
 import { coachOf, ourPlan, ourTactics } from '../game/coach';
 
 export interface MatchSetup {
-  comp: 'liga' | 'copa' | 'super' | 'europa';
+  comp: 'liga' | 'copa' | 'super' | 'europa' | 'playoff';
   label: string; // "Jornada 5" o "Copa · Octavos"
   homeId: number;
   awayId: number;
