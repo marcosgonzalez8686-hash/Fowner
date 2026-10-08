@@ -8,6 +8,7 @@ import { PRE_WEEKS } from '../game/negotiation';
 import { advanceWeek, startSeason } from '../game/season';
 import { hireStaff } from '../game/staff';
 import { tacticsLabel } from '../game/coach';
+import { levelOf } from '../game/director';
 import { seasonTicketForecast } from '../game/tickets';
 import type { GameState } from '../game/types';
 import { Stars } from '../ui';
@@ -72,7 +73,8 @@ export default function Pretemporada({ s, update, notify, go }: {
   const plantilla = mySquad(s);
   const juveniles = myYouth(s).length;
   const sugerencias: { texto: string; ir: () => void }[] = [
-    ...(juveniles ? [{ texto: `🌱 Decide qué hacer con ${juveniles} juvenil${juveniles > 1 ? 'es' : ''} de la cantera`, ir: () => go('equipo', 'plantilla') }] : []),
+    // si la cantera la lleva el director, no se pide nada al dueño
+    ...(juveniles && levelOf(s, 'cantera') === 'manual' ? [{ texto: `🌱 Decide qué hacer con ${juveniles} juvenil${juveniles > 1 ? 'es' : ''} de la cantera`, ir: () => go('equipo', 'plantilla') }] : []),
     ...(plantilla.length < 18 ? [{ texto: `⚠️ Plantilla corta (${plantilla.length}): ficha en el mercado`, ir: () => go('equipo', 'mercado') }] : []),
     { texto: `🎟️ Campaña de abonos: ~${seasonTicketForecast(s).toLocaleString('es-ES')} abonos a ${fmtMoney(s.club.seasonTickets.price)}`, ir: () => go('finanzas', 'entradas') },
     ...(s.club.director ? [] : [{ texto: '💼 Contrata un director deportivo (opcional)', ir: () => go('direccion', 'director') }]),

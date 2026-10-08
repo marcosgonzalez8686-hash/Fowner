@@ -329,6 +329,7 @@ function doYouth(s: GameState) {
   const d = s.club.director!;
   const squad = mySquad(s);
   const objetivo = DIV_LEVEL[myTeam(s).division];
+  const descartados: string[] = [];
   for (const y of myYouth(s)) {
     if (alreadyProposed(s, y.id)) continue;
     const exigencia = d.style === 'cantera' ? 10 : 4;
@@ -337,9 +338,18 @@ function doYouth(s: GameState) {
     if ((vale || squad.length + agreedBalance(s) < SQUAD_SAFE) && squad.length < 26) {
       act(s, 'cantera', { kind: 'cantera', playerId: y.id }, `subir a ${y.name} (${y.pos}, ${y.ovr})`,
         `Juvenil de ${y.age} años, media ${y.ovr} y ${potLabel(y.ovr, y.pot)}. Creo que puede aportar.`);
-    } else if (levelOf(s, 'cantera') === 'auto') {
+    } else {
+      // los que no valen los descarta él (también en "propone": solo te consulta a quién subir)
+      descartados.push(`${y.name} (${y.pos}, ${y.ovr})`);
       releasePlayer(s, y.id);
     }
+  }
+  if (descartados.length) {
+    addMessage(s, {
+      from: 'director',
+      title: `Hecho: ${descartados.length} juvenil${descartados.length > 1 ? 'es' : ''} no sigue${descartados.length > 1 ? 'n' : ''}`,
+      body: `No los veo para el primer equipo: ${descartados.join(', ')}.`,
+    });
   }
 }
 

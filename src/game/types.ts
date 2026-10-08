@@ -193,6 +193,7 @@ export interface GameState {
   skipCoach?: number; // temporada en la que el dueño decidió seguir sin entrenador
   preWeek?: number; // semana de pretemporada (el mercado avanza por semanas)
   lastEventKey?: string;
+  recentEvents?: string[]; // últimos eventos, para no repetirlos
   messages: Message[];
   history: { season: number; division: number; position: number }[];
   lastResults: MatchResult[]; // últimos resultados de la división del jugador

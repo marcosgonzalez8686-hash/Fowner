@@ -10,7 +10,8 @@ export function tabAlerts(s: GameState) {
   const coach = s.club.staff.entrenador;
   // negociaciones que esperan nuestra respuesta
   const ofertas = myTurn(s).length;
-  const juveniles = s.phase === 'pretemporada' ? myYouth(s).length : 0;
+  // los juveniles por decidir solo cuentan si la cantera la lleva el dueño (las propuestas del director ya avisan en Inicio)
+  const juveniles = s.phase === 'pretemporada' && (!s.club.director || s.club.delegation.cantera === 'manual') ? myYouth(s).length : 0;
   const empleados =
     (coach ? 0 : 1) +
     (coach && (coach.confidence ?? 60) < 30 ? 1 : 0) +
