@@ -58,7 +58,7 @@ export function loanAnswer(s: GameState, p: Player): { ok: boolean; reason?: str
   return { ok: true };
 }
 
-export function loanIn(s: GameState, id: number): string {
+export function loanIn(s: GameState, id: number, cuotaPactada?: number): string {
   if (!marketOpen(s)) return 'El mercado está cerrado.';
   const p = s.players.find((x) => x.id === id);
   if (!p || p.teamId === null) return 'No está disponible.';
@@ -66,7 +66,7 @@ export function loanIn(s: GameState, id: number): string {
   if (mySquad(s).length >= 26) return 'La plantilla está llena.';
   const r = loanAnswer(s, p);
   if (!r.ok) return r.reason!;
-  const cuota = loanFee(p);
+  const cuota = cuotaPactada ?? loanFee(p);
   if (s.club.transferBan === s.season) return 'Sanción por deuda: esta temporada no puedes pagar cuotas de cesión.';
   if (s.club.cash < cuota) return 'No hay dinero en caja para la cuota de cesión.';
   const club = teamById(s, p.teamId)!;

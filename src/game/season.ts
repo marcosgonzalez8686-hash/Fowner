@@ -4,7 +4,7 @@ import {
 } from './economy';
 import { expireProposals, levelOf, runDirector } from './director';
 import { buildAllFixtures, makeDirectors, makePlayer } from './generate';
-import { addMessage, myTeam, mySquad, myYouth, teamById, wageBill } from './market';
+import { addMessage, marketOpen, myTeam, mySquad, myYouth, teamById, wageBill } from './market';
 import { bestEleven, chooseStyle, computeStandings, simulate, type Formation } from './match';
 import { conflictAfterMatch, newIdols } from './traits';
 import { matchKeys } from './insights';
@@ -26,7 +26,8 @@ import {
 import { refreshSponsorOffers, sponsorFixed, sponsorPerWin, sponsorsEndSeason } from './sponsor';
 import { maybeCreateEvent } from './events';
 import { cupRoundDue, newCup, playCupRound, stillIn } from './cup';
-import { expireOffers, generateOffers } from './offers';
+import { generateOffers } from './offers';
+import { PRE_WEEKS, closeMarket, tickNegotiations } from './negotiation';
 import { payDividends, payLoans, refreshInvestorOffers } from './bank';
 import { leagueAttendance, seasonTicketFansGrowth, seasonTicketLoyalty, seasonTicketsNewSeason, sellSeasonTickets } from './tickets';
 import { changeMorale, healOneMatchday, injuryName, isInjured, moraleAfterMatch, moraleBonus, resetSeasonMorale, rollInjuries } from './morale';
@@ -48,6 +49,16 @@ export function expectedAttendance(s: GameState) {
   return leagueAttendance(s).total;
 }
 
+/** Pretemporada: pasa una semana (avanzan las negociaciones, llegan ofertas y el director trabaja) */
+export function advanceWeek(s: GameState): string | undefined {
+  if (s.phase !== 'pretemporada') return 'Solo en pretemporada.';
+  if ((s.preWeek ?? 0) >= PRE_WEEKS - 1) return 'Es la última semana de pretemporada: toca empezar la liga.';
+  s.preWeek = (s.preWeek ?? 0) + 1;
+  tickNegotiations(s);
+  generateOffers(s, 1);
+  runDirector(s, 'pretemporada');
+}
+
 export function startSeason(s: GameState): string | undefined {
   if (s.phase !== 'pretemporada') return;
   if (!s.club.sponsors.camiseta && s.sponsorOffers.camiseta?.length) return 'Antes de empezar, firma un patrocinador de camiseta.';
@@ -55,7 +66,8 @@ export function startSeason(s: GameState): string | undefined {
   // los juveniles sin decidir se van
   for (const y of myYouth(s)) { y.teamId = null; y.youth = false; }
   s.phase = 'temporada';
-  expireOffers(s);
+  // el mercado de verano se cierra: lo que no esté firmado se cae
+  closeMarket(s);
   sellSeasonTickets(s);
   expireProposals(s);
   addMessage(s, {
@@ -270,8 +282,12 @@ export function playMatchday(s: GameState) {
   }
 
   // ofertas por nuestros jugadores durante el mercado de invierno
-  if (s.matchday >= 18 && s.matchday <= 20) generateOffers(s, 1);
-  if (s.matchday === 21) expireOffers(s);
+  // parón de invierno: cada jornada avanzan las negociaciones y llegan ofertas
+  if (marketOpen(s)) {
+    tickNegotiations(s);
+    generateOffers(s, 1);
+  }
+  if (s.matchday === 21) closeMarket(s);
   runDirector(s, 'jornada');
   expireProposals(s);
   if (s.matchday < MATCHDAYS) maybeCreateEvent(s);
@@ -519,6 +535,7 @@ export function endSeason(s: GameState) {
     s.gameOver = 'Tras una temporada decepcionante, los socios han votado en asamblea y te obligan a vender el club.';
     return;
   }
+  s.preWeek = 0;
   generateOffers(s, 2);
   runDirector(s, 'pretemporada');
 }

@@ -6,6 +6,7 @@ import { defaultIdentity, type Crest } from './identity';
 import { newLand } from './land';
 import { makeStaffCandidates } from './staff';
 import { ensureCoach } from './coach';
+import { newSaleOffer } from './negotiation';
 import { rollIdentity } from './traits';
 import { bestEleven } from './match';
 import { migrateSponsors } from './sponsor';
@@ -98,7 +99,17 @@ function migrate(s: GameState) {
     c.records.seasons = s.history.map((h) => ({ season: h.season, division: h.division, position: h.position }));
   }
   if (!s.cup) s.cup = newCup(s);
-  if (!s.incomingOffers) s.incomingOffers = [];
+  // las ofertas recibidas de antes pasan a ser negociaciones de venta
+  if (!s.negotiations) {
+    s.negotiations = [];
+    const viejas = (s as unknown as { incomingOffers?: { playerId: number; teamId: number; fee: number; maxFee: number; wantsToLeave: boolean }[] }).incomingOffers ?? [];
+    for (const o of viejas) {
+      const p = s.players.find((x) => x.id === o.playerId);
+      if (p) newSaleOffer(s, p, o.teamId, o.fee, o.maxFee, o.wantsToLeave);
+    }
+    delete (s as unknown as { incomingOffers?: unknown }).incomingOffers;
+  }
+  s.preWeek ??= 0;
   if (!s.leagueStats) s.leagueStats = emptyStats(s.season);
   if (!c.seasonTickets) c.seasonTickets = defaultSeasonTickets(s);
   if (!c.bank) {

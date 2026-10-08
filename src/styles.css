@@ -541,3 +541,4 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .pulse-item span { font-size: 0.68rem; color: var(--muted); text-align: center; line-height: 1.15; }
 .pulse-item.bad { border-color: var(--neg); }
 .pulse-item.bad b { color: var(--neg); }
+.offer.negociacion.turn { border-left: 3px solid var(--brand-2); padding-left: 8px; }

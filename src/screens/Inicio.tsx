@@ -5,7 +5,7 @@ import { MATCHDAYS } from '../game/economy';
 import { marketOpen, myTeam, mySquad, myYouth, squadOf, teamById } from '../game/market';
 import { bestEleven, computeStandings, form } from '../game/match';
 import { ourPlan } from '../game/coach';
-import { endSeason, playMatchday, startSeason } from '../game/season';
+import { advanceWeek, endSeason, playMatchday, startSeason } from '../game/season';
 import type { GameState, Message } from '../game/types';
 import { Card } from '../ui';
 import MatchSummary from '../components/MatchSummary';
@@ -14,7 +14,8 @@ import KitView from '../components/KitView';
 import { rivalCrest } from '../game/identity';
 import { resolveEvent } from '../game/events';
 import { SlotOffers } from '../components/Sponsors';
-import OffersCard from '../components/OffersCard';
+import NegotiationsCard from '../components/Negotiations';
+import { PRE_WEEKS, activeNegs, myTurn } from '../game/negotiation';
 import Previa, { type MatchSetup } from '../components/Previa';
 import LiveMatch from '../components/LiveMatch';
 import { levelOf } from '../game/director';
@@ -37,7 +38,7 @@ function nextMatch(s: GameState) {
 export function pendingCount(s: GameState) {
   const faltaCamiseta = !s.club.sponsors.camiseta && Boolean(s.sponsorOffers.camiseta?.length);
   const faltaObjetivo = s.phase === 'pretemporada' && !s.club.objective;
-  return (s.pendingEvent ? 1 : 0) + s.messages.filter((m) => m.status === 'pendiente').length + (faltaCamiseta ? 1 : 0) + (faltaObjetivo ? 1 : 0) + s.incomingOffers.length;
+  return (s.pendingEvent ? 1 : 0) + s.messages.filter((m) => m.status === 'pendiente').length + (faltaCamiseta ? 1 : 0) + (faltaObjetivo ? 1 : 0) + myTurn(s).length;
 }
 
 export default function Inicio({ s, update, notify, go }: ScreenProps) {
@@ -65,7 +66,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const propuestas = s.messages.filter((m) => m.status === 'pendiente');
   const miUltimo = s.lastResults.find((r) => r.home === t.id || r.away === t.id);
   const faltaObjetivo = s.phase === 'pretemporada' && !s.club.objective;
-  const hayPendientes = Boolean(s.pendingEvent) || propuestas.length > 0 || faltaCamiseta || ofertasPendientes > 0 || faltaObjetivo || s.incomingOffers.length > 0;
+  const hayPendientes = Boolean(s.pendingEvent) || propuestas.length > 0 || faltaCamiseta || ofertasPendientes > 0 || faltaObjetivo || myTurn(s).length > 0;
 
   const nosotros = prox && (
     <div className="me">
@@ -155,7 +156,9 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
         {s.phase === 'pretemporada' && (
           <>
             <h2>Pretemporada {s.season}</h2>
-            <p className="muted small">Mercado abierto. Prepara el club antes de empezar:</p>
+            <p className="muted small">
+              Semana {(s.preWeek ?? 0) + 1} de {PRE_WEEKS} · mercado abierto. Las negociaciones avanzan cada semana. Prepara el club antes de empezar:
+            </p>
             <ul className="checklist">
               {tareas.map((x) => (
                 <li key={x.texto} className={x.ok ? 'ok' : x.obligatoria ? 'must' : ''}>
@@ -168,10 +171,25 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
                 </li>
               ))}
             </ul>
+            {(s.preWeek ?? 0) < PRE_WEEKS - 1 && (
+              <button
+                className="btn big full"
+                onClick={() => {
+                  const err = update((g) => advanceWeek(g));
+                  notify(err ?? 'Pasa una semana de pretemporada');
+                }}
+              >
+                ⏩ Avanzar una semana
+              </button>
+            )}
+            {activeNegs(s).length > 0 && (
+              <p className="small muted center">🤝 {activeNegs(s).length} negociación(es) abiertas: al empezar la liga se cierra el mercado y se caen las que no estén firmadas.</p>
+            )}
             <button
               className="btn primary big full"
               disabled={faltaCamiseta || faltaObjetivo}
               onClick={() => {
+                if (activeNegs(s).length && !confirm('Hay negociaciones abiertas que se perderán al cerrar el mercado. ¿Empezar la temporada igualmente?')) return;
                 const err = update((g) => startSeason(g));
                 if (err) notify(err);
               }}
@@ -349,7 +367,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
         </Card>
       )}
 
-      <OffersCard s={s} update={update} notify={notify} />
+      <NegotiationsCard s={s} update={update} notify={notify} onlyPending />
 
       {ofertasPendientes > 0 && (
         <button className="hint as-btn full-w" onClick={() => go('finanzas', 'patrocinadores')}>

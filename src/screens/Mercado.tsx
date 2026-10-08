@@ -5,7 +5,7 @@ import { DIV_LEVEL, fmtMoney } from '../game/economy';
 import { askingPrice, marketOpen, myTeam, teamById, willJoin } from '../game/market';
 import type { Pos } from '../game/types';
 import { Card, Ovr } from '../ui';
-import OffersCard from '../components/OffersCard';
+import NegotiationsCard from '../components/Negotiations';
 import { PlayerTags } from '../components/Traits';
 import { useNav } from '../nav/context';
 
@@ -41,7 +41,7 @@ export default function Mercado({ s, update, notify }: ScreenProps) {
 
   return (
     <>
-      <OffersCard s={s} update={update} notify={notify} />
+      <NegotiationsCard s={s} update={update} notify={notify} />
       {levelOf(s, 'fichajes') !== 'manual' && (
         <p className="hint">💼 Tu director deportivo también está buscando fichajes. Puedes fichar tú igualmente.</p>
       )}

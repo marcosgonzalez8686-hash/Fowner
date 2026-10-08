@@ -2,18 +2,18 @@ import { useState } from 'react';
 import type { Update } from '../App';
 import { DIV_LEVEL, fmtMoney, playerValue, roundMoney } from '../game/economy';
 import {
-  askingPrice, askingSalary, buyPlayer, marketOpen, myTeam, releasePlayer, renewPlayer, renewSalary, sellPlayer, sellPrice,
+  askingPrice, askingSalary, marketOpen, myTeam, releasePlayer, renewPlayer, renewSalary,
   teamById,
 } from '../game/market';
 import type { GameState, Player } from '../game/types';
-import { Segmented, Sheet } from '../ui';
+import { Segmented, Sheet, Stepper } from '../ui';
 import { seasonAverage } from '../game/history';
 import { FormStrip, RatingBadge } from './Rating';
 import { ProfileDetail } from './Traits';
-import { MAX_LOANS_IN, loanAnswer, loanFee, loanIn, loanOut, loanTarget } from '../game/loans';
+import { MAX_LOANS_IN, loanAnswer, loanFee, loanTarget } from '../game/loans';
+import { negFor, startLoanIn, startLoanOut, startPurchase } from '../game/negotiation';
 import { TREND_TEXT, persuadeVeteran, trendOf } from '../game/aging';
-import { requestReport, shownPot } from '../game/scouting';
-import { potLabel } from '../game/scouting';
+import { potLabel, requestReport, shownPot } from '../game/scouting';
 import { FLAG } from '../game/continental';
 import { condition } from '../game/fatigue';
 import { fatiguePenalty } from '../game/match';
@@ -31,6 +31,9 @@ export function Condicion({ p }: { p: Player }) {
   );
 }
 
+/** Paso de dinero adecuado para la cantidad */
+const paso = (v: number) => (v >= 1_000_000 ? 50_000 : v >= 100_000 ? 5_000 : v >= 10_000 ? 1_000 : 100);
+
 /** Busca un jugador en cualquier sitio (también en los clubes extranjeros de la Copa de Campeones) */
 export function findPlayer(s: GameState, id: number): Player | undefined {
   return s.players.find((p) => p.id === id) ?? Object.values(s.continental?.squads ?? {}).flat().find((p) => p.id === id);
@@ -42,6 +45,10 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
 }) {
   const sel = findPlayer(s, id);
   const [anos, setAnos] = useState(sel && sel.teamId === s.club.teamId ? (sel.age >= 31 ? '1' : '2') : sel && sel.age <= 24 ? '3' : '2');
+  // propuestas iniciales: algo por debajo de lo que piden
+  const [oferta, setOferta] = useState(sel ? roundMoney(askingPrice(sel) * 0.85) : 0);
+  const [sueldo, setSueldo] = useState(sel ? roundMoney(askingSalary(s, sel) * 0.9) : 0);
+  const [cuota, setCuota] = useState(sel ? roundMoney(loanFee(sel) * 0.8) : 0);
   if (!sel) {
     return (
       <Sheet title="Jugador" onClose={onClose} top>
@@ -55,6 +62,7 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
     onClose();
   };
   const club = teamById(s, sel.teamId);
+  const enCurso = negFor(s, sel.id);
 
   if (sel.teamId === s.club.teamId) {
     const cedidoA = Boolean(sel.loan && sel.loan.from !== s.club.teamId);
@@ -128,15 +136,19 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
             )}
 
             <h4>Vender</h4>
-            {marketOpen(s) ? (
-              <button
-                className="btn full"
-                onClick={() => run(() => update((g) => sellPlayer(g, sel.id, sellPrice(sel)).error), `Vendido por ${fmtMoney(sellPrice(sel))}`)}
-              >
-                Aceptar oferta de {fmtMoney(sellPrice(sel))}
-              </button>
+            {enCurso ? (
+              <p className="hint small">🤝 Hay una negociación abierta por él. Síguela en Equipo → Mercado.</p>
             ) : (
-              <p className="small muted">El mercado está cerrado.</p>
+              <>
+                <p className="small muted">
+                  {sel.listed
+                    ? 'Está en la lista de transferibles: los clubes lo saben y llegarán ofertas (algo más bajas).'
+                    : 'Si lo pones como transferible, otros clubes se animarán a hacer ofertas.'}
+                </p>
+                <button className="btn full" onClick={() => run(() => update((g) => { const x = g.players.find((y) => y.id === sel.id); if (x) x.listed = !x.listed; }), sel.listed ? 'Ya no es transferible' : 'Ahora es transferible')}>
+                  {sel.listed ? '🚫 Quitar de transferibles' : '🏷️ Poner como transferible'}
+                </button>
+              </>
             )}
 
             <h4>Rescindir</h4>
@@ -148,13 +160,13 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
             </button>
 
             <h4>Ceder</h4>
-            {marketOpen(s) && destino ? (
+            {marketOpen(s) && destino && !enCurso ? (
               <>
                 <p className="small muted">
-                  Una temporada en el {destino.team.name} ({destino.division + 1}ª), que paga su ficha. A los jóvenes, jugar minutos les viene bien.
+                  Una temporada en el {destino.team.name} ({destino.division + 1}ª), que pagaría su ficha. A los jóvenes, jugar minutos les viene bien. Te contestarán {s.phase === 'pretemporada' ? 'la semana que viene' : 'tras la próxima jornada'}.
                 </p>
-                <button className="btn full" onClick={() => run(() => update((g) => loanOut(g, sel.id)), '')}>
-                  🔁 Ceder al {destino.team.name}
+                <button className="btn full" onClick={() => run(() => update((g) => startLoanOut(g, sel.id)), `Ofrecido cedido al ${destino.team.name}`)}>
+                  🔁 Ofrecerlo cedido al {destino.team.name}
                 </button>
               </>
             ) : (
@@ -197,50 +209,62 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
         <p className="small muted">Está cedido: no se puede fichar hasta que vuelva a su club.</p>
       ) : (
         <>
-          <div className="kpis">
-            <div><b>{fmtMoney(askingPrice(sel))}</b><span>traspaso</span></div>
-            <div><b>{fmtMoney(askingSalary(s, sel))}</b><span>ficha/temp.</span></div>
-          </div>
-          <h4>Duración del contrato</h4>
-          <Segmented
-            value={anos}
-            onChange={setAnos}
-            options={['1', '2', '3', '4'].map((v) => ({ value: v, label: `${v} año${v === '1' ? '' : 's'}` }))}
-          />
-          <button
-            className="btn primary full"
-            onClick={() => {
-              const err = update((g) => buyPlayer(g, sel.id, askingPrice(sel), askingSalary(s, sel), Number(anos)).error);
-              notify(err ?? `¡${sel.name} es nuevo jugador del club!`);
-              onClose();
-            }}
-          >
-            Fichar
-          </button>
-          {sel.teamId !== null && (() => {
-            const r = loanAnswer(s, sel);
-            return (
-              <>
-                <h4>Cesión</h4>
-                {r.ok ? (
-                  <>
-                    <p className="small muted">Hasta final de temporada. Cuota {fmtMoney(loanFee(sel))} y pagas su ficha ({fmtMoney(sel.salary)}). Máximo {MAX_LOANS_IN} cedidos.</p>
-                    <button
-                      className="btn full"
-                      onClick={() => {
-                        notify(update((g) => loanIn(g, sel.id)) ?? '');
-                        onClose();
-                      }}
-                    >
-                      🔁 Pedir cedido
+          {enCurso ? (
+            <p className="hint small">🤝 Ya hay una negociación abierta por él. Síguela en Equipo → Mercado.</p>
+          ) : (
+            <>
+              <h4>{sel.teamId === null ? 'Ofrecer contrato' : `Oferta al ${club?.name ?? 'club'}`}</h4>
+              <p className="small muted">
+                {sel.teamId === null
+                  ? `Es libre: solo hay que convencerle. Pide unos ${fmtMoney(askingSalary(s, sel))}/temp.`
+                  : `Su club pide unos ${fmtMoney(askingPrice(sel))}. Primero se negocia el traspaso y después el contrato con el jugador.`}{' '}
+                Te contestarán {s.phase === 'pretemporada' ? 'la semana que viene' : 'tras la próxima jornada'}.
+              </p>
+              {sel.teamId !== null ? (
+                <div className="row">
+                  <Stepper value={oferta} step={paso(oferta)} min={0} onChange={setOferta} format={fmtMoney} />
+                  <button className="btn primary grow" onClick={() => run(() => update((g) => startPurchase(g, sel.id, oferta, { years: Number(anos) })), 'Oferta enviada')}>
+                    📨 Hacer oferta
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Segmented
+                    value={anos}
+                    onChange={setAnos}
+                    options={['1', '2', '3', '4'].map((v) => ({ value: v, label: `${v} año${v === '1' ? '' : 's'}` }))}
+                  />
+                  <div className="row">
+                    <Stepper value={sueldo} step={paso(sueldo)} min={0} onChange={setSueldo} format={fmtMoney} />
+                    <button className="btn primary grow" onClick={() => run(() => update((g) => startPurchase(g, sel.id, 0, { salary: sueldo, years: Number(anos) })), 'Oferta enviada')}>
+                      📨 Ofrecer contrato
                     </button>
+                  </div>
+                </>
+              )}
+              {sel.teamId !== null && (() => {
+                const r = loanAnswer(s, sel);
+                return (
+                  <>
+                    <h4>Cesión</h4>
+                    {r.ok ? (
+                      <>
+                        <p className="small muted">Hasta final de temporada: tú pagas su ficha ({fmtMoney(sel.salary)}) y una cuota al club. Máximo {MAX_LOANS_IN} cedidos.</p>
+                        <div className="row">
+                          <Stepper value={cuota} step={paso(cuota)} min={0} onChange={setCuota} format={fmtMoney} />
+                          <button className="btn grow" onClick={() => run(() => update((g) => startLoanIn(g, sel.id, cuota)), 'Petición enviada')}>
+                            🔁 Pedir cedido
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="small muted">{r.reason}</p>
+                    )}
                   </>
-                ) : (
-                  <p className="small muted">{r.reason}</p>
-                )}
-              </>
-            );
-          })()}
+                );
+              })()}
+            </>
+          )}
         </>
       )}
     </Sheet>

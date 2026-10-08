@@ -1,7 +1,7 @@
 import { DIV_LEVEL, fmtMoney, roundMoney } from './economy';
 import {
-  addMessage, askingPrice, askingSalary, buyPlayer, describeMoney, marketOpen, myTeam, mySquad, myYouth,
-  promoteYouth, releasePlayer, renewPlayer, renewSalary, sellPlayer, sellPrice, wageBill, willJoin,
+  addMessage, askingPrice, askingSalary, describeMoney, marketOpen, myTeam, mySquad, myYouth,
+  promoteYouth, releasePlayer, renewPlayer, renewSalary, sellPrice, wageBill, willJoin,
 } from './market';
 import { FORMACION } from './match';
 import { ourShape, ourTactics, tacticsLabel } from './coach';
@@ -10,7 +10,7 @@ import { potLabel } from './scouting';
 import { gauss } from './rng';
 import { ownerTitle } from './identity';
 import { scoutingFactor } from './land';
-import { directorHandlesOffers } from './offers';
+import { negFor, startPurchase } from './negotiation';
 import { ROLES, ROLE_ORDER, hireStaff, staffScoutFactor, staffWages, type Role, type Staff } from './staff';
 import type { Director, GameState, Level, Player, Pos, Proposal, Task } from './types';
 
@@ -82,15 +82,20 @@ function alreadyProposed(s: GameState, playerId: number) {
 export function executeProposal(s: GameState, pr: Proposal): string | undefined {
   let r;
   switch (pr.kind) {
-    case 'fichar':
-      r = buyPlayer(s, pr.playerId, pr.fee, pr.salary, pr.years);
-      if (r.ok) s.club.transferBudget = Math.max(0, s.club.transferBudget - pr.fee);
-      break;
-    case 'vender':
-      r = sellPlayer(s, pr.playerId, pr.fee, pr.toTeamId);
-      // la mitad de lo ingresado vuelve al presupuesto de fichajes para reponer
-      if (r.ok) s.club.transferBudget += Math.round(pr.fee / 2);
-      break;
+    case 'fichar': {
+      // el director abre la negociación: empieza por debajo y como mucho paga un 10% más de lo previsto
+      const tope = Math.min(roundMoney(pr.fee * 1.1), Math.max(pr.fee, s.club.transferBudget));
+      return startPurchase(s, pr.playerId, roundMoney(pr.fee * 0.85), {
+        by: 'director', salary: roundMoney(pr.salary * 0.95), years: pr.years, maxFee: tope, maxSalary: roundMoney(pr.salary * 1.15),
+      });
+    }
+    case 'vender': {
+      // se pone en el mercado; las ofertas llegarán y se negociarán
+      const p = s.players.find((x) => x.id === pr.playerId && x.teamId === s.club.teamId);
+      if (!p) return 'El jugador ya no está en el club.';
+      p.listed = true;
+      return;
+    }
     case 'renovar':
       r = renewPlayer(s, pr.playerId, pr.salary, pr.years);
       break;
@@ -114,9 +119,11 @@ function warnOnce(s: GameState, title: string, body: string) {
 function act(s: GameState, task: Task, pr: Proposal, title: string, body: string) {
   if (levelOf(s, task) === 'auto') {
     const err = executeProposal(s, pr);
+    // fichar y vender ya no son inmediatos: se abren negociaciones
+    const hecho = pr.kind === 'fichar' ? 'Negociando' : pr.kind === 'vender' ? 'Transferible' : 'Hecho';
     addMessage(s, {
       from: 'director',
-      title: err ? `No se pudo: ${title}` : `Hecho: ${title}`,
+      title: err ? `No se pudo: ${title}` : `${hecho}: ${title}`,
       body: err ? `${body}\n\nMotivo: ${err}` : body,
     });
   } else {
@@ -141,6 +148,8 @@ function scoreSigning(d: Director, p: Player, coste: number, perc: number) {
 function doSignings(s: GameState, maxOps: number) {
   const d = s.club.director!;
   if (pendingFor(s, 'fichar').length >= 2) return;
+  // como mucho dos negociaciones suyas a la vez
+  if (s.negotiations.filter((n) => n.by === 'director' && n.kind === 'compra' && (n.state === 'esperando' || n.state === 'tu_turno')).length >= 2) return;
   let ops = 0;
   // con la plantilla corta hace las operaciones que hagan falta para llegar al mínimo
   const limite = maxOps + Math.max(0, SQUAD_SAFE - mySquad(s).length);
@@ -182,7 +191,7 @@ function doSignings(s: GameState, maxOps: number) {
     let mejor: { p: Player; fee: number; salary: number; score: number; perc: number } | null = null;
     for (const p of s.players) {
       if (p.teamId === s.club.teamId || p.pos !== pos || p.age > 33 || p.loan) continue;
-      if (alreadyProposed(s, p.id) || !willJoin(s, p)) continue;
+      if (alreadyProposed(s, p.id) || negFor(s, p.id) || !willJoin(s, p)) continue;
       const fee = roundMoney(askingPrice(p) * rebaja);
       const salary = roundMoney(askingSalary(s, p) * rebaja);
       if (fee > presupuesto || salary > margenSalarial) continue;
@@ -242,14 +251,14 @@ function doSales(s: GameState) {
     candidato = squad.filter((p) => !titulares.has(p.id) && p.age >= 29 && p.signedSeason !== s.season).sort((a, b) => b.salary - a.salary)[0] ?? null;
     motivo = 'Cobra mucho para no ser titular.';
   }
-  if (!candidato || alreadyProposed(s, candidato.id)) return;
+  if (!candidato || candidato.listed || negFor(s, candidato.id) || alreadyProposed(s, candidato.id)) return;
   const fee = roundMoney(sellPrice(candidato) * (1 + d.stars * 0.03));
   act(
     s, 'ventas',
     { kind: 'vender', playerId: candidato.id, fee, toTeamId: 0 },
-    `vender a ${candidato.name} (${candidato.pos}, ${candidato.ovr})`,
+    `poner a la venta a ${candidato.name} (${candidato.pos}, ${candidato.ovr})`,
     `${candidato.name}, ${candidato.age} años, media ${candidato.ovr}, cobra ${fmtMoney(candidato.salary)}/temp.\n` +
-      `Hay una oferta de ${fmtMoney(fee)}. ${motivo}`,
+      `Vale unos ${fmtMoney(fee)}. ${motivo} Lo pondría como transferible y negociaríamos las ofertas que lleguen.`,
   );
 }
 
@@ -344,7 +353,6 @@ export function runDirector(s: GameState, moment: DirectorMoment) {
   if (!s.club.director || s.gameOver) return;
   if (levelOf(s, 'cantera') !== 'manual' && s.phase === 'pretemporada') doYouth(s);
   if (marketOpen(s)) {
-    directorHandlesOffers(s, levelOf(s, 'ventas'));
     if (levelOf(s, 'ventas') !== 'manual') doSales(s);
     if (levelOf(s, 'fichajes') !== 'manual') doSignings(s, moment === 'jornada' ? 1 : 3);
   }

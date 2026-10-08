@@ -5,13 +5,13 @@ import type { Role, Staff } from './staff';
 import type { Profile, Trait } from './traits';
 import type { LeagueStats } from './stats';
 import type { Continental, Supercopa } from './continental';
+import type { Negotiation } from './negotiation';
 import type { SponsorContract, SponsorSlot } from './sponsor';
 import type { PendingEvent } from './events';
 import type { Objective } from './fans';
 import type { Cup } from './cup';
 import type { SeasonTickets } from './tickets';
 import type { BankState } from './bank';
-import type { IncomingOffer } from './offers';
 import type { Records } from './history';
 
 export type Pos = 'POR' | 'DEF' | 'MED' | 'DEL';
@@ -36,6 +36,7 @@ export interface Player {
   traits?: Trait[]; // rasgos de personalidad
   adapt?: { coach: number; apps: number }; // partidos jugados con el entrenador actual (adaptación al sistema)
   loan?: { from: number; until: number; apps: number }; // cedido: club dueño, temporada en que vuelve y partidos jugados
+  listed?: boolean; // transferible: lo ofrecemos a otros clubes
   fatigue?: number; // cansancio acumulado, 0 = fresco (la condición física es 100 - cansancio)
   potHidden?: number; // promesa oculta: potencial extra que solo descubre un informe de los ojeadores
   signedSeason?: number; // temporada en la que llegó al club del jugador
@@ -182,7 +183,8 @@ export interface GameState {
   sponsorOffers: Partial<Record<SponsorSlot, SponsorContract[]>>;
   pendingEvent?: PendingEvent;
   cup: Cup;
-  incomingOffers: IncomingOffer[];
+  negotiations: Negotiation[]; // fichajes, ventas y cesiones en marcha (y las últimas cerradas)
+  preWeek?: number; // semana de pretemporada (el mercado avanza por semanas)
   lastEventKey?: string;
   messages: Message[];
   history: { season: number; division: number; position: number }[];

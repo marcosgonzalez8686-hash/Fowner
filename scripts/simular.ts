@@ -3,7 +3,7 @@ import { hireDirector } from '../src/game/director';
 import { fmtMoney, ledgerExpense, ledgerIncome } from '../src/game/economy';
 import { newGame } from '../src/game/generate';
 import { mySquad, myTeam, squadOf, wageBill } from '../src/game/market';
-import { endSeason, playMatchday, startSeason } from '../src/game/season';
+import { advanceWeek, endSeason, playMatchday, startSeason } from '../src/game/season';
 import { setDelegation } from '../src/game/club';
 import type { Task } from '../src/game/types';
 import { signOffer, type SponsorSlot } from '../src/game/sponsor';
@@ -28,6 +28,8 @@ if (modo === 'auto') {
 const t0 = Date.now();
 for (let temp = 0; temp < temporadas && !s.gameOver; temp++) {
   setObjective(s, expectedObjective(s));
+  // la pretemporada pasa semana a semana: así avanzan las negociaciones
+  while (!advanceWeek(s));
   startSeason(s);
   while (s.phase === 'temporada' && !s.gameOver) {
     if (myCupMatchDue(s)) playCupRound(s);
@@ -44,6 +46,8 @@ for (let temp = 0; temp < temporadas && !s.gameOver; temp++) {
   console.log('   copa:', copa === -1 ? 'CAMPEÓN' : `eliminado en ${ROUND_NAMES[copa]}`, '| campeón', s.teams.find((t) => t.id === s.cup.champion)?.name, '| premios', s.club.ledger.copa);
   const ent = s.club.staff.entrenador;
   console.log('   entrenador:', ent ? `${ent.name} ${ent.stars}★ ${ent.formation} ${ent.style} · contrato ${ent.contract} · confianza ${ent.confidence}` : 'ninguno');
+  const negs = s.negotiations.filter((n) => n.season === s.season);
+  console.log('   negociaciones:', negs.length, '| cerradas', negs.filter((n) => n.state === 'cerrada').length, '| rotas', negs.filter((n) => n.state === 'rota').length, '| tipos', [...new Set(negs.map((n) => n.kind))].join(','));
   endSeason(s);
   // firma la oferta intermedia de cada espacio libre
   for (const [slot, ofertas] of Object.entries(s.sponsorOffers)) if (ofertas?.length) signOffer(s, slot as SponsorSlot, ofertas[1].id);

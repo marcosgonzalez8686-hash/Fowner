@@ -2,12 +2,14 @@ import type { TabId } from '../App';
 import { MATCHDAYS } from '../game/economy';
 import { marketOpen, myYouth } from '../game/market';
 import type { GameState, Message } from '../game/types';
+import { myTurn } from '../game/negotiation';
 
 // Avisos en las pestañas: un número si hay algo que decidir, un punto si hay novedades.
 
 export function tabAlerts(s: GameState) {
   const coach = s.club.staff.entrenador;
-  const ofertas = s.incomingOffers.length;
+  // negociaciones que esperan nuestra respuesta
+  const ofertas = myTurn(s).length;
   const juveniles = s.phase === 'pretemporada' ? myYouth(s).length : 0;
   const empleados =
     (coach ? 0 : 1) +
@@ -27,6 +29,6 @@ export function tabAlerts(s: GameState) {
 }
 
 /** Mensajes que merecen el aviso del buzón (el resto se leen cuando se quiera) */
-const IMPORTANTE = /^(🏆|🥇|🏅|🌍|🔥|👴|📨|🎖️|🙌|💎|⚠️|😤|😒|👋|🧢|📈|👟|💪|🎉|😞|🚨|💸|🏦)/u;
+const IMPORTANTE = /^(✅|💔|🔒|🏆|🥇|🏅|🌍|🔥|👴|📨|🎖️|🙌|💎|⚠️|😤|😒|👋|🧢|📈|👟|💪|🎉|😞|🚨|💸|🏦)/u;
 export const isImportant = (m: Message) =>
   m.from === 'director' ? !/^(Hecho|Oferta por|He renovado)/.test(m.title) : IMPORTANTE.test(m.title);
