@@ -4,6 +4,7 @@ const { compressToUTF16, decompressFromUTF16 } = LZString;
 import { emptyStats } from './stats';
 import { ensureFacilities } from './rivals';
 import { createWorld } from './world';
+import { quarterFinals } from './europe';
 import { DIVISION_NAMES } from './economy';
 import { SAVE_VERSION } from './generate';
 import { emptyLedger } from './economy';
@@ -143,6 +144,11 @@ function migrate(s: GameState) {
   }
   // la antigua Copa de Campeones da paso a las tres competiciones europeas (desde la temporada siguiente)
   delete s.continental;
+  // eliminatorias europeas a ida y vuelta: las que iban a partido único se rehacen desde los cuartos
+  if (s.europe && !s.europe.legs) {
+    for (const comp of s.europe.comps) if (comp.stage >= 4) quarterFinals(comp);
+    s.europe.legs = true;
+  }
   // instalaciones de los rivales (partidas de antes)
   ensureFacilities(s.teams.filter((t) => t.id !== c.teamId));
   c.ledger = { ...emptyLedger(), ...c.ledger };

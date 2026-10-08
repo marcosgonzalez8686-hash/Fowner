@@ -23,6 +23,7 @@ export interface CupTie {
   ga?: number;
   gb?: number;
   pens?: string; // resultado de la tanda, p. ej. "4-3"
+  agg?: string; // eliminatoria a ida y vuelta: resultado global (del punto de vista de a)
   winner?: number;
 }
 

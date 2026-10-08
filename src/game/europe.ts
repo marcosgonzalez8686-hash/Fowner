@@ -5,13 +5,13 @@ import { bestEleven, roundRobin } from './match';
 import { changeMorale } from './morale';
 import { playTie } from './continental';
 import { shuffle } from './rng';
-import type { CupTie } from './cup';
+import { penalties, type CupTie } from './cup';
 import type { GameState } from './types';
 import { COUNTRIES, FOREIGN, flagOf } from './world';
 
 // Competiciones europeas: Champions League, Europa League y Conference League.
 // 16 clubes cada una: fase liga de 4 jornadas (cada uno contra 4 rivales distintos)
-// y los 8 primeros pasan a cuartos, semifinales y final (a partido único; la final, en campo neutral).
+// y los 8 primeros pasan a cuartos y semifinales (ida y vuelta) y a la final (partido único en campo neutral).
 
 export type EuroKey = 'ucl' | 'uel' | 'uecl';
 export const EURO_KEYS: EuroKey[] = ['ucl', 'uel', 'uecl'];
@@ -23,8 +23,8 @@ export const EURO: Record<EuroKey, { name: string; icon: string; entry: number; 
 };
 
 /** Fechas: tras qué jornada de liga se juega cada fase (sin pisar la Copa) */
-export const EURO_AFTER = [4, 7, 11, 15, 22, 29, 35];
-export const EURO_STAGES = ['Jornada 1', 'Jornada 2', 'Jornada 3', 'Jornada 4', 'Cuartos de final', 'Semifinales', 'Final'];
+export const EURO_AFTER = [4, 7, 11, 15, 20, 22, 27, 29, 35];
+export const EURO_STAGES = ['Jornada 1', 'Jornada 2', 'Jornada 3', 'Jornada 4', 'Cuartos (ida)', 'Cuartos (vuelta)', 'Semifinales (ida)', 'Semifinales (vuelta)', 'Final'];
 const LIGA = 4; // jornadas de la fase liga
 
 /** Plazas de cada país: [Champions, Europa League, Conference] */
@@ -36,15 +36,21 @@ export interface EuroComp {
   key: EuroKey;
   teams: number[];
   league: CupTie[][]; // 4 jornadas
-  ko: CupTie[][]; // cuartos, semis y final
-  stage: number; // 0-3 fase liga, 4 cuartos, 5 semis, 6 final, 7 terminada
+  ko: CupTie[][]; // cuartos (ida, vuelta), semis (ida, vuelta) y final
+  stage: number; // 0-3 fase liga, 4-5 cuartos, 6-7 semis, 8 final, 9 terminada
   champion?: number;
 }
 
 export interface Europe {
   season: number;
   comps: EuroComp[];
+  legs?: boolean; // eliminatorias a ida y vuelta (las partidas de antes eran a partido único)
 }
+
+type Fase = 'liga' | 'ida' | 'vuelta' | 'final';
+export const faseDe = (stage: number): Fase => (stage < LIGA ? 'liga' : stage === EURO_STAGES.length - 1 ? 'final' : (stage - LIGA) % 2 === 0 ? 'ida' : 'vuelta');
+/** Cruce de ida: juega en casa el peor clasificado; la vuelta, en casa del mejor */
+const ida = (mejor: number, peor: number): CupTie => ({ a: peor, b: mejor, home: peor });
 
 const tieOf = (f: { home: number; away: number }): CupTie => ({ a: f.home, b: f.away, home: f.home });
 
@@ -78,7 +84,7 @@ export function newEurope(s: GameState, espana: number[], copa?: number) {
     const orden = l.lastTable ?? [...l.teams].sort((a, b) => bestEleven(squadOf(s, b.id)).strength - bestEleven(squadOf(s, a.id)).strength).map((t) => t.id);
     reparte(l.country, orden);
   }
-  s.europe = { season: s.season, comps: EURO_KEYS.map((k) => nuevaComp(k, listas[k])) };
+  s.europe = { season: s.season, comps: EURO_KEYS.map((k) => nuevaComp(k, listas[k])), legs: true };
 
   const mia = myEuroComp(s);
   if (mia) {
@@ -88,7 +94,7 @@ export function newEurope(s: GameState, espana: number[], copa?: number) {
     addMessage(s, {
       from: 'liga',
       title: `${info.icon} ¡Jugamos la ${info.name}!`,
-      body: `Solo por participar: ${fmtMoney(info.entry)}. Fase liga de 4 jornadas (tras las jornadas ${EURO_AFTER.slice(0, LIGA).join(', ')}) y los 8 primeros pasan a cuartos. Cada victoria: ${fmtMoney(info.win)}.`,
+      body: `Solo por participar: ${fmtMoney(info.entry)}. Fase liga de 4 jornadas (tras las jornadas ${EURO_AFTER.slice(0, LIGA).join(', ')}) y los 8 primeros pasan a cuartos (ida y vuelta). Cada victoria: ${fmtMoney(info.win)}.`,
     });
   }
 }
@@ -138,10 +144,13 @@ export function playEuroStage(s: GameState) {
     if (!toca(s, c)) continue;
     const info = EURO[c.key];
     const fase = c.stage;
-    const liga = fase < LIGA;
-    for (const tie of tiesDe(c)) {
-      playTie(s, tie, `${info.name} · ${EURO_STAGES[fase]}`, c.key === 'ucl' ? 2 : 1.6, liga);
-      if (tie.a !== mio && tie.b !== mio) continue;
+    const tipo = faseDe(fase);
+    const liga = tipo === 'liga';
+    const idas = tipo === 'vuelta' ? c.ko[fase - LIGA - 1] : [];
+    tiesDe(c).forEach((tie, i) => {
+      playTie(s, tie, `${info.name} · ${EURO_STAGES[fase]}`, c.key === 'ucl' ? 2 : 1.6, tipo !== 'final');
+      if (tipo === 'vuelta') global(s, tie, idas[i]);
+      if (tie.a !== mio && tie.b !== mio) return;
       const rival = teamById(s, tie.a === mio ? tie.b : tie.a)!;
       const gf = tie.a === mio ? tie.ga! : tie.gb!;
       const gc = tie.a === mio ? tie.gb! : tie.ga!;
@@ -156,60 +165,107 @@ export function playEuroStage(s: GameState) {
           title: `${info.icon} ${info.name}: ${gf > gc ? 'victoria' : gf < gc ? 'derrota' : 'empate'} ${gf}-${gc}`,
           body: `${EURO_STAGES[fase]} de la fase liga ante el ${rival.name}${pais}.${premio ? ` Premio: ${fmtMoney(premio)}.` : ''}`,
         });
-        continue;
+        return;
       }
-      const ronda = fase - LIGA;
+      if (tipo === 'ida') {
+        changeMorale(s, gf > gc ? 2 : gf < gc ? -1 : 0);
+        addMessage(s, {
+          from: 'liga',
+          title: `${info.icon} ${info.name} · ${EURO_STAGES[fase]}: ${gf}-${gc} ante el ${rival.name}`,
+          body: `${gf > gc ? 'Ventaja para la vuelta' : gf < gc ? 'Toca remontar en la vuelta' : 'Todo abierto para la vuelta'}${pais}. Se juega tras la jornada ${EURO_AFTER[fase + 1]}, ${tie.home === mio ? 'a domicilio' : 'en casa'}.`,
+        });
+        return;
+      }
+      const ronda = tipo === 'final' ? 2 : (fase - LIGA - 1) / 2;
       if (tie.winner === mio) {
         const premio = info.ko[ronda];
         s.club.cash += premio;
         s.club.ledger.copa += premio;
         const final = fase === EURO_STAGES.length - 1;
         changeMorale(s, 5);
-        changeSatisfaction(s, final ? (c.key === 'ucl' ? 25 : 15) : 4, final ? `¡Campeones de la ${info.name}!` : `${info.name}: pasamos ${EURO_STAGES[fase].toLowerCase()}`);
+        changeSatisfaction(s, final ? (c.key === 'ucl' ? 25 : 15) : 4, final ? `¡Campeones de la ${info.name}!` : `${info.name}: pasamos ${nombreRonda(fase)}`);
         if (final) s.club.trophies.push({ season: s.season, name: info.name });
         addMessage(s, {
           from: 'liga',
-          title: final ? `${info.icon} ¡¡CAMPEONES DE LA ${info.name.toUpperCase()}!!` : `${info.icon} ${info.name}: pasamos ${EURO_STAGES[fase].toLowerCase()}`,
-          body: `${resultado(s, tie)} ante el ${rival.name}${pais}. Premio: ${fmtMoney(premio)}.`,
+          title: final ? `${info.icon} ¡¡CAMPEONES DE LA ${info.name.toUpperCase()}!!` : `${info.icon} ${info.name}: pasamos ${nombreRonda(fase)}`,
+          body: `${tipo === 'vuelta' ? resultadoGlobal(s, tie) : resultado(s, tie)} ante el ${rival.name}${pais}. Premio: ${fmtMoney(premio)}.`,
         });
       } else {
         changeMorale(s, -2);
         changeSatisfaction(s, -1, `${info.name}: eliminados`);
-        addMessage(s, { from: 'liga', title: `${info.icon} ${info.name}: eliminados en ${EURO_STAGES[fase].toLowerCase()}`, body: `${resultado(s, tie)} ante el ${rival.name}${pais}.` });
+        addMessage(s, { from: 'liga', title: tipo === 'final' ? `${info.icon} Subcampeones de la ${info.name}` : `${info.icon} ${info.name}: eliminados en ${nombreRonda(fase)}`, body: `${tipo === 'vuelta' ? resultadoGlobal(s, tie) : resultado(s, tie)} ante el ${rival.name}${pais}.` });
       }
-    }
+    });
     avanza(s, c);
   }
+}
+
+/** Resultado global de una eliminatoria: la vuelta más la ida; si empatan, penaltis */
+function global(s: GameState, vuelta: CupTie, primera: CupTie) {
+  // en la vuelta, a es el mejor clasificado (en la ida era b)
+  const ga = vuelta.ga! + primera.gb!;
+  const gb = vuelta.gb! + primera.ga!;
+  vuelta.agg = `${ga}-${gb}`;
+  if (ga !== gb) vuelta.winner = ga > gb ? vuelta.a : vuelta.b;
+  else {
+    const p = penalties(bestEleven(squadOf(s, vuelta.a)).strength, bestEleven(squadOf(s, vuelta.b)).strength);
+    vuelta.pens = `${p.a}-${p.b}`;
+    vuelta.winner = p.a > p.b ? vuelta.a : vuelta.b;
+  }
+  // el resumen de nuestro partido cuenta el global
+  const mio = s.club.teamId;
+  if ((vuelta.a === mio || vuelta.b === mio) && s.lastReport) {
+    const nos = vuelta.a === mio;
+    s.lastReport.label = `${s.lastReport.label} · global ${nos ? `${ga}-${gb}` : `${gb}-${ga}`}`;
+    if (vuelta.pens) s.lastReport.pens = s.lastReport.home === vuelta.a ? vuelta.pens : vuelta.pens.split('-').reverse().join('-');
+  }
+}
+
+/** «cuartos», «semifinales» o «final» (sin ida ni vuelta) */
+const nombreRonda = (fase: number) => EURO_STAGES[fase].replace(/ \((ida|vuelta)\)/, '').toLowerCase();
+
+const resultadoGlobal = (s: GameState, t: CupTie) => {
+  const nos = t.a === s.club.teamId;
+  const [x, y] = (t.agg ?? '0-0').split('-');
+  const p = t.pens ? `, penaltis ${nos ? t.pens : t.pens.split('-').reverse().join('-')}` : '';
+  return `${resultado(s, { ...t, pens: undefined })} en la vuelta (global ${nos ? `${x}-${y}` : `${y}-${x}`}${p})`;
+};
+
+/** Cuartos de ida a partir de la fase liga: 1º-8º, 2º-7º, 3º-6º y 4º-5º */
+export function quarterFinals(c: EuroComp) {
+  const top = euroTable(c).map((r) => r.teamId).slice(0, 8);
+  c.ko = [[0, 1, 2, 3].map((i) => ida(top[i], top[7 - i]))];
+  c.stage = LIGA;
 }
 
 function avanza(s: GameState, c: EuroComp) {
   const mio = s.club.teamId;
   const info = EURO[c.key];
   c.stage++;
+  const tipo = c.stage < EURO_STAGES.length ? faseDe(c.stage) : null;
+  const orden = euroTable(c).map((r) => r.teamId);
+  const mejor = (x: number, y: number) => (orden.indexOf(x) <= orden.indexOf(y) ? [x, y] : [y, x]);
   if (c.stage === LIGA) {
-    // los 8 primeros a cuartos: 1º-8º, 2º-7º, 3º-6º, 4º-5º (en casa el mejor)
-    const tabla = euroTable(c).map((r) => r.teamId);
-    const top = tabla.slice(0, 8);
-    c.ko.push([0, 1, 2, 3].map((i) => ({ a: top[i], b: top[7 - i], home: top[i] })));
+    quarterFinals(c);
     if (c.teams.includes(mio)) {
-      const puesto = tabla.indexOf(mio) + 1;
+      const puesto = orden.indexOf(mio) + 1;
       addMessage(s, {
         from: 'liga',
         title: puesto <= 8 ? `${info.icon} ¡A cuartos de la ${info.name}!` : `${info.icon} Fuera de la ${info.name}`,
-        body: `Acabamos ${puesto}º de 16 en la fase liga.${puesto > 8 ? ' Solo pasan los 8 primeros.' : ''}`,
+        body: `Acabamos ${puesto}º de 16 en la fase liga.${puesto > 8 ? ' Solo pasan los 8 primeros.' : ' Cuartos a ida y vuelta: la vuelta, en casa del mejor clasificado.'}`,
       });
       if (puesto > 8) changeSatisfaction(s, -2, `${info.name}: fuera en la fase liga`);
     }
-  } else if (c.stage === LIGA + 1 || c.stage === LIGA + 2) {
+  } else if (tipo === 'vuelta') {
+    // la vuelta, con los campos cambiados
+    c.ko.push(c.ko[c.ko.length - 1].map((t) => ({ a: t.b, b: t.a, home: t.b })));
+  } else if (tipo === 'ida') {
+    // semis: ganador del cruce 1 contra el del 4 y el del 2 contra el del 3
     const g = c.ko[c.ko.length - 1].map((t) => t.winner!);
-    const orden = euroTable(c).map((r) => r.teamId);
-    const mejor = (x: number, y: number) => (orden.indexOf(x) <= orden.indexOf(y) ? [x, y] : [y, x]);
-    if (c.stage === LIGA + 1) {
-      // semis: ganador del cruce 1 contra el del 4 y el del 2 contra el del 3
-      c.ko.push([mejor(g[0], g[3]), mejor(g[1], g[2])].map(([a, b]) => ({ a, b, home: a })));
-    } else {
-      c.ko.push([{ a: g[0], b: g[1], home: null }]);
-    }
+    c.ko.push([mejor(g[0], g[3]), mejor(g[1], g[2])].map(([x, y]) => ida(x, y)));
+  } else if (tipo === 'final') {
+    const g = c.ko[c.ko.length - 1].map((t) => t.winner!);
+    c.ko.push([{ a: g[0], b: g[1], home: null }]);
   } else if (c.stage === EURO_STAGES.length) {
     c.champion = c.ko[c.ko.length - 1][0].winner;
     if (c.champion !== mio && c.champion !== undefined) {

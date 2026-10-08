@@ -19,6 +19,7 @@ function Cruce({ s, t, mine }: { s: GameState; t: CupTie; mine?: boolean }) {
       <Equipo s={s} id={t.a} ganador={t.winner} />
       <span className="cup-score">
         {t.ga !== undefined ? `${t.ga} - ${t.gb}` : t.home === null ? 'neutral' : 'vs'}
+        {t.agg && <small>global {t.agg}</small>}
         {t.pens && <small>pen. {t.pens}</small>}
       </span>
       <Equipo s={s} id={t.b} ganador={t.winner} />
@@ -55,7 +56,7 @@ function OtrasCompeticiones({ s }: { s: GameState }) {
             ))}
           </div>
           <p className="small muted">
-            16 clubes. Fase liga de 4 jornadas (tras las jornadas {EURO_AFTER.slice(0, 4).join(', ')}): los 8 primeros pasan a cuartos (jornada {EURO_AFTER[4]}), semifinales ({EURO_AFTER[5]}) y final en campo neutral ({EURO_AFTER[6]}).
+            16 clubes. Fase liga de 4 jornadas (tras las jornadas {EURO_AFTER.slice(0, 4).join(', ')}): los 8 primeros pasan a cuartos (ida y vuelta tras las jornadas {EURO_AFTER[4]} y {EURO_AFTER[5]}), semifinales ({EURO_AFTER[6]} y {EURO_AFTER[7]}) y final a partido único en campo neutral ({EURO_AFTER[8]}). La vuelta, en casa del mejor clasificado.
             Participar: {fmtMoney(EURO[ver].entry)} · victoria: {fmtMoney(EURO[ver].win)} · pasar ronda: {EURO[ver].ko.map((x) => fmtMoney(x)).join(' / ')}.
           </p>
           {c.champion !== undefined && <p><b>🏆 Campeón: {teamById(s, c.champion)?.name}</b></p>}
