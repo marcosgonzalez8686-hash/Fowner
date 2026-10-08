@@ -1,6 +1,6 @@
 import { fmtMoney, roundMoney } from './economy';
 import {
-  addMessage, askingPrice, askingSalary, buyPlayer, marketOpen, myTeam, mySquad, sellPlayer, squadOf, teamById, willJoin,
+  addMessage, askingPrice, askingSalary, buyPlayer, marketOpen, myTeam, mySquad, renewPlayer, renewSalary, sellPlayer, squadOf, teamById, willJoin,
 } from './market';
 import { bestEleven } from './match';
 import { changeMorale } from './morale';
@@ -13,11 +13,11 @@ import type { GameState, Player } from './types';
 // se contraoferta, se agota la paciencia, aparecen otros clubes y se rompen. Se puede negociar en cualquier momento,
 // pero lo acordado con el mercado cerrado se hace efectivo al abrirse el siguiente.
 
-export type NegKind = 'compra' | 'cesion' | 'venta' | 'cedo';
+export type NegKind = 'compra' | 'cesion' | 'venta' | 'cedo' | 'renovacion';
 
 export interface Negotiation {
   id: number;
-  kind: NegKind; // compra/cesion: traemos a un jugador; venta/cedo: sale uno nuestro
+  kind: NegKind; // compra/cesion: traemos a un jugador; venta/cedo: sale uno nuestro; renovacion: uno nuestro
   playerId: number;
   clubId: number | null; // el otro club (null = agente libre)
   by: 'dueño' | 'director';
@@ -139,6 +139,32 @@ export function startLoanOut(s: GameState, playerId: number): string | undefined
     fee: 0, salary: p.salary, years: 1, clubMin: 0, playerMin: 0, patience: 1, wait: 1,
   });
   apunta(s, n, `Lo ofrecemos cedido al ${dest.team.name}`);
+}
+
+/** Lo que de verdad pediría un jugador nuestro por renovar: más si viene de una gran temporada */
+function renewalDemand(p: Player) {
+  const nota = p.season && p.season.apps >= 5 ? p.season.ratingSum / p.season.apps : 6.3;
+  const temporada = 1 + Math.max(-0.1, Math.min(0.25, (nota - 6.3) * 0.15));
+  return roundMoney(renewSalary(p) * temporada * rand(0.92, 1.08));
+}
+
+/** Proponer la renovación a uno de nuestros jugadores (se puede en cualquier momento) */
+export function startRenewal(
+  s: GameState, playerId: number, salary: number, years: number, opts: { by?: 'dueño' | 'director'; maxSalary?: number } = {},
+): string | undefined {
+  const p = mySquad(s).find((x) => x.id === playerId);
+  if (!p) return 'El jugador ya no está en el club.';
+  if (p.loan) return 'Está cedido: no es nuestro.';
+  if (p.retiring) return 'Ha anunciado que se retira.';
+  if (negFor(s, playerId)) return 'Ya hay una negociación abierta con él.';
+  const n = nueva(s, {
+    kind: 'renovacion', playerId, clubId: null, by: opts.by ?? 'dueño', stage: 'jugador', state: 'esperando',
+    fee: 0, salary, years: p.age >= 33 ? 1 : years, clubMin: 0, playerMin: renewalDemand(p),
+    // el fiel tiene más paciencia; el ambicioso, menos
+    patience: randInt(2, 3) + (hasTrait(p, 'fiel') ? 1 : 0) - (hasTrait(p, 'ambicioso') ? 1 : 0),
+    wait: 1, maxSalary: opts.maxSalary,
+  });
+  apunta(s, n, `Le ofrecemos renovar: ${fmtMoney(n.salary)}/temp. y ${n.years} temp.`);
 }
 
 /** Llega una oferta de otro club por uno de nuestros jugadores */
@@ -274,8 +300,12 @@ function responde(s: GameState, n: Negotiation) {
     }
     return;
   }
+  if (n.kind === 'renovacion' && p.teamId !== s.club.teamId) {
+    rompe(s, n, `${p.name} ya no está en el club.`);
+    return;
+  }
   // con el jugador
-  if (!willJoin(s, p)) {
+  if (n.kind === 'compra' && !willJoin(s, p)) {
     rompe(s, n, `${p.name} no quiere jugar en nuestra categoría.`);
     return;
   }
@@ -284,7 +314,11 @@ function responde(s: GameState, n: Negotiation) {
     apunta(s, n, '⚠️ Su agente sube lo que pide');
   }
   if (n.salary >= n.playerMin) cierra(s, n);
-  else if (n.salary < n.playerMin * 0.7 || n.patience <= 0) rompe(s, n, `${p.name} no se ve en el proyecto y rechaza la oferta.`);
+  else if (n.salary < n.playerMin * 0.7 || n.patience <= 0) {
+    rompe(s, n, n.kind === 'renovacion'
+      ? `${p.name} se siente infravalorado y rompe las negociaciones. Puedes volver a intentarlo más adelante.`
+      : `${p.name} no se ve en el proyecto y rechaza la oferta.`);
+  }
   else {
     n.patience--;
     n.counterSalary = roundMoney(Math.max(n.playerMin, (n.playerMin * 1.12 + n.salary) / 2));
@@ -305,7 +339,8 @@ function acuerdoConClub(s: GameState, n: Negotiation) {
 
 /** Firma: con el mercado abierto se hace ya; si no, queda acordada para el próximo mercado */
 function cierra(s: GameState, n: Negotiation): string | undefined {
-  if (marketOpen(s)) return ejecuta(s, n);
+  // las renovaciones no dependen del mercado
+  if (marketOpen(s) || n.kind === 'renovacion') return ejecuta(s, n);
   const p = jugador(s, n);
   n.state = 'acordada';
   apunta(s, n, '✍️ Acuerdo firmado: se hará efectivo en el próximo mercado');
@@ -321,6 +356,7 @@ const TEXTO_ACUERDO: Record<NegKind, string> = {
   cesion: 'Cesión acordada: llegará',
   venta: 'Venta acordada: se irá y cobraremos el traspaso',
   cedo: 'Cesión acordada: se irá cedido',
+  renovacion: 'Renovación acordada.',
 };
 
 /** Al abrirse el mercado se ejecuta todo lo que estaba acordado */
@@ -360,6 +396,10 @@ function ejecuta(s: GameState, n: Negotiation): string | undefined {
     err = r.ok ? undefined : r.error;
     titulo = `✅ ¡${p.name} ficha por el club!`;
     if (!err && n.by === 'director') s.club.transferBudget = Math.max(0, s.club.transferBudget - n.fee);
+  } else if (n.kind === 'renovacion') {
+    const r = renewPlayer(s, p.id, n.salary, n.years);
+    err = r.ok ? undefined : r.error;
+    titulo = `✍️ ${p.name} renueva`;
   } else if (n.kind === 'cesion') {
     const r = loanIn(s, p.id, n.fee);
     err = r.includes('llega cedido') ? undefined : r;
@@ -383,7 +423,7 @@ function ejecuta(s: GameState, n: Negotiation): string | undefined {
   addMessage(s, {
     from: n.by === 'director' ? 'director' : 'club',
     title: titulo,
-    body: n.kind === 'compra' ? `Traspaso: ${fmtMoney(n.fee)} · Sueldo: ${fmtMoney(n.salary)}/temp., ${n.years} temp.` : n.kind === 'venta' ? `Traspaso cerrado por ${fmtMoney(n.fee)}.` : n.kind === 'cesion' ? `Cuota: ${fmtMoney(n.fee)}.` : 'Vuelve al acabar la temporada.',
+    body: n.kind === 'renovacion' ? `${n.years} temporada(s) más a ${fmtMoney(n.salary)}/temp.` : n.kind === 'compra' ? `Traspaso: ${fmtMoney(n.fee)} · Sueldo: ${fmtMoney(n.salary)}/temp., ${n.years} temp.` : n.kind === 'venta' ? `Traspaso cerrado por ${fmtMoney(n.fee)}.` : n.kind === 'cesion' ? `Cuota: ${fmtMoney(n.fee)}.` : 'Vuelve al acabar la temporada.',
   });
 }
 

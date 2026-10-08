@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Update } from '../App';
 import { DIV_LEVEL, fmtMoney, roundMoney } from '../game/economy';
 import {
-  askingPrice, askingSalary, marketOpen, myTeam, releasePlayer, renewPlayer, renewSalary,
+  askingPrice, askingSalary, marketOpen, myTeam, releasePlayer, renewSalary,
   teamById,
 } from '../game/market';
 import type { GameState, Player } from '../game/types';
@@ -11,7 +11,7 @@ import { seasonAverage } from '../game/history';
 import { FormStrip, RatingBadge } from './Rating';
 import { ProfileDetail } from './Traits';
 import { MAX_LOANS_IN, loanAnswer, loanFee, loanTarget } from '../game/loans';
-import { negFor, startLoanIn, startLoanOut, startPurchase } from '../game/negotiation';
+import { negFor, startLoanIn, startLoanOut, startPurchase, startRenewal } from '../game/negotiation';
 import { TREND_TEXT, persuadeVeteran, trendOf } from '../game/aging';
 import { potLabel, requestReport, shownPot } from '../game/scouting';
 import { FLAG } from '../game/continental';
@@ -57,6 +57,7 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
   const [oferta, setOferta] = useState(sel ? roundMoney(askingPrice(s, sel) * 0.85) : 0);
   const [sueldo, setSueldo] = useState(sel ? roundMoney(askingSalary(s, sel) * 0.9) : 0);
   const [cuota, setCuota] = useState(sel ? roundMoney(loanFee(s, sel) * 0.8) : 0);
+  const [sueldoRenov, setSueldoRenov] = useState(sel ? roundMoney(renewSalary(sel) * 0.95) : 0);
   if (!sel) {
     return (
       <Sheet title="Jugador" onClose={onClose} top>
@@ -128,18 +129,28 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
             {!sel.retiring && (
               <>
                 <h4>Renovar</h4>
-                <p className="small">Pide {fmtMoney(renewSalary(sel))}/temp.</p>
-                <Segmented
-                  value={anos}
-                  onChange={setAnos}
-                  options={['1', '2', '3', '4'].map((v) => ({ value: v, label: `${v} año${v === '1' ? '' : 's'}` }))}
-                />
-                <button
-                  className="btn primary full"
-                  onClick={() => run(() => update((g) => renewPlayer(g, sel.id, renewSalary(sel), Number(anos)).error), 'Renovado')}
-                >
-                  Renovar
-                </button>
+                {enCurso ? (
+                  <p className="hint small">🤝 Hay una negociación abierta con él. Síguela en Equipo → Mercado.</p>
+                ) : (
+                  <>
+                    <p className="small muted">
+                      Cobra {fmtMoney(sel.salary)}/temp. Su agente habla de unos {fmtMoney(renewSalary(sel))}, aunque lo que pida dependerá de su temporada.
+                      Te contestará {s.phase === 'pretemporada' ? 'la semana que viene' : 'tras la próxima jornada'}.
+                    </p>
+                    <Segmented
+                      value={anos}
+                      onChange={setAnos}
+                      options={['1', '2', '3', '4'].map((v) => ({ value: v, label: `${v} año${v === '1' ? '' : 's'}` }))}
+                    />
+                    <Stepper value={sueldoRenov} step={paso(sueldoRenov)} min={0} onChange={setSueldoRenov} format={fmtMoney} />
+                    <button
+                      className="btn primary full"
+                      onClick={() => run(() => update((g) => startRenewal(g, sel.id, sueldoRenov, Number(anos))), 'Propuesta de renovación enviada')}
+                    >
+                      📝 Ofrecer renovación ({fmtMoney(sueldoRenov)}/temp.)
+                    </button>
+                  </>
+                )}
               </>
             )}
 

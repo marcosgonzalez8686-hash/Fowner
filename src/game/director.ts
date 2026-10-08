@@ -1,7 +1,7 @@
 import { DIV_LEVEL, fmtMoney, roundMoney } from './economy';
 import {
   addMessage, askingPrice, askingSalary, describeMoney, marketOpen, myTeam, mySquad, myYouth,
-  promoteYouth, releasePlayer, renewPlayer, renewSalary, sellPrice, wageBill, willJoin,
+  promoteYouth, releasePlayer, renewSalary, sellPrice, wageBill, willJoin,
 } from './market';
 import { FORMACION } from './match';
 import { ourShape, ourTactics, tacticsLabel } from './coach';
@@ -10,7 +10,7 @@ import { potLabel } from './scouting';
 import { gauss } from './rng';
 import { ownerTitle } from './identity';
 import { scoutingFactor } from './land';
-import { negFor, startPurchase } from './negotiation';
+import { negFor, startPurchase, startRenewal } from './negotiation';
 import { annualIncome } from './bank';
 import { ROLES, ROLE_ORDER, hireStaff, staffScoutFactor, staffWages, type Role, type Staff } from './staff';
 import type { Director, GameState, Level, Player, Pos, Proposal, Task } from './types';
@@ -113,8 +113,8 @@ export function executeProposal(s: GameState, pr: Proposal): string | undefined 
       return;
     }
     case 'renovar':
-      r = renewPlayer(s, pr.playerId, pr.salary, pr.years);
-      break;
+      // el director negocia: empieza un poco por debajo y como mucho sube un 10%
+      return startRenewal(s, pr.playerId, roundMoney(pr.salary * 0.95), pr.years, { by: 'director', maxSalary: roundMoney(pr.salary * 1.1) });
     case 'cantera':
       r = promoteYouth(s, pr.playerId);
       break;
@@ -136,7 +136,7 @@ function act(s: GameState, task: Task, pr: Proposal, title: string, body: string
   if (levelOf(s, task) === 'auto') {
     const err = executeProposal(s, pr);
     // fichar y vender ya no son inmediatos: se abren negociaciones
-    const hecho = pr.kind === 'fichar' ? 'Negociando' : pr.kind === 'vender' ? 'Transferible' : 'Hecho';
+    const hecho = pr.kind === 'fichar' || pr.kind === 'renovar' ? 'Negociando' : pr.kind === 'vender' ? 'Transferible' : 'Hecho';
     addMessage(s, {
       from: 'director',
       title: err ? `No se pudo: ${title}` : `${hecho}: ${title}`,
@@ -284,7 +284,7 @@ function doRenewals(s: GameState) {
   const squad = mySquad(s);
   const top = new Set([...squad].sort((a, b) => b.ovr - a.ovr).slice(0, 16).map((p) => p.id));
   for (const p of squad) {
-    if (p.contract !== 1 || p.loan || alreadyProposed(s, p.id)) continue;
+    if (p.contract !== 1 || p.loan || alreadyProposed(s, p.id) || negFor(s, p.id)) continue;
     const joven = p.age <= 23 && p.pot - p.ovr >= 5;
     if (!top.has(p.id) && !(joven && d.style === 'cantera')) continue;
     if (p.age >= 34) continue;

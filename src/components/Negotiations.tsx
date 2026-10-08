@@ -10,7 +10,7 @@ import type { GameState } from '../game/types';
 import { PlayerLink, TeamLink } from '../nav/context';
 import { Card, Segmented, Stepper } from '../ui';
 
-const TIPO: Record<Negotiation['kind'], string> = { compra: 'Fichaje', cesion: 'Cesión', venta: 'Oferta recibida', cedo: 'Cedemos' };
+const TIPO: Record<Negotiation['kind'], string> = { compra: 'Fichaje', cesion: 'Cesión', venta: 'Oferta recibida', cedo: 'Cedemos', renovacion: 'Renovación' };
 
 /** Cuándo llegará la respuesta */
 const cuando = (s: GameState) => (s.phase === 'pretemporada' ? 'la semana que viene' : 'tras la próxima jornada');
