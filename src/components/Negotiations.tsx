@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { Update } from '../App';
-import { fmtMoney, playerValue, roundMoney } from '../game/economy';
+import { fmtMoney, roundMoney } from '../game/economy';
 import { teamById } from '../game/market';
+import { marketValue } from '../game/market';
 import {
   acceptTerms, counter, isActive, saleAdvice, withdraw, type Negotiation,
 } from '../game/negotiation';
@@ -40,7 +41,7 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
         <span className="small muted">{TIPO[n.kind]}{club ? <> · <TeamLink id={club.id}>{club.short}</TeamLink></> : n.kind === 'compra' ? ' · libre' : ''}</span>
       </div>
       <div className="small muted">
-        {p.pos} · {p.age} años · media {p.ovr} · valor {fmtMoney(playerValue(p))}
+        {p.pos} · {p.age} años · media {p.ovr} · valor {fmtMoney(marketValue(s, p))}
         {delDirector && ' · 💼 la lleva el director'}
       </div>
       {!(tuTurno && !delDirector) && <p className="small">{n.log[n.log.length - 1]}</p>}

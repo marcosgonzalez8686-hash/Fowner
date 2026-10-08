@@ -24,7 +24,7 @@ export default function Mercado({ s, update, notify }: ScreenProps) {
       .filter((p) => pos === 'TODOS' || p.pos === pos)
       .filter((p) => !libres || p.teamId === null)
       .filter((p) => willJoin(s, p))
-      .filter((p) => !soloAsequibles || askingPrice(p) <= s.club.cash)
+      .filter((p) => !soloAsequibles || askingPrice(s, p) <= s.club.cash)
       .sort((a, b) => b.ovr - a.ovr)
       .slice(0, 40);
   }, [s, pos, soloAsequibles, libres]);
@@ -57,7 +57,7 @@ export default function Mercado({ s, update, notify }: ScreenProps) {
             <span className="name">
               {p.name}
               <small>
-                {p.age} años · {p.teamId === null ? 'libre' : teamById(s, p.teamId)!.name} · {fmtMoney(askingPrice(p))}
+                {p.age} años · {p.teamId === null ? 'libre' : teamById(s, p.teamId)!.name} · {fmtMoney(askingPrice(s, p))}
               </small>
               <PlayerTags s={s} p={p} />
             </span>

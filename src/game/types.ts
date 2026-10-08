@@ -36,6 +36,7 @@ export interface Player {
   traits?: Trait[]; // rasgos de personalidad
   adapt?: { coach: number; apps: number }; // partidos jugados con el entrenador actual (adaptación al sistema)
   loan?: { from: number; until: number; apps: number }; // cedido: club dueño, temporada en que vuelve y partidos jugados
+  valueStart?: number; // valor de mercado al empezar la temporada (para ver si se revaloriza)
   listed?: boolean; // transferible: lo ofrecemos a otros clubes
   fatigue?: number; // cansancio acumulado, 0 = fresco (la condición física es 100 - cansancio)
   potHidden?: number; // promesa oculta: potencial extra que solo descubre un informe de los ojeadores

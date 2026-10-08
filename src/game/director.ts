@@ -209,7 +209,7 @@ function doSignings(s: GameState, maxOps: number) {
     for (const p of s.players) {
       if (p.teamId === s.club.teamId || p.pos !== pos || p.age > 33 || p.loan) continue;
       if (alreadyProposed(s, p.id) || negFor(s, p.id) || !willJoin(s, p)) continue;
-      const fee = roundMoney(askingPrice(p) * rebaja);
+      const fee = roundMoney(askingPrice(s, p) * rebaja);
       const salary = roundMoney(askingSalary(s, p) * rebaja);
       if (fee > presupuesto || salary > margenSalarial) continue;
       // también valora si encaja en el sistema del entrenador
@@ -269,7 +269,7 @@ function doSales(s: GameState) {
     motivo = 'Cobra mucho para no ser titular.';
   }
   if (!candidato || candidato.listed || negFor(s, candidato.id) || alreadyProposed(s, candidato.id)) return;
-  const fee = roundMoney(sellPrice(candidato) * (1 + d.stars * 0.03));
+  const fee = roundMoney(sellPrice(s, candidato) * (1 + d.stars * 0.03));
   act(
     s, 'ventas',
     { kind: 'vender', playerId: candidato.id, fee, toTeamId: 0 },

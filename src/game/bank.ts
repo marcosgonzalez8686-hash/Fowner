@@ -1,7 +1,7 @@
-import { DIV_TV, MATCHDAYS, fmtMoney, ledgerExpense, ledgerIncome, playerValue, roundMoney } from './economy';
+import { DIV_TV, MATCHDAYS, fmtMoney, ledgerExpense, ledgerIncome, roundMoney } from './economy';
 import { changeSatisfaction } from './fans';
 import { BUILDINGS, buildingLevel, type BuildingKind } from './land';
-import { addMessage, mySquad, myTeam } from './market';
+import { addMessage, marketValue, mySquad, myTeam } from './market';
 import { personName } from './names';
 import { pick, rand } from './rng';
 import { sponsorFixed } from './sponsor';
@@ -168,7 +168,7 @@ export function repayLoan(s: GameState, id: number): string | undefined {
 
 /** Lo que vale el club para un inversor */
 export function clubValuation(s: GameState) {
-  const plantilla = mySquad(s).reduce((a, p) => a + playerValue(p), 0);
+  const plantilla = mySquad(s).reduce((a, p) => a + marketValue(s, p), 0);
   let instalaciones = 0;
   for (const k of Object.keys(BUILDINGS) as BuildingKind[]) {
     instalaciones += BUILDINGS[k].cost.slice(1, buildingLevel(s, k) + 1).reduce((a, b) => a + b, 0);

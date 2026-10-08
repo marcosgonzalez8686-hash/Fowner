@@ -19,9 +19,47 @@ export function marketOpen(s: GameState) {
   return s.phase === 'pretemporada' || (s.phase === 'temporada' && s.matchday >= 18 && s.matchday <= 20);
 }
 
+/** Nota media de la temporada (de nuestros partidos o de la liga) si ha jugado lo bastante */
+function seasonForm(s: GameState, p: Player) {
+  if (p.season && p.season.apps >= 5) return { avg: p.season.ratingSum / p.season.apps, goals: p.season.goals };
+  const l = s.leagueStats?.players[p.id];
+  if (l && l.apps >= 5) return { avg: l.rsum / l.apps, goals: l.goals };
+  return null;
+}
+
+/**
+ * Valor de mercado: la base (media, edad y potencial) ajustada por rendimiento, contrato,
+ * escaparate (categoría y Europa), lesiones y retirada.
+ */
+export function marketValue(s: GameState, p: Player) {
+  let v = playerValue(p);
+  // rendimiento de la temporada
+  const f = seasonForm(s, p);
+  if (f) {
+    v *= 1 + Math.max(-0.15, Math.min(0.25, (f.avg - 6.3) * 0.12));
+    if (p.pos === 'DEL' || p.pos === 'MED') v *= 1 + Math.min(0.2, f.goals * 0.01);
+  }
+  // contrato: con poco contrato vale menos (el último año, mucho menos)
+  if (p.teamId !== null) v *= p.contract <= 1 ? 0.6 : p.contract === 2 ? 0.9 : 1;
+  // escaparate: la categoría del club y la Copa de Campeones
+  const club = teamById(s, p.teamId);
+  if (club && !club.country) v *= 1 + (2 - club.division) * 0.06;
+  if (club && s.continental?.season === s.season && s.continental.rounds[0]?.some((t) => t.a === club.id || t.b === club.id)) v *= 1.1;
+  // lesiones largas y retirada anunciada
+  if ((p.injury ?? 0) > 6) v *= 0.8;
+  if (p.retiring) v *= 0.3;
+  return roundMoney(v);
+}
+
+/** Variación del valor desde el inicio de la temporada (en tanto por uno), si se conoce */
+export function valueTrend(s: GameState, p: Player) {
+  if (!p.valueStart) return null;
+  return marketValue(s, p) / p.valueStart - 1;
+}
+
 /** Precio que pide el club vendedor (0 para agentes libres) */
-export function askingPrice(p: Player) {
-  return p.teamId === null ? 0 : roundMoney(playerValue(p) * 1.2);
+export function askingPrice(s: GameState, p: Player) {
+  return p.teamId === null ? 0 : roundMoney(marketValue(s, p) * 1.2);
 }
 
 /** Salario que pide el jugador para venir; más si baja de categoría */
@@ -90,8 +128,8 @@ export function findBuyer(s: GameState, p: Player): Team {
 }
 
 /** Oferta que recibirías hoy por un jugador */
-export function sellPrice(p: Player) {
-  return roundMoney(playerValue(p) * 0.9);
+export function sellPrice(s: GameState, p: Player) {
+  return roundMoney(marketValue(s, p) * 0.9);
 }
 
 export function sellPlayer(s: GameState, playerId: number, fee: number, toTeamId?: number): BuyResult {

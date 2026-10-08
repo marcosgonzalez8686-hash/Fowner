@@ -4,7 +4,7 @@ import {
 } from './economy';
 import { expireProposals, levelOf, runDirector } from './director';
 import { buildAllFixtures, makeDirectors, makePlayer } from './generate';
-import { addMessage, marketOpen, myTeam, mySquad, myYouth, teamById, wageBill } from './market';
+import { addMessage, marketOpen, marketValue, myTeam, mySquad, myYouth, teamById, wageBill } from './market';
 import { bestEleven, chooseStyle, computeStandings, simulate, type Formation } from './match';
 import { conflictAfterMatch, newIdols } from './traits';
 import { matchKeys } from './insights';
@@ -66,6 +66,8 @@ export function startSeason(s: GameState): string | undefined {
   // los juveniles sin decidir se van
   for (const y of myYouth(s)) { y.teamId = null; y.youth = false; }
   s.phase = 'temporada';
+  // punto de partida para ver quién se revaloriza durante la temporada
+  for (const p of s.players) p.valueStart = marketValue(s, p);
   sellSeasonTickets(s);
   expireProposals(s);
   addMessage(s, {

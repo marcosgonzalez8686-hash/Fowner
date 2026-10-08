@@ -1,8 +1,8 @@
 import type { ScreenProps } from '../App';
 import { levelOf } from '../game/director';
-import { DIV_LEVEL, fmtMoney, playerValue } from '../game/economy';
+import { DIV_LEVEL, fmtMoney } from '../game/economy';
 import {
-  myTeam, mySquad, myYouth, promoteYouth, releasePlayer, teamById, wageBill,
+  marketValue, valueTrend, myTeam, mySquad, myYouth, promoteYouth, releasePlayer, teamById, wageBill,
 } from '../game/market';
 import { FORMACION } from '../game/match';
 import { coachOf, confidenceLabel, ourPlan, ourShape, tacticsLabel } from '../game/coach';
@@ -44,7 +44,7 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
           <div><b>{moraleLabel(s.club.morale).emoji} {moraleLabel(s.club.morale).text}</b><span>moral del vestuario</span></div>
           <div><b>{squad.filter((p) => (p.injury ?? 0) > 0).length}</b><span>lesionados</span></div>
           <div><b>{Math.round(xi.reduce((a, p) => a + condition(p), 0) / Math.max(1, xi.length))}%</b><span>condición del once</span></div>
-          <div><b>{fmtMoney(squad.reduce((a, p) => a + playerValue(p), 0))}</b><span>valor de la plantilla</span></div>
+          <div><b>{fmtMoney(squad.reduce((a, p) => a + marketValue(s, p), 0))}</b><span>valor de la plantilla</span></div>
         </div>
         {/* el entrenador decide el sistema: acceso directo a su ficha en Empleados */}
         <button className="coach-row as-btn" onClick={() => go('direccion', 'empleados')}>
@@ -109,6 +109,10 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
                     {p.loan && <b>🔁 cedido por {teamById(s, p.loan.from)?.short} · </b>}
                     {p.age} años {TREND_TEXT[trendOf(p)].icon} · {fmtMoney(p.salary)} · {p.contract <= 1 ? <b className="warn">acaba contrato</b> : `${p.contract} temp.`}
                     {condition(p) < 80 && <b className={condition(p) < 55 ? 'neg' : 'warn'}> · 🔋 {condition(p)}%</b>}
+                    {(() => {
+                      const t = valueTrend(s, p);
+                      return t !== null && Math.abs(t) >= 0.1 ? <span className={t > 0 ? 'pos' : 'neg'}> · {t > 0 ? '📈' : '📉'} {t > 0 ? '+' : ''}{Math.round(t * 100)}%</span> : null;
+                    })()}
                   </small>
                   <PlayerTags s={s} p={p} />
                   {p.form?.length ? (

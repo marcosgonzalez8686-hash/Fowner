@@ -1,5 +1,5 @@
-import { DIV_LEVEL, fmtMoney, playerValue, roundMoney } from './economy';
-import { addMessage, marketOpen, myTeam, mySquad } from './market';
+import { DIV_LEVEL, fmtMoney, roundMoney } from './economy';
+import { addMessage, marketOpen, marketValue, myTeam, mySquad } from './market';
 import { negFor, newSaleOffer } from './negotiation';
 import { pick, rand, chance } from './rng';
 import { hasTrait } from './traits';
@@ -40,7 +40,7 @@ export function generateOffers(s: GameState, max: number) {
     if (!chance(Math.min(0.8, interes))) continue;
     const comprador = buyerFor(s, p);
     if (!comprador) continue;
-    const valor = playerValue(p);
+    const valor = marketValue(s, p);
     const sube = comprador.division < myTeam(s).division;
     // por un transferible ofrecen algo menos: saben que lo quieres vender
     const rebaja = p.listed ? 0.85 : 1;

@@ -8,7 +8,9 @@ import { isKnown, reportCapacity, reportsLeft } from '../game/scouting';
 export function PlayerTags({ s, p }: { s: GameState; p: Player }) {
   if (!isKnown(s, p)) return <small className="tags">❓ Sin informe de los ojeadores</small>;
   const t = ourTactics(s);
-  const f = fitOf(p, t.formation, t.style);
+  // quien ya se ha adaptado deja de contar como que no encaja
+  const base = fitOf(p, t.formation, t.style);
+  const f = base < 0 && p.teamId === s.club.teamId && adaptProgress(p, coachOf(s)?.id ?? 0) >= 1 ? 0 : base;
   return (
     <small className="tags">
       <span title={f > 0 ? 'Encaja en el sistema' : f < 0 ? 'No encaja en el sistema' : 'Neutro con el sistema'}>{FIT_ICON[f]}</span>
@@ -40,8 +42,10 @@ export function ProfileDetail({ s, p, fichaje, onReport }: { s: GameState; p: Pl
   }
   const t = ourTactics(s);
   const coach = coachOf(s)?.id ?? 0;
-  const f = fitOf(p, t.formation, t.style);
   const prog = adaptProgress(p, coach);
+  const base = fitOf(p, t.formation, t.style);
+  const adaptado = base < 0 && !fichaje && prog >= 1;
+  const f = adaptado ? 0 : base;
   return (
     <>
       <h4>Perfil de juego</h4>
@@ -53,10 +57,10 @@ export function ProfileDetail({ s, p, fichaje, onReport }: { s: GameState; p: Pl
       <p className="small">
         {FIT_ICON[f]} Con el {t.formation} {STYLES[t.style].label.toLowerCase()}{coachOf(s) ? ` de ${coachOf(s)!.name}` : ''}:{' '}
         <b className={f > 0 ? 'pos' : f < 0 ? 'neg' : ''}>
-          {f > 0 ? 'encaja' : f < 0 ? (prog >= 1 && !fichaje ? 'ya se ha adaptado' : 'no encaja') : 'normal'}
+          {f > 0 ? 'encaja' : f < 0 ? 'no encaja' : adaptado ? 'ya se ha adaptado' : 'normal'}
         </b>
       </p>
-      {f < 0 && !fichaje && (
+      {(f < 0 || adaptado) && !fichaje && (
         <p className="small muted">
           🔄 {prog >= 1 ? 'Con los partidos se ha ido acostumbrando al sistema.' : 'Se está adaptando al sistema poco a poco.'}
         </p>

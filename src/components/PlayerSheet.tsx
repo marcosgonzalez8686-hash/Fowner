@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Update } from '../App';
-import { DIV_LEVEL, fmtMoney, playerValue, roundMoney } from '../game/economy';
+import { DIV_LEVEL, fmtMoney, roundMoney } from '../game/economy';
 import {
   askingPrice, askingSalary, marketOpen, myTeam, releasePlayer, renewPlayer, renewSalary,
   teamById,
@@ -18,6 +18,14 @@ import { FLAG } from '../game/continental';
 import { condition } from '../game/fatigue';
 import { fatiguePenalty } from '../game/match';
 import { TeamLink } from '../nav/context';
+import { marketValue, valueTrend } from '../game/market';
+
+/** Cuánto se ha revalorizado (o depreciado) esta temporada */
+function Tendencia({ s, p }: { s: GameState; p: Player }) {
+  const t = valueTrend(s, p);
+  if (t === null || Math.abs(t) < 0.03) return null;
+  return <span className={t > 0 ? 'pos' : 'neg'}>{t > 0 ? '📈 +' : '📉 '}{Math.round(t * 100)}% esta temporada</span>;
+}
 
 /** Condición física con lo que le resta en el campo */
 export function Condicion({ p }: { p: Player }) {
@@ -46,9 +54,9 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
   const sel = findPlayer(s, id);
   const [anos, setAnos] = useState(sel && sel.teamId === s.club.teamId ? (sel.age >= 31 ? '1' : '2') : sel && sel.age <= 24 ? '3' : '2');
   // propuestas iniciales: algo por debajo de lo que piden
-  const [oferta, setOferta] = useState(sel ? roundMoney(askingPrice(sel) * 0.85) : 0);
+  const [oferta, setOferta] = useState(sel ? roundMoney(askingPrice(s, sel) * 0.85) : 0);
   const [sueldo, setSueldo] = useState(sel ? roundMoney(askingSalary(s, sel) * 0.9) : 0);
-  const [cuota, setCuota] = useState(sel ? roundMoney(loanFee(sel) * 0.8) : 0);
+  const [cuota, setCuota] = useState(sel ? roundMoney(loanFee(s, sel) * 0.8) : 0);
   if (!sel) {
     return (
       <Sheet title="Jugador" onClose={onClose} top>
@@ -74,7 +82,7 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
           <br />
           Cobra {fmtMoney(sel.salary)}/temp. · contrato: {sel.contract} temp.
           <br />
-          💰 Valor de mercado: <b>{fmtMoney(playerValue(sel))}</b>
+          💰 Valor de mercado: <b>{fmtMoney(marketValue(s, sel))}</b> <Tendencia s={s} p={sel} />
           <br />
           <Condicion p={sel} />
           <br />
@@ -187,7 +195,7 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
       <p className="muted">
         {sel.pos} · {sel.age} años · media {sel.ovr} · {potLabel(sel.ovr, shownPot(s, sel))}
         <br />
-        💰 Valor de mercado: <b>{fmtMoney(playerValue(sel))}</b>
+        💰 Valor de mercado: <b>{fmtMoney(marketValue(s, sel))}</b> <Tendencia s={s} p={sel} />
         <br />
         {club ? <TeamLink id={club.id}>{club.country ? `${FLAG[club.country] ?? ''} ${club.name}` : `${club.name} (${club.division + 1}ª)`}</TeamLink> : 'Agente libre'}
         {sel.ovr >= nivel + 4 ? ' · de los buenos para nuestra categoría' : ''}
@@ -215,7 +223,7 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
               <p className="small muted">
                 {sel.teamId === null
                   ? `Es libre: solo hay que convencerle. Pide unos ${fmtMoney(askingSalary(s, sel))}/temp.`
-                  : `Su club pide unos ${fmtMoney(askingPrice(sel))}. Primero se negocia el traspaso y después el contrato con el jugador.`}{' '}
+                  : `Su club pide unos ${fmtMoney(askingPrice(s, sel))}. Primero se negocia el traspaso y después el contrato con el jugador.`}{' '}
                 Te contestarán {s.phase === 'pretemporada' ? 'la semana que viene' : 'tras la próxima jornada'}.
                 {!marketOpen(s) && ' Con el mercado cerrado se puede negociar igual: si hay acuerdo, llegará al abrirse el próximo mercado.'}
               </p>

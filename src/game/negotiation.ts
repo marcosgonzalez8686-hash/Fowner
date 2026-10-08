@@ -100,7 +100,7 @@ export function startPurchase(
   if (vendedor?.country) return 'Juega en el extranjero.';
   // lo que de verdad aceptaría el club: más si es titular, menos si es un club pequeño
   const titular = vendedor ? bestEleven(squadOf(s, vendedor.id)).xi.some((x) => x.id === p.id) : false;
-  const clubMin = libre ? 0 : roundMoney(askingPrice(p) * rand(0.78, 1.02) * (titular ? 1.15 : 0.95) * (vendedor!.division > myTeam(s).division ? 0.95 : 1.05));
+  const clubMin = libre ? 0 : roundMoney(askingPrice(s, p) * rand(0.78, 1.02) * (titular ? 1.15 : 0.95) * (vendedor!.division > myTeam(s).division ? 0.95 : 1.05));
   const playerMin = roundMoney(askingSalary(s, p) * rand(0.88, 1.08) * (hasTrait(p, 'ambicioso') ? 1.15 : 1));
   const n = nueva(s, {
     kind: 'compra', playerId, clubId: p.teamId, by: opts.by ?? 'dueño',
@@ -121,7 +121,7 @@ export function startLoanIn(s: GameState, playerId: number, cuota: number): stri
   if (s.club.transferBan === s.season) return 'Sanción por deuda: esta temporada no puedes pagar cuotas de cesión.';
   const n = nueva(s, {
     kind: 'cesion', playerId, clubId: p.teamId, by: 'dueño', stage: 'club', state: 'esperando',
-    fee: cuota, salary: p.salary, years: 1, clubMin: roundMoney(loanFee(p) * rand(0.7, 1.3)), playerMin: 0,
+    fee: cuota, salary: p.salary, years: 1, clubMin: roundMoney(loanFee(s, p) * rand(0.7, 1.3)), playerMin: 0,
     patience: randInt(1, 3), wait: 1,
   });
   apunta(s, n, `Pedimos la cesión al ${nombreClub(s, n)} ofreciendo ${fmtMoney(cuota)}`);
@@ -393,7 +393,7 @@ function ejecuta(s: GameState, n: Negotiation): string | undefined {
 export function saleAdvice(s: GameState, n: Negotiation): { action: 'aceptar' | 'pedir' | 'rechazar'; text: string } {
   const p = jugador(s, n);
   if (!p) return { action: 'rechazar', text: '' };
-  const valor = askingPrice(p) / 1.2;
+  const valor = askingPrice(s, p) / 1.2;
   const ratio = (n.counterFee ?? n.fee) / Math.max(1, valor);
   const clave = !p.listed && [...mySquad(s)].sort((a, b) => b.ovr - a.ovr).slice(0, 3).some((x) => x.id === p.id);
   if (mySquad(s).length <= 20) return { action: 'rechazar', text: 'Nos quedaríamos cortos de plantilla.' };

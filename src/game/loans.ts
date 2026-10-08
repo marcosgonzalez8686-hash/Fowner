@@ -1,5 +1,5 @@
-import { DIV_LEVEL, fmtMoney, playerValue, roundMoney } from './economy';
-import { addMessage, marketOpen, myTeam, mySquad, squadOf, teamById } from './market';
+import { DIV_LEVEL, fmtMoney, roundMoney } from './economy';
+import { addMessage, marketOpen, myTeam, mySquad, squadOf, teamById, marketValue } from './market';
 import { bestEleven } from './match';
 import { randInt } from './rng';
 import type { GameState, Player } from './types';
@@ -46,7 +46,7 @@ export function loanOut(s: GameState, id: number): string {
 }
 
 /** Cuota por pedir cedido a un jugador */
-export const loanFee = (p: Player) => roundMoney(playerValue(p) * 0.1);
+export const loanFee = (s: GameState, p: Player) => roundMoney(marketValue(s, p) * 0.1);
 
 /** ¿Lo cederían? Los clubes ceden a quien no es titular, y solo a clubes de su categoría o inferior */
 export function loanAnswer(s: GameState, p: Player): { ok: boolean; reason?: string } {
@@ -66,7 +66,7 @@ export function loanIn(s: GameState, id: number, cuotaPactada?: number): string 
   if (mySquad(s).length >= 26) return 'La plantilla está llena.';
   const r = loanAnswer(s, p);
   if (!r.ok) return r.reason!;
-  const cuota = cuotaPactada ?? loanFee(p);
+  const cuota = cuotaPactada ?? loanFee(s, p);
   if (s.club.transferBan === s.season) return 'Sanción por deuda: esta temporada no puedes pagar cuotas de cesión.';
   if (s.club.cash < cuota) return 'No hay dinero en caja para la cuota de cesión.';
   const club = teamById(s, p.teamId)!;
