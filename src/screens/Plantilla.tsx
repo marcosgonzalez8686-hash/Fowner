@@ -6,7 +6,7 @@ import {
 } from '../game/market';
 import { FORMACION } from '../game/match';
 import { coachOf, confidenceLabel, ourPlan, ourShape, tacticsLabel } from '../game/coach';
-import type { Pos } from '../game/types';
+import type { GameState, Player, Pos } from '../game/types';
 import { Card, Ovr, Stars } from '../ui';
 import { moraleLabel } from '../game/morale';
 import { FormStrip } from '../components/Rating';
@@ -16,6 +16,18 @@ import { loanedOut } from '../game/loans';
 import { TREND_TEXT, trendOf } from '../game/aging';
 import { condition } from '../game/fatigue';
 import { potLabel } from '../game/scouting';
+import { negFor } from '../game/negotiation';
+
+/** Marcas de salida: transferible, cesión o venta en marcha, renovación */
+function marcas(s: GameState, p: Player) {
+  const n = negFor(s, p.id);
+  const out: { text: string; cls: string }[] = [];
+  if (n?.kind === 'venta') out.push(n.state === 'acordada' ? { text: '✍️ Vendido', cls: 'sale' } : { text: '🤝 Ofertas por él', cls: 'sale' });
+  else if (p.listed) out.push({ text: '🏷️ Transferible', cls: 'sale' });
+  if (n?.kind === 'cedo') out.push(n.state === 'acordada' ? { text: '✍️ Se va cedido', cls: 'loan' } : { text: '🔁 Ofrecido cedido', cls: 'loan' });
+  if (n?.kind === 'renovacion') out.push({ text: '📝 Renovando', cls: 'renew' });
+  return out;
+}
 
 const POS_NAME: Record<Pos, string> = { POR: 'Porteros', DEF: 'Defensas', MED: 'Centrocampistas', DEL: 'Delanteros' };
 
@@ -70,7 +82,7 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
           </p>
         )}
         <p className="small muted">
-          ⭐ titular · 🤕 lesionado · 🔋 condición física · ✅ encaja en el sistema · ➖ normal · ❌ no encaja. Toca un jugador para ver su perfil y su carácter.
+          ⭐ titular · 🤕 lesionado · 🔋 condición física · ✅ encaja en el sistema · ➖ normal · ❌ no encaja · 🏷️ transferible · 🔁 ofrecido cedido. Toca un jugador para ver su perfil y su carácter.
         </p>
       </Card>
 
@@ -103,6 +115,7 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
                 <span className="pos">{(p.injury ?? 0) > 0 ? '🤕' : titulares.has(p.id) ? '⭐' : ''}</span>
                 <span className="name">
                   {p.name}
+                  {marcas(s, p).map((m) => <span key={m.text} className={`mark ${m.cls}`}>{m.text}</span>)}
                   <small>
                     {(p.injury ?? 0) > 0 && <b className="neg">Lesionado {p.injury} j. · </b>}
                     {p.retiring && <b className="warn">👴 se retira · </b>}

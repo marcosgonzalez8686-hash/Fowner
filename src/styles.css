@@ -542,3 +542,14 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .pulse-item.bad { border-color: var(--neg); }
 .pulse-item.bad b { color: var(--neg); }
 .offer.negociacion.turn { border-left: 3px solid var(--brand-2); padding-left: 8px; }
+
+/* marcas de salida en la plantilla */
+.mark { display: inline-block; align-self: flex-start; margin: 2px 0; padding: 1px 7px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; vertical-align: 2px; white-space: nowrap; }
+.mark.sale { background: #fde7c7; color: #8a4b00; }
+.mark.loan { background: #d9ecff; color: #0b4f8a; }
+.mark.renew { background: #e3f5e1; color: #1f6b2a; }
+@media (prefers-color-scheme: dark) {
+  .mark.sale { background: #4a3214; color: #ffcf8f; }
+  .mark.loan { background: #16324d; color: #a9d4ff; }
+  .mark.renew { background: #1d3a22; color: #a8e2ae; }
+}
