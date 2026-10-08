@@ -1,8 +1,9 @@
 import type { ScreenProps } from '../App';
 import { levelOf } from '../game/director';
-import { DIV_LEVEL, fmtMoney } from '../game/economy';
+import { DIV_LEVEL, fmtMoney, roundMoney } from '../game/economy';
+import { FILIAL_AGE, FILIAL_GROWTH_APPS, FILIAL_MAX, createFilial, filialBlock, filialCreateCost, filialName, filialSeasonCost, sendToFilial } from '../game/filial';
 import {
-  marketValue, valueTrend, myTeam, mySquad, myYouth, promoteYouth, releasePlayer, teamById, wageBill,
+  marketValue, valueTrend, myFilial, myTeam, mySquad, myYouth, promoteYouth, releasePlayer, teamById, wageBill,
 } from '../game/market';
 import { FORMACION } from '../game/match';
 import { coachOf, confidenceLabel, ourPlan, ourShape, tacticsLabel } from '../game/coach';
@@ -36,6 +37,7 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
   const { openPlayer } = useNav();
   const squad = mySquad(s);
   const youth = myYouth(s);
+  const filial = myFilial(s);
   const nivel = DIV_LEVEL[myTeam(s).division];
   const { xi, strength, formation, style } = ourPlan(s, squad);
   const forma = ourShape(s);
@@ -100,11 +102,48 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
               <span className="name">{p.name}<small>{p.age} años · {potLabel(p.ovr, p.pot)}</small></span>
               <Ovr v={p.ovr} base={nivel} />
               <button className="btn small primary" onClick={() => run(() => update((g) => promoteYouth(g, p.id).error), `${p.name} sube al primer equipo`)}>Subir</button>
+              {s.club.filial && (
+                <button className="btn small" disabled={Boolean(filialBlock(s, p))} onClick={() => run(() => update((g) => sendToFilial(g, p.id)), `${p.name} va al filial`)}>🅱️</button>
+              )}
               <button className="btn small" onClick={() => run(() => update((g) => releasePlayer(g, p.id).error), `${p.name} se marcha`)}>✕</button>
             </div>
           ))}
         </Card>
       )}
+
+      <Card title={s.club.filial ? `🅱️ ${filialName(s)} · ${filial.length}/${FILIAL_MAX}` : '🅱️ Filial'}>
+        {!s.club.filial ? (
+          <>
+            <p className="small muted">
+              Un equipo B donde los jóvenes (hasta {FILIAL_AGE} años) juegan cada semana y crecen más que en el banquillo. Siguen siendo tuyos y cobran su sueldo, pero no juegan con el primer equipo hasta que los subas.
+            </p>
+            <button className="btn full" onClick={() => run(() => update((g) => createFilial(g)), 'Filial creado')}>
+              Crear filial ({fmtMoney(filialCreateCost(s))} de inscripción · después {fmtMoney(roundMoney(filialCreateCost(s) * 0.6))}/temp.)
+            </button>
+          </>
+        ) : filial.length === 0 ? (
+          <p className="small muted">Aún no hay nadie. Envía jóvenes desde su ficha o a los juveniles de la cantera con el botón 🅱️. Cuesta {fmtMoney(filialSeasonCost(s))}/temp.</p>
+        ) : (
+          <>
+            {filial.sort((a, b) => b.ovr - a.ovr).map((p) => (
+              <button key={p.id} className="player as-btn" onClick={() => openPlayer(p.id)}>
+                <span className="pos">{p.pos}</span>
+                <span className="name">
+                  {p.name}
+                  <small>
+                    {p.age} años · {potLabel(p.ovr, p.pot)} · {p.filialApps ?? 0} partidos
+                    {(p.filialApps ?? 0) >= FILIAL_GROWTH_APPS ? ' ✅' : ''}
+                    {p.contract <= 1 && <b className="warn"> · acaba contrato</b>}
+                    {(p.injury ?? 0) > 0 && <b className="neg"> · 🤕 {p.injury} j.</b>}
+                  </small>
+                </span>
+                <Ovr v={p.ovr} base={nivel} />
+              </button>
+            ))}
+            <p className="small muted">Con {FILIAL_GROWTH_APPS} partidos o más (✅), en verano crecen un extra. Al cumplir {FILIAL_AGE + 1} años suben al primer equipo. Coste: {fmtMoney(filialSeasonCost(s))}/temp. más sus sueldos.</p>
+          </>
+        )}
+      </Card>
 
       {(Object.keys(FORMACION) as Pos[]).map((pos) => (
         <Card key={pos} title={`${POS_NAME[pos]} · ${forma[pos]} en el once`}>

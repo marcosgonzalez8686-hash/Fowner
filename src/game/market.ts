@@ -10,9 +10,11 @@ export const myTeam = (s: GameState) => s.teams.find((t) => t.id === s.club.team
 // los clubes extranjeros de la Copa de Campeones viven aparte, con su plantilla
 export const teamById = (s: GameState, id: number | null) => s.teams.find((t) => t.id === id) ?? s.continental?.foreign.find((t) => t.id === id);
 export const squadOf = (s: GameState, teamId: number) => s.continental?.squads[teamId] ?? s.players.filter((p) => p.teamId === teamId);
-export const mySquad = (s: GameState) => squadOf(s, s.club.teamId).filter((p) => !p.youth);
+export const mySquad = (s: GameState) => squadOf(s, s.club.teamId).filter((p) => !p.youth && !p.filial);
+/** Jugadores en el filial (son nuestros: cobran, pero no juegan con el primer equipo) */
+export const myFilial = (s: GameState) => squadOf(s, s.club.teamId).filter((p) => p.filial);
 export const myYouth = (s: GameState) => squadOf(s, s.club.teamId).filter((p) => p.youth);
-export const wageBill = (s: GameState) => mySquad(s).reduce((a, p) => a + p.salary, 0);
+export const wageBill = (s: GameState) => squadOf(s, s.club.teamId).filter((p) => !p.youth).reduce((a, p) => a + p.salary, 0);
 
 /** Mercado abierto en pretemporada y en el parón de invierno (jornadas 18 a 20) */
 export function marketOpen(s: GameState) {

@@ -147,7 +147,7 @@ export function startLoanIn(s: GameState, playerId: number, cuota: number): stri
 
 /** Ofrecer cedido a uno de nuestros jugadores */
 export function startLoanOut(s: GameState, playerId: number): string | undefined {
-  const p = mySquad(s).find((x) => x.id === playerId);
+  const p = s.players.find((x) => x.id === playerId && x.teamId === s.club.teamId && !x.youth);
   if (!p || p.loan) return 'No se puede ceder.';
   if (negFor(s, playerId)) return 'Ya hay una negociación abierta por él.';
   const dest = loanTarget(s, p);
@@ -170,7 +170,7 @@ function renewalDemand(p: Player) {
 export function startRenewal(
   s: GameState, playerId: number, salary: number, years: number, opts: { by?: 'dueño' | 'director'; maxSalary?: number } = {},
 ): string | undefined {
-  const p = mySquad(s).find((x) => x.id === playerId);
+  const p = s.players.find((x) => x.id === playerId && x.teamId === s.club.teamId && !x.youth);
   if (!p) return 'El jugador ya no está en el club.';
   if (p.loan) return 'Está cedido: no es nuestro.';
   if (p.retiring) return 'Ha anunciado que se retira.';

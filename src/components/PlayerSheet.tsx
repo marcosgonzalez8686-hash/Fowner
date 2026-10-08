@@ -8,6 +8,7 @@ import {
 import type { GameState, Player } from '../game/types';
 import { Segmented, Sheet, Stepper } from '../ui';
 import { YELLOW_LIMIT } from '../game/discipline';
+import { FILIAL_AGE, FILIAL_GROWTH_APPS, filialBlock, filialName, promoteFromFilial, sendToFilial } from '../game/filial';
 import { seasonAverage } from '../game/history';
 import { FormStrip, RatingBadge } from './Rating';
 import { ProfileDetail } from './Traits';
@@ -91,6 +92,7 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
           {(sel.suspended ?? 0) > 0 && <><b className="neg">🟥 Sancionado: se pierde {sel.suspended! > 1 ? `los próximos ${sel.suspended} partidos` : 'el próximo partido'}</b><br /></>}
           {(sel.yellows ?? 0) > 0 && <>🟨 {sel.yellows} amarilla{sel.yellows! > 1 ? 's' : ''} esta temporada (con {YELLOW_LIMIT}, un partido de sanción)<br /></>}
           {TREND_TEXT[trendOf(sel)].icon} Está {TREND_TEXT[trendOf(sel)].text}
+          {sel.filial && <><br />🅱️ Juega en el filial</>}
         </p>
         {sel.retiring && (
           <div className="hint warn-bg">
@@ -174,6 +176,24 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
                 <button className="btn full" onClick={() => run(() => update((g) => { const x = g.players.find((y) => y.id === sel.id); if (x) x.listed = !x.listed; }), sel.listed ? 'Ya no es transferible' : 'Ahora es transferible')}>
                   {sel.listed ? '🚫 Quitar de transferibles' : '🏷️ Poner como transferible'}
                 </button>
+              </>
+            )}
+
+            {s.club.filial && !sel.loan && (sel.filial || sel.age <= FILIAL_AGE) && (
+              <>
+                <h4>Filial</h4>
+                {sel.filial ? (
+                  <>
+                    <p className="small muted">Juega cada semana en el {filialName(s)}: lleva {sel.filialApps ?? 0} partidos esta temporada. Con {FILIAL_GROWTH_APPS} o más, en verano crece algo más.</p>
+                    <button className="btn full" onClick={() => run(() => update((g) => promoteFromFilial(g, sel.id)), `${sel.name} sube al primer equipo`)}>⬆️ Subir al primer equipo</button>
+                  </>
+                ) : (
+                  <>
+                    <p className="small muted">En el filial juega cada semana y crece más, pero no podrá jugar con el primer equipo hasta que lo subas.</p>
+                    <button className="btn full" disabled={Boolean(filialBlock(s, sel))} onClick={() => run(() => update((g) => sendToFilial(g, sel.id)), `${sel.name} baja al filial`)}>⬇️ Enviar al filial</button>
+                    {filialBlock(s, sel) && <p className="small muted">{filialBlock(s, sel)}</p>}
+                  </>
+                )}
               </>
             )}
 

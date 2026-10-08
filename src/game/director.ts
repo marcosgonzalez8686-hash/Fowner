@@ -1,6 +1,7 @@
 import { DIV_LEVEL, fmtMoney, roundMoney } from './economy';
+import { filialBlock, sendToFilial } from './filial';
 import {
-  addMessage, askingPrice, askingSalary, describeMoney, marketOpen, myTeam, mySquad, myYouth,
+  addMessage, askingPrice, askingSalary, describeMoney, marketOpen, myFilial, myTeam, mySquad, myYouth,
   promoteYouth, releasePlayer, renewSalary, sellPrice, wageBill, willJoin,
 } from './market';
 import { FORMACION } from './match';
@@ -299,10 +300,12 @@ function doRenewals(s: GameState) {
   const d = s.club.director!;
   const squad = mySquad(s);
   const top = new Set([...squad].sort((a, b) => b.ovr - a.ovr).slice(0, 16).map((p) => p.id));
-  for (const p of squad) {
+  // también los del filial con futuro (cobran poco y son la cantera del primer equipo)
+  const promesas = new Set(myFilial(s).filter((p) => p.pot >= DIV_LEVEL[myTeam(s).division] - 2).map((p) => p.id));
+  for (const p of [...squad, ...myFilial(s).filter((x) => promesas.has(x.id))]) {
     if (p.contract !== 1 || p.loan || alreadyProposed(s, p.id) || negFor(s, p.id)) continue;
     const joven = p.age <= 23 && p.pot - p.ovr >= 5;
-    if (!top.has(p.id) && !(joven && d.style === 'cantera')) continue;
+    if (!top.has(p.id) && !promesas.has(p.id) && !(joven && d.style === 'cantera')) continue;
     if (p.age >= 34) continue;
     const salary = roundMoney(renewSalary(p) * (1 - d.stars * 0.02));
     // renovar a quien hace falta se permite siempre que no pida una subida grande;
@@ -310,7 +313,9 @@ function doRenewals(s: GameState) {
     // cuenta con quién se queda el año que viene: los que acaban contrato se irían
     const seQuedan = squad.filter((x) => x.contract > 1 && !x.loan && !x.retiring).length + agreedBalance(s);
     // si hace falta, se renueva salvo que dispare los sueldos: sustituirlo costaría lo mismo o más
-    const necesario = seQuedan < SQUAD_SAFE + 2 && (salary <= p.salary * 1.2 || wageBill(s) - p.salary + salary <= prudentWageCap(s) * 1.15);
+    // una promesa del filial se renueva si sigue cobrando por debajo de la media: es barata y es el futuro
+    const promesaBarata = promesas.has(p.id) && salary <= Math.max(p.salary * 1.5, wageBill(s) / Math.max(1, squad.length));
+    const necesario = promesaBarata || (seQuedan < SQUAD_SAFE + 2 && (salary <= p.salary * 1.2 || wageBill(s) - p.salary + salary <= prudentWageCap(s) * 1.15));
     if (!necesario && wageBill(s) - p.salary + salary > prudentWageCap(s)) {
       warnOnce(s, `No llego para renovar a ${p.name}`, `Pide ${fmtMoney(salary)}/temp. y la masa salarial pasaría de lo prudente (${fmtMoney(prudentWageCap(s))}: el tope que me marcas o el 70% de lo que ingresamos, lo que sea menor).`);
       continue;
@@ -330,6 +335,7 @@ function doYouth(s: GameState) {
   const squad = mySquad(s);
   const objetivo = DIV_LEVEL[myTeam(s).division];
   const descartados: string[] = [];
+  const alFilial: string[] = [];
   for (const y of myYouth(s)) {
     if (alreadyProposed(s, y.id)) continue;
     const exigencia = d.style === 'cantera' ? 10 : 4;
@@ -338,11 +344,18 @@ function doYouth(s: GameState) {
     if ((vale || squad.length + agreedBalance(s) < SQUAD_SAFE) && squad.length < 26) {
       act(s, 'cantera', { kind: 'cantera', playerId: y.id }, `subir a ${y.name} (${y.pos}, ${y.ovr})`,
         `Juvenil de ${y.age} años, media ${y.ovr} y ${potLabel(y.ovr, y.pot)}. Creo que puede aportar.`);
+    } else if (y.pot >= objetivo - 2 && !filialBlock(s, y)) {
+      // aún no está para el primer equipo, pero tiene recorrido: a foguearse al filial
+      sendToFilial(s, y.id);
+      alFilial.push(`${y.name} (${y.pos}, ${y.ovr}, ${potLabel(y.ovr, y.pot)})`);
     } else {
       // los que no valen los descarta él (también en "propone": solo te consulta a quién subir)
       descartados.push(`${y.name} (${y.pos}, ${y.ovr})`);
       releasePlayer(s, y.id);
     }
+  }
+  if (alFilial.length) {
+    addMessage(s, { from: 'director', title: `Hecho: ${alFilial.length} juvenil${alFilial.length > 1 ? 'es' : ''} al filial`, body: `Aún no están para el primer equipo, pero tienen recorrido: ${alFilial.join(', ')}.` });
   }
   if (descartados.length) {
     addMessage(s, {

@@ -28,7 +28,7 @@ export function loanTarget(s: GameState, p: Player) {
 
 export function loanOut(s: GameState, id: number): string {
   if (!marketOpen(s)) return 'Las cesiones solo se cierran con el mercado abierto.';
-  const p = mySquad(s).find((x) => x.id === id);
+  const p = s.players.find((x) => x.id === id && x.teamId === s.club.teamId && !x.youth);
   if (!p) return 'El jugador ya no está en el club.';
   if (p.loan) return 'Ya está cedido.';
   if (mySquad(s).length <= 16) return 'No puedes quedarte con menos de 16 jugadores.';

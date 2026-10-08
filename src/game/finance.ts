@@ -1,3 +1,4 @@
+import { filialSeasonCost } from './filial';
 import { DIV_TV, MATCHDAYS, emptyLedger } from './economy';
 import { commercialPerMatch, maintenancePerSeason } from './land';
 import { myTeam, wageBill } from './market';
@@ -30,7 +31,7 @@ export function projectSeason(s: GameState): Projection {
     salarios: wageBill(s) / MATCHDAYS,
     director: (s.club.director?.salary ?? 0) / MATCHDAYS,
     mantenimiento: maintenancePerSeason(s) / MATCHDAYS,
-    personal: staffWages(s) / MATCHDAYS,
+    personal: (staffWages(s) + filialSeasonCost(s)) / MATCHDAYS,
     competicion: competitionPerMatchday(t.division),
   };
   // préstamos: cuotas pendientes jornada a jornada

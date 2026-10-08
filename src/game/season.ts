@@ -30,6 +30,7 @@ import { directorShopsListed, generateOffers } from './offers';
 import { growFacilities } from './rivals';
 import { resetYellows } from './discipline';
 import { aiTransfers } from './aitransfers';
+import { filialEndSeason, filialMatchday, filialSeasonCost } from './filial';
 import { finishPlayoffs, myPlayoffDue, playoffWinner, startPlayoffs } from './playoff';
 import { PRE_WEEKS, executeAgreed, tickNegotiations } from './negotiation';
 import { payDividends, payLoans, refreshInvestorOffers } from './bank';
@@ -237,7 +238,8 @@ export function playMatchday(s: GameState) {
   const sal = Math.round(wageBill(s) / MATCHDAYS);
   const dd = c.director ? Math.round(c.director.salary / MATCHDAYS) : 0;
   const mant = Math.round(maintenancePerSeason(s) / MATCHDAYS);
-  const pers = Math.round(staffWages(s) / MATCHDAYS);
+  const pers = Math.round((staffWages(s) + filialSeasonCost(s)) / MATCHDAYS);
+  filialMatchday(s);
   const comp = Math.round(competitionPerMatchday(mio.division));
   c.cash += tv + patro - sal - dd - mant - pers - comp;
   c.ledger.competicion += comp;
@@ -451,6 +453,9 @@ export function endSeason(s: GameState) {
     }
     return true;
   });
+
+  // el filial: extra de crecimiento para los que han jugado y suben los que cumplen la edad
+  filialEndSeason(s);
 
   // 3. plantillas de la IA: se adaptan a su nueva categoría
   for (const t of s.teams) {

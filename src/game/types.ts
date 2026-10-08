@@ -37,6 +37,8 @@ export interface Player {
   adapt?: { coach: number; apps: number }; // partidos jugados con el entrenador actual (adaptación al sistema)
   loan?: { from: number; until: number; apps: number }; // cedido: club dueño, temporada en que vuelve y partidos jugados
   valueStart?: number; // valor de mercado al empezar la temporada (para ver si se revaloriza)
+  filial?: boolean; // juega en nuestro filial
+  filialApps?: number; // partidos con el filial esta temporada
   yellows?: number; // amarillas acumuladas esta temporada (nuestros jugadores)
   suspended?: number; // partidos de sanción pendientes
   listed?: boolean; // transferible: lo ofrecemos a otros clubes
@@ -157,6 +159,7 @@ export interface Club {
   retireCheck?: number; // temporada en la que los veteranos ya decidieron si se retiran
   scouted?: number[]; // jugadores de otros clubes con informe de los ojeadores
   reportsUsed?: number; // informes pedidos esta temporada
+  filial?: { since: number }; // equipo B creado (temporada)
   transferBan?: number; // temporada en la que no se pueden pagar traspasos (sanción por deuda)
   staff: Partial<Record<Role, Staff>>;
   sponsors: Partial<Record<SponsorSlot, SponsorContract>>;
