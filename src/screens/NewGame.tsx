@@ -8,6 +8,7 @@ import { STYLE_LABEL } from '../game/director';
 import { DIVISIONS, fmtMoney } from '../game/economy';
 import type { Director, GameState, Level } from '../game/types';
 import { Segmented, Stars } from '../ui';
+import { DIFFICULTY, DIFFICULTY_KEYS, type Difficulty } from '../game/difficulty';
 import { DEFAULT_STADIUM, LAND_SIZE, clampStadium } from '../game/land';
 import type { MapModel } from '../components/Map3D';
 
@@ -31,6 +32,7 @@ export default function NewGame({ onCancel, onCreate }: Props) {
   const [candidatos] = useState<Director[]>(() => makeDirectors({ nextId: 1 } as unknown as GameState, DIVISIONS - 1));
   const [director, setDirector] = useState<Director | null>(null);
   const [delegar, setDelegar] = useState<Level>('propone');
+  const [dificultad, setDificultad] = useState<Difficulty>('normal');
 
   // terreno virgen con el estadio donde el dueño lo coloque
   const mapa: MapModel = useMemo(() => {
@@ -66,7 +68,7 @@ export default function NewGame({ onCancel, onCreate }: Props) {
     onCreate(
       club.trim(),
       { ...id, ownerName: id.ownerName.trim(), ownerSurname: id.ownerSurname.trim(), stadium: id.stadium.trim() },
-      { stadium: estadio, director: director ?? undefined, delegation: delegar },
+      { stadium: estadio, director: director ?? undefined, delegation: delegar, difficulty: dificultad },
     );
 
   return (
@@ -206,6 +208,15 @@ export default function NewGame({ onCancel, onCreate }: Props) {
               </figure>
             </div>
           </div>
+          <h2>Dificultad</h2>
+          <Segmented
+            value={dificultad}
+            onChange={setDificultad}
+            options={DIFFICULTY_KEYS.map((k) => ({ value: k, label: `${DIFFICULTY[k].icon} ${DIFFICULTY[k].label}` }))}
+          />
+          <p className="small muted">
+            {DIFFICULTY[dificultad].desc} Empiezas con {fmtMoney(Math.round(180_000 * DIFFICULTY[dificultad].cash))} en caja. No se puede cambiar después.
+          </p>
         </>
       )}
 

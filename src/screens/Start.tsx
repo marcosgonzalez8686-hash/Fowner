@@ -1,3 +1,4 @@
+import { DIFFICULTY } from '../game/difficulty';
 import { useState } from 'react';
 import Crest from '../components/Crest';
 import type { Identity } from '../game/identity';
@@ -48,7 +49,7 @@ export default function Start({ onLoad, onNew }: Props) {
                     : `${meta.division} · T${meta.season} · ${meta.phase === 'pretemporada' ? 'Pretemporada' : `J${meta.matchday}/38`}`}
                 </small>
                 <small>
-                  Caja {fmtMoney(meta.cash)} · guardada {fecha(meta.savedAt)}
+                  {DIFFICULTY[meta.difficulty ?? 'normal'].icon} {DIFFICULTY[meta.difficulty ?? 'normal'].label} · Caja {fmtMoney(meta.cash)} · guardada {fecha(meta.savedAt)}
                 </small>
               </span>
               <span className="slot-go">Cargar ›</span>

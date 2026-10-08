@@ -1,4 +1,5 @@
 import { buildingLevel } from './land';
+import { diff } from './difficulty';
 import { addMessage } from './market';
 import { chance, clamp, rand } from './rng';
 import { staffStars } from './staff';
@@ -33,7 +34,7 @@ export const injuryName = (j: number) => TIPOS.find(([max]) => j <= max)![1];
  */
 export function rollInjuries(s: GameState, xi: Player[], teamId: number): Player[] {
   const mio = teamId === s.club.teamId;
-  const prob = PROB_LESION * (mio ? 1 - 0.12 * staffStars(s, 'preparador') : 1);
+  const prob = PROB_LESION * (mio ? (1 - 0.12 * staffStars(s, 'preparador')) * diff(s).injuries : 1);
   const recuperacion = mio ? 1 - 0.1 * buildingLevel(s, 'medico') - 0.08 * staffStars(s, 'fisio') : 1;
   const nuevas: Player[] = [];
   for (const p of xi) {

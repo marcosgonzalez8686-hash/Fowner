@@ -17,6 +17,10 @@ export const DIVISION_NAMES = ['Primera División', 'Segunda División', 'Tercer
 export const DIV_LEVEL = [76, 67, 59, 51, 43];
 /** Derechos de TV por temporada */
 export const DIV_TV = [11_000_000, 3_300_000, 900_000, 240_000, 75_000];
+/** Parte de la TV que se cobra fija, jornada a jornada; el resto se reparte por la clasificación final */
+export const TV_FIXED = 0.6;
+/** Reparto por mérito: del doble de la media (campeón) a nada (último) */
+export const tvMeritFactor = (pos: number, n = TEAMS_PER_DIV) => (2 * (n - pos)) / (n - 1);
 /** Patrocinio base por temporada */
 export const DIV_SPONSOR = [4_000_000, 1_000_000, 250_000, 70_000, 25_000];
 /** Afición base de un club medio */
@@ -24,17 +28,16 @@ export const DIV_FANS = [28_000, 11_000, 4_000, 2_000, 900];
 /** Precio de referencia de la entrada */
 export const DIV_PRICE = [45, 25, 14, 10, 8];
 
-export const ESTADIO_COSTE_POR_ASIENTO = 150;
 export const ESTADIO_JORNADAS_OBRA = 6;
 export const NIVEL_MAX = 5;
 /** Coste de subir instalaciones al nivel indicado (índice = nivel destino) */
-export const COSTE_INSTALACION = [0, 0, 60_000, 250_000, 900_000, 3_000_000];
+export const COSTE_INSTALACION = [0, 0, 90_000, 450_000, 1_800_000, 6_000_000];
 
 export const emptyLedger = (): Ledger => ({
   taquilla: 0, tv: 0, patrocinio: 0, traspasosIn: 0, traspasosOut: 0, salarios: 0, director: 0, obras: 0,
   comercial: 0, mantenimiento: 0, personal: 0, copa: 0, abonos: 0,
   financiacion: 0, cuotas: 0, intereses: 0, inversores: 0,
-  competicion: 0, multas: 0, impuestos: 0,
+  competicion: 0, multas: 0, impuestos: 0, agentes: 0,
 });
 
 /** Valor de mercado orientativo de un jugador */
@@ -69,4 +72,4 @@ export function fmtMoney(v: number) {
 }
 
 export const ledgerIncome = (l: Ledger) => l.taquilla + l.tv + l.patrocinio + l.traspasosIn + (l.comercial ?? 0) + (l.copa ?? 0) + (l.abonos ?? 0) + (l.financiacion ?? 0);
-export const ledgerExpense = (l: Ledger) => l.traspasosOut + l.salarios + l.director + l.obras + (l.mantenimiento ?? 0) + (l.personal ?? 0) + (l.cuotas ?? 0) + (l.intereses ?? 0) + (l.inversores ?? 0) + (l.competicion ?? 0) + (l.multas ?? 0) + (l.impuestos ?? 0);
+export const ledgerExpense = (l: Ledger) => l.traspasosOut + l.salarios + l.director + l.obras + (l.mantenimiento ?? 0) + (l.personal ?? 0) + (l.cuotas ?? 0) + (l.intereses ?? 0) + (l.inversores ?? 0) + (l.competicion ?? 0) + (l.multas ?? 0) + (l.impuestos ?? 0) + (l.agentes ?? 0);

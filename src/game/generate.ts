@@ -2,6 +2,7 @@ import { fansExpectationMessage } from './fans';
 import { ensureFacilities } from './rivals';
 import { createWorld, randomNat } from './world';
 import { newEurope } from './europe';
+import { diff, type Difficulty } from './difficulty';
 import { emptyStats } from './stats';
 import { rollIdentity } from './traits';
 import {
@@ -85,12 +86,14 @@ export interface NewGameOptions {
   stadium?: { x: number; y: number };
   director?: Director;
   delegation?: Level;
+  difficulty?: Difficulty;
 }
 
 export function newGame(clubNameInput: string, identityInput?: Identity, opts: NewGameOptions = {}): GameState {
   const stadiumPos = opts.stadium;
   const s: GameState = {
     version: SAVE_VERSION,
+    difficulty: opts.difficulty ?? 'normal',
     season: 1,
     phase: 'pretemporada',
     matchday: 0,
@@ -125,7 +128,8 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
       };
       s.teams.push(team);
       // cada club con un nivel algo distinto dentro de su división
-      makeSquad(s, team.id, DIV_LEVEL[d] + rand(-3, 3));
+      // la dificultad sube o baja el nivel de los rivales
+      makeSquad(s, team.id, DIV_LEVEL[d] + rand(-3, 3) + diff(s).rival);
     }
   }
 
@@ -143,7 +147,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
   s.club = {
     teamId: mio.id,
     identity,
-    cash: 180_000,
+    cash: Math.round(180_000 * diff(s).cash),
     ticketPrice: DIV_PRICE[ultima],
     seasonTickets: { price: 0, maxShare: 0.5, sold: 0 },
     bank: emptyBank(),

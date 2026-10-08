@@ -1,5 +1,7 @@
 import { filialSeasonCost } from './filial';
-import { DIV_TV, MATCHDAYS, emptyLedger } from './economy';
+import { DIV_TV, MATCHDAYS, TV_FIXED, emptyLedger, tvMeritFactor } from './economy';
+import { computeStandings } from './match';
+import { diff } from './difficulty';
 import { commercialPerMatch, maintenancePerSeason } from './land';
 import { myTeam, wageBill } from './market';
 import { staffWages } from './staff';
@@ -16,6 +18,10 @@ export interface Projection {
   cashPath: number[];
   cashEnd: number;
   homeMatches: number;
+  /** reparto de TV por clasificación previsto (con la posición de hoy) */
+  tvMerit: number;
+  /** posición con la que se calcula; 0 si aún no ha empezado la liga */
+  tvPos: number;
 }
 
 /** Previsión hasta final de temporada con los datos de hoy (sin fichajes ni obras nuevas) */
@@ -26,8 +32,8 @@ export function projectSeason(s: GameState): Projection {
   // en liga los abonados no pagan: la taquilla sale solo de las entradas sueltas
   const asis = leagueAttendance(s);
   const porJornada = {
-    tv: DIV_TV[t.division] / MATCHDAYS,
-    patrocinio: sponsorFor(s) / MATCHDAYS,
+    tv: (DIV_TV[t.division] * TV_FIXED * diff(s).income) / MATCHDAYS,
+    patrocinio: (sponsorFor(s) * diff(s).income) / MATCHDAYS,
     salarios: wageBill(s) / MATCHDAYS,
     director: (s.club.director?.salary ?? 0) / MATCHDAYS,
     mantenimiento: maintenancePerSeason(s) / MATCHDAYS,
@@ -75,7 +81,13 @@ export function projectSeason(s: GameState): Projection {
     caja += delta;
     cashPath.push(Math.round(caja));
   }
-  // al cerrar la temporada: multa por estadio e impuesto sobre el beneficio previsto
+  // al cerrar la temporada: reparto variable de la TV según la posición actual (a mitad de tabla si no ha empezado)
+  const ids = s.teams.filter((x) => x.division === t.division).map((x) => x.id);
+  const tvPos = s.matchday > 0 ? computeStandings(ids, s.fixtures[t.division]).findIndex((r) => r.teamId === t.id) + 1 : 0;
+  const tvMerit = Math.round(DIV_TV[t.division] * (1 - TV_FIXED) * (tvPos ? tvMeritFactor(tvPos, ids.length) : 1) * diff(s).income);
+  pending.tv += tvMerit;
+  caja += tvMerit;
+  // multa por estadio e impuesto sobre el beneficio previsto
   pending.multas = stadiumFine(s, t.division);
   caja -= pending.multas;
   const total = { ...s.club.ledger };
@@ -84,5 +96,5 @@ export function projectSeason(s: GameState): Projection {
   caja -= pending.impuestos;
   if (cashPath.length) cashPath[cashPath.length - 1] = Math.round(caja);
   for (const k of Object.keys(pending) as (keyof Ledger)[]) pending[k] = Math.round(pending[k]);
-  return { pending, cashPath, cashEnd: Math.round(caja), homeMatches };
+  return { pending, cashPath, cashEnd: Math.round(caja), homeMatches, tvMerit, tvPos };
 }

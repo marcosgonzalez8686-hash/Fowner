@@ -1,4 +1,5 @@
 import { DIV_PRICE, DIVISIONS, PROMOTE, TEAMS_PER_DIV } from './economy';
+import { diff } from './difficulty';
 import { addMessage, myTeam, squadOf } from './market';
 import { bestEleven, computeStandings } from './match';
 import { clamp } from './rng';
@@ -66,6 +67,8 @@ export function satisfactionLabel(v: number) {
 /** Cambia la satisfacción y anota el motivo (se guardan los últimos) */
 export function changeSatisfaction(s: GameState, delta: number, motivo: string) {
   if (!delta) return;
+  // la paciencia de la afición depende de la dificultad: los disgustos pesan más o menos
+  if (delta < 0) delta *= diff(s).fans;
   const antes = s.club.satisfaction;
   s.club.satisfaction = clamp(Math.round((s.club.satisfaction + delta) * 10) / 10, 0, 100);
   s.club.satLog.unshift({ season: s.season, matchday: s.matchday, delta: Math.round(delta * 10) / 10, text: motivo });

@@ -134,6 +134,7 @@ export interface Ledger {
   competicion: number; // desplazamientos, arbitrajes, seguridad y licencias
   multas: number; // multas de la liga
   impuestos: number; // impuesto sobre beneficios
+  agentes: number; // comisiones de agentes y primas de fichaje
 }
 
 export interface Club {
@@ -196,6 +197,7 @@ export interface GameState {
   pendingEvent?: PendingEvent;
   cup: Cup;
   negotiations: Negotiation[]; // fichajes, ventas y cesiones en marcha (y las últimas cerradas)
+  difficulty?: import('./difficulty').Difficulty; // fácil, normal (por defecto) o difícil
   world?: { leagues: import('./world').ForeignLeague[] };
   nations?: import('./nations').NationsState; // selecciones: última convocatoria y palmarés // ligas de otros países
   playoffs?: import('./playoff').Playoff[]; // playoffs de ascenso de la temporada que acaba

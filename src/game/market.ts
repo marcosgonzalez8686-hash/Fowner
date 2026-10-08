@@ -85,12 +85,26 @@ export function willJoin(s: GameState, p: Player) {
 
 export interface BuyResult { ok: boolean; error?: string }
 
-export function canBuy(s: GameState, p: Player, fee: number): BuyResult {
+/** Comisión del agente: un porcentaje de cada traspaso (lo paga quien ficha y también se descuenta al vender) */
+export const AGENT_FEE = 0.1;
+
+/** Lo que cuesta de verdad un fichaje: el traspaso, la comisión del agente y la prima de fichaje al jugador */
+export function signingCost(fee: number, salary: number) {
+  const agente = roundMoney(fee * AGENT_FEE);
+  // los libres no cuestan traspaso, pero piden una prima mayor
+  const prima = roundMoney(salary * (fee > 0 ? 0.25 : 0.5));
+  return { agente, prima, total: fee + agente + prima };
+}
+
+/** Lo que de verdad entra al vender: el traspaso menos la comisión del agente */
+export const saleNet = (fee: number) => fee - roundMoney(fee * AGENT_FEE);
+
+export function canBuy(s: GameState, p: Player, fee: number, salary = 0): BuyResult {
   if (!marketOpen(s)) return { ok: false, error: 'El mercado está cerrado.' };
   if (p.teamId === s.club.teamId) return { ok: false, error: 'Ya es jugador tuyo.' };
   if (!willJoin(s, p)) return { ok: false, error: `${p.name} no quiere jugar en esta categoría.` };
   if (mySquad(s).length >= SQUAD_MAX) return { ok: false, error: `La plantilla está llena (máximo ${SQUAD_MAX}).` };
-  if (s.club.cash < fee) return { ok: false, error: 'No hay dinero suficiente en caja.' };
+  if (s.club.cash < signingCost(fee, salary).total) return { ok: false, error: 'No hay dinero suficiente en caja (traspaso, agente y prima).' };
   if (!s.players.includes(p)) return { ok: false, error: 'El jugador ya no está disponible.' };
   if (p.loan) return { ok: false, error: 'Está cedido: no se puede fichar hasta que vuelva a su club.' };
   if (fee > 0 && s.club.transferBan === s.season) return { ok: false, error: 'Sanción por deuda: esta temporada solo puedes fichar jugadores libres.' };
@@ -100,11 +114,13 @@ export function canBuy(s: GameState, p: Player, fee: number): BuyResult {
 export function buyPlayer(s: GameState, playerId: number, fee: number, salary: number, years: number): BuyResult {
   const p = s.players.find((x) => x.id === playerId);
   if (!p) return { ok: false, error: 'El jugador ya no está disponible.' };
-  const check = canBuy(s, p, fee);
+  const check = canBuy(s, p, fee, salary);
   if (!check.ok) return check;
   const vendedor = teamById(s, p.teamId);
-  s.club.cash -= fee;
+  const extra = signingCost(fee, salary);
+  s.club.cash -= extra.total;
   s.club.ledger.traspasosOut += fee;
+  s.club.ledger.agentes = (s.club.ledger.agentes ?? 0) + extra.agente + extra.prima;
   p.teamId = s.club.teamId;
   p.salary = salary;
   p.contract = years;
@@ -152,8 +168,11 @@ export function sellPlayer(s: GameState, playerId: number, fee: number, toTeamId
     changeSatisfaction(s, -3, `Venta de ${p.name}, de los mejores`);
     changeMorale(s, -4);
   }
-  s.club.cash += fee;
+  // el agente se lleva su parte
+  const comision = fee - saleNet(fee);
+  s.club.cash += fee - comision;
   s.club.ledger.traspasosIn += fee;
+  s.club.ledger.agentes = (s.club.ledger.agentes ?? 0) + comision;
   // el comprador se queda con el jugador y suelta a otro para no inflar plantillas
   p.teamId = comprador.id;
   p.contract = Math.max(p.contract, 2);

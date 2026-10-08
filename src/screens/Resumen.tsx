@@ -23,6 +23,7 @@ const LINEAS: { k: keyof Ledger; label: string; gasto?: boolean }[] = [
   { k: 'mantenimiento', label: 'Mantenimiento', gasto: true },
   { k: 'personal', label: 'Empleados y otros', gasto: true },
   { k: 'traspasosOut', label: 'Fichajes', gasto: true },
+  { k: 'agentes', label: 'Agentes y primas', gasto: true },
   { k: 'obras', label: 'Obras y terrenos', gasto: true },
   { k: 'intereses', label: 'Intereses', gasto: true },
   { k: 'competicion', label: 'Gastos de competición', gasto: true },
@@ -114,7 +115,8 @@ export default function Resumen({ s }: ScreenProps) {
             {p.abonos > 0 && <tr><td className="left">Campaña de abonos</td><td><Money v={p.abonos} /></td></tr>}
             <tr><td className="left">Taquilla (entradas sueltas)</td><td><Money v={p.taquilla} /></td></tr>
             <tr><td className="left">Tienda y bar</td><td><Money v={p.comercial} /></td></tr>
-            <tr><td className="left">Televisión y patrocinio</td><td><Money v={p.tv + p.patrocinio} /></td></tr>
+            <tr><td className="left">Televisión (parte fija) y patrocinio</td><td><Money v={p.tv - prev.tvMerit + p.patrocinio} /></td></tr>
+            <tr><td className="left">📺 Reparto de TV por clasificación{prev.tvPos ? ` (si acabas ${prev.tvPos}º)` : ' (a mitad de tabla)'}</td><td><Money v={prev.tvMerit} /></td></tr>
             <tr><td className="left">Salarios</td><td><Money v={-p.salarios} /></td></tr>
             <tr><td className="left">Director deportivo</td><td><Money v={-p.director} /></td></tr>
             <tr><td className="left">Mantenimiento</td><td><Money v={-p.mantenimiento} /></td></tr>

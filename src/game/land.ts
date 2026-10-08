@@ -2,6 +2,7 @@ import { COSTE_INSTALACION, NIVEL_MAX, fmtMoney, roundMoney } from './economy';
 import { addMessage } from './market';
 import { refreshSponsorOffers } from './sponsor';
 import { changeSatisfaction } from './fans';
+import { diff } from './difficulty';
 import type { GameState } from './types';
 
 // Terreno del club: una cuadrícula de parcelas. El estadio ocupa 2x2 en el centro
@@ -53,37 +54,43 @@ export const BUILDINGS: Record<BuildingKind, BuildingInfo> = {
   parking: {
     name: 'Aparcamiento', icon: '🅿️', maxLevel: 3,
     help: 'Más facilidades para venir: +6% de asistencia por nivel.',
-    cost: [0, 30_000, 90_000, 250_000],
+    cost: [0, 30_000, 120_000, 450_000],
   },
   tienda: {
     name: 'Tienda oficial', icon: '👕', maxLevel: 3,
     help: 'Venta de camisetas: ingresos en cada partido en casa según tu afición.',
-    cost: [0, 25_000, 80_000, 220_000],
+    cost: [0, 25_000, 110_000, 400_000],
   },
   bar: {
     name: 'Bar del estadio', icon: '🍺', maxLevel: 3,
     help: 'Cada espectador gasta algo más: ingresos por partido en casa.',
-    cost: [0, 20_000, 65_000, 180_000],
+    cost: [0, 20_000, 90_000, 320_000],
   },
   medico: {
     name: 'Centro médico', icon: '🩺', maxLevel: 3,
     help: 'Los veteranos pierden nivel más despacio con la edad.',
-    cost: [0, 60_000, 160_000, 420_000],
+    cost: [0, 60_000, 220_000, 750_000],
   },
   ojeadores: {
     name: 'Oficina de ojeadores', icon: '🔭', maxLevel: 3,
     help: 'Tu director deportivo valora mejor a los jugadores.',
-    cost: [0, 50_000, 140_000, 360_000],
+    cost: [0, 50_000, 190_000, 650_000],
   },
   museo: {
     name: 'Museo del club', icon: '🏛️', maxLevel: 3,
     help: 'Aumenta la afición cada temporada y los ingresos de patrocinio.',
-    cost: [0, 80_000, 220_000, 550_000],
+    cost: [0, 80_000, 300_000, 1_000_000],
   },
 };
 
 /** Mantenimiento anual: 6% de lo invertido en cada edificio */
-const MANTENIMIENTO = 0.06;
+/** Mantenimiento anual: parte de lo invertido en instalaciones */
+export const MANTENIMIENTO = 0.1;
+/** Mantenimiento anual del estadio por cada asiento de grada */
+export const MANTENIMIENTO_ASIENTO = 3;
+
+/** Coste de construir un edificio al nivel indicado (con la dificultad) */
+export const buildCost = (s: GameState, k: BuildingKind, nivel: number) => roundMoney(BUILDINGS[k].cost[nivel] * diff(s).works);
 
 /** Ajusta la esquina del estadio para que el bloque 2x2 quepa en el terreno */
 export function clampStadium(x: number, y: number) {
@@ -128,7 +135,7 @@ export function parcelCost(s: GameState, p: Parcel) {
   // más caro cuanto más compras y cuanto más lejos del estadio
   const centro = stadiumCenter(s);
   const dist = Math.abs(p.x - centro.x) + Math.abs(p.y - centro.y);
-  return roundMoney(15_000 * Math.pow(1.3, s.club.land.bought) * (0.8 + dist * 0.08));
+  return roundMoney(15_000 * Math.pow(1.3, s.club.land.bought) * (0.8 + dist * 0.08) * diff(s).works);
 }
 
 export function buyParcel(s: GameState, x: number, y: number): string | undefined {
@@ -146,7 +153,7 @@ export function buyParcel(s: GameState, x: number, y: number): string | undefine
 export function nextLevelCost(s: GameState, k: BuildingKind) {
   const n = buildingLevel(s, k);
   const info = BUILDINGS[k];
-  return n >= info.maxLevel ? null : info.cost[n + 1];
+  return n >= info.maxLevel ? null : buildCost(s, k, n + 1);
 }
 
 export function isBuilt(s: GameState, k: BuildingKind) {
@@ -157,7 +164,7 @@ export function construct(s: GameState, k: BuildingKind, x: number, y: number): 
   const p = parcelAt(s, x, y);
   if (!p || !p.owned || p.stadium || p.building) return 'Necesitas una parcela propia y libre.';
   if (isBuilt(s, k)) return 'Ya tienes ese edificio.';
-  const coste = BUILDINGS[k].cost[1];
+  const coste = buildCost(s, k, 1);
   if (s.club.cash < coste) return 'No hay dinero suficiente.';
   s.club.cash -= coste;
   s.club.ledger.obras += coste;
@@ -190,6 +197,8 @@ export function maintenancePerSeason(s: GameState) {
     const invertido = BUILDINGS[k].cost.slice(1, n + 1).reduce((a, b) => a + b, 0);
     total += invertido * MANTENIMIENTO;
   }
+  // las gradas también hay que mantenerlas
+  total += Math.max(0, s.club.capacity - STANDING) * MANTENIMIENTO_ASIENTO;
   return roundMoney(total);
 }
 

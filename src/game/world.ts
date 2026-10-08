@@ -1,4 +1,5 @@
 import { DIV_FANS } from './economy';
+import { diff } from './difficulty';
 import { makePlayer } from './generate';
 import { bestEleven, chooseStyle, computeStandings, roundRobin, simulate } from './match';
 import { foreignClubs } from './names';
@@ -63,7 +64,7 @@ function foreignPlayer(s: GameState, team: Team, level: number, pos: Pos, opts: 
 export function createWorld(s: GameState) {
   s.world = { leagues: [] };
   for (const code of FOREIGN) {
-    const nivel = COUNTRIES[code].level!;
+    const nivel = COUNTRIES[code].level! + diff(s).rival;
     const teams: Team[] = foreignClubs(code, FOREIGN_TEAMS).map((c, i) => ({
       id: s.nextId++,
       name: c.name,
@@ -106,7 +107,7 @@ export function playWorldMatchday(s: GameState, md: number, porEquipo: Map<numbe
 export function worldEndSeason(s: GameState) {
   for (const l of s.world?.leagues ?? []) {
     l.lastTable = leagueTable(l).map((r) => r.teamId);
-    const nivel = COUNTRIES[l.country].level!;
+    const nivel = COUNTRIES[l.country].level! + diff(s).rival;
     l.lastTable.forEach((id, puesto) => {
       const t = l.teams.find((x) => x.id === id)!;
       const plantilla = s.players.filter((p) => p.teamId === id);

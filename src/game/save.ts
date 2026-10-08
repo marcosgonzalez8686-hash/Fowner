@@ -36,6 +36,7 @@ export interface SlotMeta {
   gameOver: boolean;
   savedAt: number;
   crest?: Crest;
+  difficulty?: GameState['difficulty'];
 }
 
 const gameKey = (n: Slot) => `fowner-partida-${n}`;
@@ -54,6 +55,7 @@ function metaOf(s: GameState): SlotMeta {
     gameOver: Boolean(s.gameOver),
     savedAt: Date.now(),
     crest: s.club.identity?.crest,
+    difficulty: s.difficulty ?? 'normal',
   };
 }
 

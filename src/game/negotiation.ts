@@ -1,6 +1,7 @@
 import { fmtMoney, roundMoney } from './economy';
 import {
   addMessage, askingPrice, askingSalary, buyPlayer, marketOpen, myTeam, mySquad, renewPlayer, renewSalary, sellPlayer, squadOf, teamById, willJoin,
+  saleNet, signingCost,
 } from './market';
 import { bestEleven } from './match';
 import { changeMorale } from './morale';
@@ -394,11 +395,12 @@ function cierra(s: GameState, n: Negotiation): string | undefined {
 export function resumenAcuerdo(s: GameState, n: Negotiation) {
   const p = jugador(s, n);
   const nombre = p?.name ?? 'el jugador';
-  if (n.kind === 'venta') return `Vender a ${nombre} al ${nombreClub(s, n)} por ${fmtMoney(n.fee)}.`;
+  if (n.kind === 'venta') return `Vender a ${nombre} al ${nombreClub(s, n)} por ${fmtMoney(n.fee)} (el agente se queda ${fmtMoney(n.fee - saleNet(n.fee))}).`;
   if (n.kind === 'cedo') return `Ceder a ${nombre} al ${nombreClub(s, n)} una temporada (pagan su ficha).`;
   if (n.kind === 'cesion') return `Traer cedido a ${nombre} del ${nombreClub(s, n)} por una cuota de ${fmtMoney(n.fee)}.`;
   if (n.kind === 'renovacion') return `Renovar a ${nombre}: ${fmtMoney(n.salary)}/temp., ${n.years} temp.`;
-  return `Fichar a ${nombre}${n.clubId !== null ? ` del ${nombreClub(s, n)} por ${fmtMoney(n.fee)}` : ' (libre)'}: ${fmtMoney(n.salary)}/temp., ${n.years} temp.`;
+  const extra = signingCost(n.fee, n.salary);
+  return `Fichar a ${nombre}${n.clubId !== null ? ` del ${nombreClub(s, n)} por ${fmtMoney(n.fee)}` : ' (libre)'}: ${fmtMoney(n.salary)}/temp., ${n.years} temp. Agente ${fmtMoney(extra.agente)} y prima ${fmtMoney(extra.prima)}: en total ${fmtMoney(extra.total)} de caja.`;
 }
 
 /** El dueño da el visto bueno a un acuerdo que ha cerrado el director */
@@ -455,7 +457,7 @@ function ejecuta(s: GameState, n: Negotiation): string | undefined {
     const r = buyPlayer(s, p.id, n.fee, n.salary, n.years);
     err = r.ok ? undefined : r.error;
     titulo = `✅ ¡${p.name} ficha por el club!`;
-    if (!err && n.by === 'director') s.club.transferBudget = Math.max(0, s.club.transferBudget - n.fee);
+    if (!err && n.by === 'director') s.club.transferBudget = Math.max(0, s.club.transferBudget - signingCost(n.fee, n.salary).total);
   } else if (n.kind === 'renovacion') {
     const r = renewPlayer(s, p.id, n.salary, n.years);
     err = r.ok ? undefined : r.error;
@@ -483,7 +485,7 @@ function ejecuta(s: GameState, n: Negotiation): string | undefined {
   addMessage(s, {
     from: n.by === 'director' ? 'director' : 'club',
     title: titulo,
-    body: n.kind === 'renovacion' ? `${n.years} temporada(s) más a ${fmtMoney(n.salary)}/temp.` : n.kind === 'compra' ? `Traspaso: ${fmtMoney(n.fee)} · Sueldo: ${fmtMoney(n.salary)}/temp., ${n.years} temp.` : n.kind === 'venta' ? `Traspaso cerrado por ${fmtMoney(n.fee)}.` : n.kind === 'cesion' ? `Cuota: ${fmtMoney(n.fee)}.` : 'Vuelve al acabar la temporada.',
+    body: n.kind === 'renovacion' ? `${n.years} temporada(s) más a ${fmtMoney(n.salary)}/temp.` : n.kind === 'compra' ? `Traspaso: ${fmtMoney(n.fee)} · Agente y prima: ${fmtMoney(signingCost(n.fee, n.salary).total - n.fee)} · Sueldo: ${fmtMoney(n.salary)}/temp., ${n.years} temp.` : n.kind === 'venta' ? `Traspaso cerrado por ${fmtMoney(n.fee)} (comisión del agente: ${fmtMoney(n.fee - saleNet(n.fee))}).` : n.kind === 'cesion' ? `Cuota: ${fmtMoney(n.fee)}.` : 'Vuelve al acabar la temporada.',
   });
 }
 

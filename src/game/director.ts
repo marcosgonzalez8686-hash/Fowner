@@ -3,6 +3,7 @@ import { filialBlock, sendToFilial } from './filial';
 import {
   addMessage, askingPrice, askingSalary, describeMoney, marketOpen, myFilial, myTeam, mySquad, myYouth,
   promoteYouth, releasePlayer, renewSalary, sellPrice, wageBill, willJoin,
+  signingCost,
 } from './market';
 import { FORMACION } from './match';
 import { ourShape, ourTactics, tacticsLabel } from './coach';
@@ -224,7 +225,8 @@ function doSignings(s: GameState, maxOps: number) {
       if (alreadyProposed(s, p.id) || negFor(s, p.id) || !willJoin(s, p)) continue;
       const fee = roundMoney(askingPrice(s, p) * rebaja);
       const salary = roundMoney(askingSalary(s, p) * rebaja);
-      if (fee > presupuesto || salary > margenSalarial) continue;
+      // cuenta también la comisión del agente y la prima de fichaje
+      if (signingCost(fee, salary).total > Math.max(presupuesto, fee === 0 ? s.club.cash : 0) || salary > margenSalarial) continue;
       // también valora si encaja en el sistema del entrenador
       const t = ourTactics(s);
       const perc = perceived(s, d, p) + fitBonus(p, t.formation, t.style, -1);

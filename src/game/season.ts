@@ -1,5 +1,5 @@
 import {
-  DIV_FANS, DIV_LEVEL, DIV_SPONSOR, DIV_TV, DIVISION_NAMES, DIVISIONS, MATCHDAYS, PROMOTE, DIRECT_UP, PLAYOFF_FROM, PLAYOFF_TO,
+  DIV_FANS, DIV_LEVEL, DIV_SPONSOR, DIV_TV, TV_FIXED, tvMeritFactor, DIVISION_NAMES, DIVISIONS, MATCHDAYS, PROMOTE, DIRECT_UP, PLAYOFF_FROM, PLAYOFF_TO,
   SQUAD_TARGET, emptyLedger, fmtMoney, ledgerExpense, ledgerIncome, roundMoney,
 } from './economy';
 import { directorEndSeason, expireProposals, levelOf, runDirector } from './director';
@@ -33,6 +33,7 @@ import { WINDOWS, nationsSummer, nationsWindow } from './nations';
 import { growFacilities, homeAdvantage, rivalDevelopment, rivalYouthChance } from './rivals';
 import { resetYellows } from './discipline';
 import { aiTransfers } from './aitransfers';
+import { diff } from './difficulty';
 import { filialEndSeason, filialMatchday, filialSeasonCost } from './filial';
 import { warnContracts } from './contracts';
 import { finishPlayoffs, myPlayoffDue, playoffWinner, startPlayoffs } from './playoff';
@@ -240,8 +241,9 @@ export function playMatchday(s: GameState) {
 
   // ingresos y gastos fijos repartidos por jornada
   const c = s.club;
-  const tv = Math.round(DIV_TV[mio.division] / MATCHDAYS);
-  const patro = Math.round(sponsorFor(s) / MATCHDAYS);
+  // la televisión: aquí la parte fija; la variable se reparte al acabar la liga según la clasificación
+  const tv = Math.round((DIV_TV[mio.division] * TV_FIXED * diff(s).income) / MATCHDAYS);
+  const patro = Math.round((sponsorFor(s) * diff(s).income) / MATCHDAYS);
   const sal = Math.round(wageBill(s) / MATCHDAYS);
   const dd = c.director ? Math.round(c.director.salary / MATCHDAYS) : 0;
   const mant = Math.round(maintenancePerSeason(s) / MATCHDAYS);
@@ -403,6 +405,15 @@ export function endSeason(s: GameState) {
   }
   s.playoffs = undefined;
   s.history.push({ season: s.season, division: divAntes, position: miPos });
+  // la parte variable de la televisión, según la clasificación final
+  const tvMerito = Math.round(DIV_TV[divAntes] * (1 - TV_FIXED) * tvMeritFactor(miPos) * diff(s).income);
+  s.club.cash += tvMerito;
+  s.club.ledger.tv += tvMerito;
+  addMessage(s, {
+    from: 'liga',
+    title: `📺 Reparto de la televisión: ${fmtMoney(tvMerito)}`,
+    body: `La parte variable de los derechos de TV se reparte según la clasificación. Terminar ${miPos}º nos da ${fmtMoney(tvMerito)} (la media de la categoría es ${fmtMoney(Math.round(DIV_TV[divAntes] * (1 - TV_FIXED) * diff(s).income))}).`,
+  });
   for (const m of movimientos) {
     const sube = m.to < m.team.division;
     m.team.division = m.to;
@@ -483,7 +494,7 @@ export function endSeason(s: GameState) {
   for (const t of s.teams) {
     if (t.id === mio.id) continue;
     const plantilla = s.players.filter((p) => p.teamId === t.id).sort((a, b) => a.ovr - b.ovr);
-    const nivel = DIV_LEVEL[t.division];
+    const nivel = DIV_LEVEL[t.division] + diff(s).rival;
     // los equipos que han cambiado de categoría renuevan a sus 4 peores (o mejores si bajan)
     const media = plantilla.reduce((a, p) => a + p.ovr, 0) / Math.max(1, plantilla.length);
     const cambios = Math.abs(media - nivel) > 4 ? 5 : 2;

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Update } from '../App';
 import { fmtMoney, roundMoney } from '../game/economy';
-import { teamById } from '../game/market';
+import { saleNet, signingCost, teamById } from '../game/market';
 import { marketValue } from '../game/market';
 import {
   acceptTerms, approveDeal, counter, isActive, resumenAcuerdo, saleAdvice, withdraw, type Negotiation,
@@ -75,6 +75,7 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
             <button className="btn grow" onClick={() => hacer((g) => withdraw(g, n.id), 'Oferta rechazada')}>Rechazar</button>
           </div>
           <p className="small">{n.log[n.log.length - 1]}</p>
+          <p className="small muted">💼 El agente se lleva el 10%: entrarían {fmtMoney(saleNet(pide))} en caja.</p>
           {negociar ? (
             <>
               <Stepper value={oferta} step={paso(oferta)} min={pide} onChange={setOferta} format={fmtMoney} />
@@ -91,6 +92,16 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
               ? `${club?.name ?? 'El club'} pide ${fmtMoney(pide)}${n.kind === 'cesion' ? ' de cuota' : ''}.`
               : `${p.name} pide ${fmtMoney(pide)}/temp.`}
           </p>
+          {n.kind === 'compra' && (() => {
+            const fee = n.stage === 'club' ? pide : n.fee;
+            const salario = n.stage === 'club' ? n.salary : pide;
+            const c = signingCost(fee, salario);
+            return (
+              <p className="small muted">
+                💼 Además del traspaso: agente {fmtMoney(c.agente)} (10%) y prima de fichaje {fmtMoney(c.prima)}. Total a pagar: <b>{fmtMoney(c.total)}</b>.
+              </p>
+            );
+          })()}
           <div className="row">
             <button className="btn primary grow" onClick={() => hacer((g) => acceptTerms(g, n.id), 'Aceptado')}>Aceptar</button>
             <button className="btn grow" onClick={() => hacer((g) => withdraw(g, n.id), 'Te retiras')}>Retirarse</button>

@@ -7,7 +7,7 @@ import { fmtMoney } from '../game/economy';
 import { myTeam } from '../game/market';
 import {
   BUILDINGS, LAND_SIZE, STANDING, buildingLevel, buyParcel, canBuyParcel, construct, isBuilt, maintenancePerSeason,
-  nextLevelCost, parcelCost, upgrade, type BuildingKind,
+  buildCost, nextLevelCost, parcelCost, upgrade, type BuildingKind,
 } from '../game/land';
 import { Card } from '../ui';
 
@@ -97,10 +97,10 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
                     <button
                       key={n}
                       className="btn"
-                      disabled={c.cash < stadiumCost(n)}
+                      disabled={c.cash < stadiumCost(s, n)}
                       onClick={() => run(() => update((g) => expandStadium(g, n)), 'Obras iniciadas')}
                     >
-                      +{n.toLocaleString('es-ES')} asientos · {fmtMoney(stadiumCost(n))}
+                      +{n.toLocaleString('es-ES')} asientos · {fmtMoney(stadiumCost(s, n))}
                     </button>
                   ))}
                 </div>
@@ -157,10 +157,10 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
                     </div>
                     <button
                       className="btn small primary"
-                      disabled={c.cash < BUILDINGS[k].cost[1]}
+                      disabled={c.cash < buildCost(s, k, 1)}
                       onClick={() => run(() => update((g) => construct(g, k, parcela.x, parcela.y)), `${BUILDINGS[k].name} construido`)}
                     >
-                      {fmtMoney(BUILDINGS[k].cost[1])}
+                      {fmtMoney(buildCost(s, k, 1))}
                     </button>
                   </div>
                 ))}
