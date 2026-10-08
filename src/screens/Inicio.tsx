@@ -27,6 +27,7 @@ import { EURO, EURO_STAGES, myEuroDue, myEuroTie, playEuroStage } from '../game/
 import { countryName, flagOf } from '../game/world';
 import FansCard from '../components/FansCard';
 import Pretemporada from '../components/Pretemporada';
+import Calendario from '../components/Calendario';
 import { facilitiesOf } from '../game/rivals';
 
 function nextMatch(s: GameState) {
@@ -46,6 +47,7 @@ export function pendingCount(s: GameState) {
 
 export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const [verResumen, setVerResumen] = useState(false);
+  const [verCalendario, setVerCalendario] = useState(false);
   const faltaCamiseta = !s.club.sponsors.camiseta && Boolean(s.sponsorOffers.camiseta?.length);
   const ofertasPendientes = Object.entries(s.sponsorOffers).filter(([k, o]) => o?.length && k !== 'camiseta').length;
   const t = myTeam(s);
@@ -264,6 +266,8 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
         )}
       </Card>
 
+      <button className="hint as-btn full-w" onClick={() => setVerCalendario(true)}>📅 Calendario de la temporada ›</button>
+
       {plantilla.length < 18 && s.phase !== 'fin' && (
         <button
           className="hint warn-bg as-btn full-w"
@@ -393,6 +397,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
           onClose={() => setFase(null)}
         />
       )}
+      {verCalendario && <Calendario s={s} onClose={() => setVerCalendario(false)} />}
       {verResumen && s.lastReport && <MatchSummary s={s} r={s.lastReport} onClose={() => setVerResumen(false)} />}
     </>
   );

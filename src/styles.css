@@ -587,3 +587,17 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .fac-name { line-height: 1.2; }
 .fac small { grid-column: 2 / 4; font-size: 0.7rem; }
 .fac.none { opacity: 0.55; }
+
+/* calendario de la temporada */
+.calendar { list-style: none; padding: 0; margin: 0 0 10px; }
+.calendar li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.calendar li.aviso { opacity: 0.7; font-size: 0.85rem; }
+.calendar li.next { background: var(--me); margin: 0 -8px; padding: 8px; border-radius: 10px; }
+.cal-ico { width: 24px; text-align: center; flex: none; }
+.cal-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cal-main > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-res { flex: none; font-variant-numeric: tabular-nums; padding: 2px 8px; border-radius: 8px; color: #fff; font-size: 0.85rem; }
+.cal-res.win { background: var(--pos); }
+.cal-res.draw { background: #8a8f8c; }
+.cal-res.loss { background: var(--neg); }
+.cal-next { flex: none; font-size: 0.7rem; font-weight: 700; color: var(--brand-2); }
