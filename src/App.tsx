@@ -157,7 +157,7 @@ export default function App() {
   return (
     <NavContext.Provider value={nav}>
     <div className="app">
-      <header className="top">
+      <header className="topbar">
         <div className="top-left">
           <Crest c={state.club.identity.crest} size={34} />
           <div>
