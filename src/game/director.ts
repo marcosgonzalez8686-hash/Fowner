@@ -133,14 +133,16 @@ function warnOnce(s: GameState, title: string, body: string) {
 }
 
 function act(s: GameState, task: Task, pr: Proposal, title: string, body: string) {
-  if (levelOf(s, task) === 'auto') {
+  // en "propone", los fichajes los negocia él directamente: el dueño aprueba el acuerdo final
+  const negociaYa = pr.kind === 'fichar' && levelOf(s, task) === 'propone';
+  if (levelOf(s, task) === 'auto' || negociaYa) {
     const err = executeProposal(s, pr);
     // fichar y vender ya no son inmediatos: se abren negociaciones
     const hecho = pr.kind === 'fichar' || pr.kind === 'renovar' ? 'Negociando' : pr.kind === 'vender' ? 'Transferible' : 'Hecho';
     addMessage(s, {
       from: 'director',
       title: err ? `No se pudo: ${title}` : `${hecho}: ${title}`,
-      body: err ? `${body}\n\nMotivo: ${err}` : body,
+      body: err ? `${body}\n\nMotivo: ${err}` : negociaYa ? `${body}\n\nYa estoy negociando. Te pediré el visto bueno cuando tengamos acuerdo.` : body,
     });
   } else {
     addMessage(s, { from: 'director', title: `Propuesta: ${title}`, body, proposal: pr, status: 'pendiente' });

@@ -36,6 +36,8 @@ export interface Negotiation {
   maxFee?: number; // límites del director deportivo
   maxSalary?: number;
   wantsToLeave?: boolean; // venta: al jugador le apetece el cambio
+  approval?: boolean; // el director tiene el acuerdo listo y espera el visto bueno del dueño
+  approved?: boolean; // el dueño ya lo ha aprobado
   log: string[];
   season: number;
 }
@@ -49,7 +51,17 @@ const enCurso = (n: Negotiation) => n.state === 'esperando' || n.state === 'tu_t
 export const activeNegs = (s: GameState) => s.negotiations.filter(isActive);
 export const negFor = (s: GameState, playerId: number) => s.negotiations.find((n) => isActive(n) && n.playerId === playerId);
 /** Las que esperan una decisión del dueño */
-export const myTurn = (s: GameState) => s.negotiations.filter((n) => n.state === 'tu_turno' && n.by === 'dueño');
+export const myTurn = (s: GameState) => s.negotiations.filter((n) => n.state === 'tu_turno' && (n.by === 'dueño' || n.approval));
+
+/** Nivel de delegación de la tarea a la que pertenece la negociación (sin director, manual) */
+function nivel(s: GameState, n: Negotiation) {
+  if (!s.club.director) return 'manual';
+  if (n.kind === 'compra' || n.kind === 'cesion') return s.club.delegation.fichajes;
+  if (n.kind === 'venta' || n.kind === 'cedo') return s.club.delegation.ventas;
+  return s.club.delegation.renovaciones;
+}
+/** En "Propone y apruebo" el director negocia, pero el acuerdo final lo aprueba el dueño (salvo renovaciones, que se aprueban al empezar) */
+const necesitaVistoBueno = (s: GameState, n: Negotiation) => n.by === 'director' && n.kind !== 'renovacion' && !n.approved && nivel(s, n) === 'propone';
 
 const turno = (s: GameState) => (s.phase === 'pretemporada' ? `Semana ${(s.preWeek ?? 0) + 1}` : `J${s.matchday}`);
 const apunta = (s: GameState, n: Negotiation, texto: string) => n.log.push(`${turno(s)} · ${texto}`);
@@ -175,6 +187,8 @@ export function newSaleOffer(s: GameState, p: Player, buyerId: number, fee: numb
     patience: randInt(1, 2), wait: 0, expires: 2, wantsToLeave,
   });
   apunta(s, n, `El ${nombreClub(s, n)} ofrece ${fmtMoney(fee)}`);
+  // con las ventas delegadas, el director se encarga desde el primer momento
+  if (s.club.director && s.club.delegation.ventas !== 'manual') directorSale(s, n);
   return n;
 }
 
@@ -245,7 +259,8 @@ export function tickNegotiations(s: GameState) {
   for (const n of s.negotiations.filter(enCurso)) {
     if (n.state === 'tu_turno') {
       n.expires = (n.expires ?? 2) - 1;
-      if (n.expires <= 0) rompe(s, n, n.kind === 'venta' ? `El ${nombreClub(s, n)} se cansa de esperar y retira la oferta.` : 'No contestamos a tiempo y se cansan de esperar.');
+      if (n.expires <= 0 && n.approval) rompe(s, n, 'Se cansan de esperar tu visto bueno y se rompe el acuerdo.');
+      else if (n.expires <= 0) rompe(s, n, n.kind === 'venta' ? `El ${nombreClub(s, n)} se cansa de esperar y retira la oferta.` : 'No contestamos a tiempo y se cansan de esperar.');
       continue;
     }
     n.wait--;
@@ -339,6 +354,18 @@ function acuerdoConClub(s: GameState, n: Negotiation) {
 
 /** Firma: con el mercado abierto se hace ya; si no, queda acordada para el próximo mercado */
 function cierra(s: GameState, n: Negotiation): string | undefined {
+  if (necesitaVistoBueno(s, n)) {
+    const p = jugador(s, n);
+    n.approval = true;
+    aTuTurno(n);
+    apunta(s, n, '📋 Acuerdo listo: falta tu visto bueno');
+    addMessage(s, {
+      from: 'director',
+      title: `📋 Acuerdo listo: ${p?.name ?? 'jugador'}`,
+      body: `${resumenAcuerdo(s, n)}\n\nApruébalo o recházalo en Inicio o en Equipo → Mercado. Esperan respuesta ${s.phase === 'pretemporada' ? 'un par de semanas' : 'un par de jornadas'}.`,
+    });
+    return;
+  }
   // las renovaciones no dependen del mercado
   if (marketOpen(s) || n.kind === 'renovacion') return ejecuta(s, n);
   const p = jugador(s, n);
@@ -349,6 +376,27 @@ function cierra(s: GameState, n: Negotiation): string | undefined {
     title: `✍️ Acuerdo cerrado: ${p?.name ?? 'jugador'}`,
     body: `${TEXTO_ACUERDO[n.kind]} Se hará efectivo cuando abra el mercado (pretemporada o jornada 19).`,
   });
+}
+
+/** Condiciones del acuerdo en una frase */
+export function resumenAcuerdo(s: GameState, n: Negotiation) {
+  const p = jugador(s, n);
+  const nombre = p?.name ?? 'el jugador';
+  if (n.kind === 'venta') return `Vender a ${nombre} al ${nombreClub(s, n)} por ${fmtMoney(n.fee)}.`;
+  if (n.kind === 'cedo') return `Ceder a ${nombre} al ${nombreClub(s, n)} una temporada (pagan su ficha).`;
+  if (n.kind === 'cesion') return `Traer cedido a ${nombre} del ${nombreClub(s, n)} por una cuota de ${fmtMoney(n.fee)}.`;
+  if (n.kind === 'renovacion') return `Renovar a ${nombre}: ${fmtMoney(n.salary)}/temp., ${n.years} temp.`;
+  return `Fichar a ${nombre}${n.clubId !== null ? ` del ${nombreClub(s, n)} por ${fmtMoney(n.fee)}` : ' (libre)'}: ${fmtMoney(n.salary)}/temp., ${n.years} temp.`;
+}
+
+/** El dueño da el visto bueno a un acuerdo que ha cerrado el director */
+export function approveDeal(s: GameState, id: number): string | undefined {
+  const n = s.negotiations.find((x) => x.id === id && x.state === 'tu_turno' && x.approval);
+  if (!n) return 'Ya no está pendiente.';
+  n.approval = false;
+  n.approved = true;
+  apunta(s, n, '👍 Das el visto bueno');
+  return cierra(s, n);
 }
 
 const TEXTO_ACUERDO: Record<NegKind, string> = {
@@ -442,19 +490,31 @@ export function saleAdvice(s: GameState, n: Negotiation): { action: 'aceptar' | 
   return { action: 'rechazar', text: clave ? 'Es de nuestros mejores: así no se vende.' : 'Se queda corta para lo que vale.' };
 }
 
+/** El director decide sobre una oferta recibida: rechaza las que no valen, pide más o la acepta (con visto bueno si propone) */
+function directorSale(s: GameState, n: Negotiation) {
+  n.by = 'director';
+  const c = saleAdvice(s, n);
+  if (c.action === 'aceptar') acceptTerms(s, n.id);
+  else if (c.action === 'pedir') counter(s, n.id, { fee: roundMoney((n.counterFee ?? n.fee) * 1.15) });
+  else {
+    const p = jugador(s, n);
+    withdraw(s, n.id);
+    addMessage(s, {
+      from: 'director',
+      title: `Oferta por ${p?.name ?? 'un jugador'} rechazada`,
+      body: `El ${nombreClub(s, n)} ofrecía ${fmtMoney(n.counterFee ?? n.fee)}. ${c.text}`,
+    });
+  }
+}
+
 /** El director lleva sus propias negociaciones (y las ventas, si se las has delegado) */
 function directorNegotiates(s: GameState) {
   const d = s.club.director;
   if (!d) return;
-  const ventasAuto = s.club.delegation.ventas === 'auto';
-  for (const n of s.negotiations.filter((x) => x.state === 'tu_turno')) {
+  const ventasDelegadas = s.club.delegation.ventas !== 'manual';
+  for (const n of s.negotiations.filter((x) => x.state === 'tu_turno' && !x.approval)) {
     if (n.kind === 'venta') {
-      if (!ventasAuto) continue;
-      n.by = 'director';
-      const c = saleAdvice(s, n);
-      if (c.action === 'aceptar') acceptTerms(s, n.id);
-      else if (c.action === 'pedir') counter(s, n.id, { fee: roundMoney((n.counterFee ?? n.fee) * 1.15) });
-      else withdraw(s, n.id);
+      if (ventasDelegadas) directorSale(s, n);
       continue;
     }
     if (n.by !== 'director') continue;

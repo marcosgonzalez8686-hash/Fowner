@@ -63,6 +63,9 @@ export default function DirectorScreen({ s, update, notify }: ScreenProps) {
           <button className="btn small grow" disabled={!d} onClick={() => update((g) => setAllDelegation(g, 'propone'))}>Todo propone</button>
           <button className="btn small grow" disabled={!d} onClick={() => update((g) => setAllDelegation(g, 'auto'))}>Todo auto</button>
         </div>
+        <p className="small muted">
+          ✅ Propone: en fichajes y ventas negocia él, rechaza las ofertas que no valen y te pide el visto bueno cuando hay acuerdo. En lo demás te propone y tú decides.
+        </p>
         <p className="small muted">Sus límites de gasto se fijan en Dirección → Presupuesto.</p>
       </Card>
 

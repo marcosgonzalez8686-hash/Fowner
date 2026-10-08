@@ -4,7 +4,7 @@ import { fmtMoney, roundMoney } from '../game/economy';
 import { teamById } from '../game/market';
 import { marketValue } from '../game/market';
 import {
-  acceptTerms, counter, isActive, saleAdvice, withdraw, type Negotiation,
+  acceptTerms, approveDeal, counter, isActive, resumenAcuerdo, saleAdvice, withdraw, type Negotiation,
 } from '../game/negotiation';
 import type { GameState } from '../game/types';
 import { PlayerLink, TeamLink } from '../nav/context';
@@ -31,11 +31,12 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
     notify(typeof r === 'string' ? r : ok);
   };
   if (!p) return null;
-  const tuTurno = n.state === 'tu_turno';
+  const visto = n.state === 'tu_turno' && Boolean(n.approval);
+  const tuTurno = n.state === 'tu_turno' && !visto;
   const delDirector = n.by === 'director';
 
   return (
-    <div className={`offer negociacion${tuTurno && !delDirector ? ' turn' : ''}`}>
+    <div className={`offer negociacion${(tuTurno && !delDirector) || visto ? ' turn' : ''}`}>
       <div className="offer-head">
         <b><PlayerLink id={p.id}>{p.name}</PlayerLink></b>
         <span className="small muted">{TIPO[n.kind]}{club ? <> · <TeamLink id={club.id}>{club.short}</TeamLink></> : n.kind === 'compra' ? ' · libre' : ''}</span>
@@ -44,7 +45,17 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
         {p.pos} · {p.age} años · media {p.ovr} · valor {fmtMoney(marketValue(s, p))}
         {delDirector && ' · 💼 la lleva el director'}
       </div>
-      {!(tuTurno && !delDirector) && <p className="small">{n.log[n.log.length - 1]}</p>}
+      {!(tuTurno && !delDirector) && !visto && <p className="small">{n.log[n.log.length - 1]}</p>}
+
+      {visto && (
+        <>
+          <p className="small">📋 <b>El director tiene el acuerdo listo:</b> {resumenAcuerdo(s, n)}</p>
+          <div className="row">
+            <button className="btn primary grow" onClick={() => hacer((g) => approveDeal(g, n.id), 'Acuerdo aprobado')}>👍 Aprobar</button>
+            <button className="btn grow" onClick={() => hacer((g) => withdraw(g, n.id), 'Acuerdo rechazado')}>Rechazar</button>
+          </div>
+        </>
+      )}
 
       {n.state === 'esperando' && <p className="small muted">⏳ Esperando respuesta: llegará {cuando(s)}.</p>}
       {n.state === 'acordada' && (
@@ -99,7 +110,7 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
         </>
       )}
 
-      {(n.state === 'esperando' || (delDirector && n.state === 'tu_turno')) && n.kind !== 'venta' && (
+      {(n.state === 'esperando' || (delDirector && tuTurno)) && n.kind !== 'venta' && (
         <button className="link small" onClick={() => hacer((g) => withdraw(g, n.id), 'Te retiras de la negociación')}>Retirarse</button>
       )}
 
@@ -119,7 +130,7 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
 export default function NegotiationsCard({ s, update, notify, onlyPending }: {
   s: GameState; update: Update; notify: (m: string) => void; onlyPending?: boolean;
 }) {
-  const abiertas = s.negotiations.filter((n) => (onlyPending ? n.state === 'tu_turno' && n.by === 'dueño' : isActive(n)));
+  const abiertas = s.negotiations.filter((n) => (onlyPending ? n.state === 'tu_turno' && (n.by === 'dueño' || n.approval) : isActive(n)));
   const ventas = abiertas.filter((n) => n.kind === 'venta');
   const resto = abiertas.filter((n) => n.kind !== 'venta');
   const recientes = onlyPending ? [] : s.negotiations.filter((n) => !isActive(n) && n.season === s.season).slice(0, 8);
@@ -128,7 +139,11 @@ export default function NegotiationsCard({ s, update, notify, onlyPending }: {
     <>
       {ventas.length > 0 && (
         <Card title={`📨 Ofertas por tus jugadores (${ventas.length})`}>
-          <p className="small muted">Puedes aceptar, rechazar o pedir más. Si tardas en contestar o pides demasiado, pueden retirarse.</p>
+          <p className="small muted">
+            {ventas.every((n) => n.by === 'director')
+              ? 'Las negocia tu director deportivo: rechaza las que no valen y te pide el visto bueno cuando hay acuerdo.'
+              : 'Puedes aceptar, rechazar o pedir más. Si tardas en contestar o pides demasiado, pueden retirarse.'}
+          </p>
           {ventas.map((n) => <Negociacion key={`${n.id}-${n.log.length}`} s={s} n={n} update={update} notify={notify} />)}
         </Card>
       )}
