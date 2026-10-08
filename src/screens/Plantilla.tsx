@@ -1,6 +1,6 @@
 import type { ScreenProps } from '../App';
 import { levelOf } from '../game/director';
-import { DIV_LEVEL, fmtMoney } from '../game/economy';
+import { DIV_LEVEL, fmtMoney, playerValue } from '../game/economy';
 import {
   myTeam, mySquad, myYouth, promoteYouth, releasePlayer, teamById, wageBill,
 } from '../game/market';
@@ -15,6 +15,7 @@ import { useNav } from '../nav/context';
 import { loanedOut } from '../game/loans';
 import { fitOf } from '../game/traits';
 import { TREND_TEXT, trendOf } from '../game/aging';
+import { condition } from '../game/fatigue';
 
 const POS_NAME: Record<Pos, string> = { POR: 'Porteros', DEF: 'Defensas', MED: 'Centrocampistas', DEL: 'Delanteros' };
 
@@ -43,6 +44,8 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
           <div><b>{fmtMoney(wageBill(s))}</b><span>salarios/temp.</span></div>
           <div><b>{moraleLabel(s.club.morale).emoji} {s.club.morale}</b><span>moral del vestuario</span></div>
           <div><b>{squad.filter((p) => (p.injury ?? 0) > 0).length}</b><span>lesionados</span></div>
+          <div><b>{Math.round(xi.reduce((a, p) => a + condition(p), 0) / Math.max(1, xi.length))}%</b><span>condición del once</span></div>
+          <div><b>{fmtMoney(squad.reduce((a, p) => a + playerValue(p), 0))}</b><span>valor de la plantilla</span></div>
         </div>
         {/* el entrenador decide el sistema: acceso directo a su ficha en Empleados */}
         <button className="coach-row as-btn" onClick={() => go('direccion', 'empleados')}>
@@ -72,7 +75,7 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
           </p>
         )}
         <p className="small muted">
-          ⭐ titular · 🤕 lesionado · ✅ encaja en el sistema (+2) · ➖ neutro · ❌ no encaja (−3, menos al adaptarse). Toca un jugador para ver su perfil y su carácter.
+          ⭐ titular · 🤕 lesionado · 🔋 condición física (cansados rinden menos y el entrenador los rota) · ✅ encaja en el sistema (+2) · ➖ neutro · ❌ no encaja (−3, menos al adaptarse). Toca un jugador para ver su perfil y su carácter.
         </p>
       </Card>
 
@@ -110,6 +113,7 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
                     {p.retiring && <b className="warn">👴 se retira · </b>}
                     {p.loan && <b>🔁 cedido por {teamById(s, p.loan.from)?.short} · </b>}
                     {p.age} años {TREND_TEXT[trendOf(p)].icon} · {fmtMoney(p.salary)} · {p.contract <= 1 ? <b className="warn">acaba contrato</b> : `${p.contract} temp.`}
+                    {condition(p) < 80 && <b className={condition(p) < 55 ? 'neg' : 'warn'}> · 🔋 {condition(p)}%</b>}
                   </small>
                   <PlayerTags s={s} p={p} />
                   {p.form?.length ? (

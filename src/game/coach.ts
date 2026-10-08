@@ -1,7 +1,7 @@
 import { MATCHDAYS, fmtMoney, roundMoney } from './economy';
 import { changeSatisfaction, currentPosition, objectiveTarget } from './fans';
 import { addMessage, myTeam, mySquad } from './market';
-import { FORMATIONS, STYLES, elevenFor, type Formation, type Style } from './match';
+import { FORMATIONS, STYLES, elevenFor, fatiguePenalty, type Formation, type Style } from './match';
 import { coachSeverance, ROLES, type Staff } from './staff';
 import { pick } from './rng';
 import type { GameState, Player } from './types';
@@ -33,7 +33,8 @@ export function ourPlan(s: GameState, squad: Player[] = mySquad(s)) {
   const t = ourTactics(s);
   const coach = coachOf(s)?.id ?? 0;
   // el entrenador alinea por rendimiento real: nivel más encaje en su sistema
-  return { ...elevenFor(squad, t.formation, (p) => p.ovr + fitBonus(p, t.formation, t.style, coach)), ...t };
+  // y rota a los cansados: un suplente fresco puede rendir más que un titular agotado
+  return { ...elevenFor(squad, t.formation, (p) => p.ovr + fitBonus(p, t.formation, t.style, coach) - fatiguePenalty(p)), ...t };
 }
 
 /** Jugadores por línea que pide el sistema del entrenador */

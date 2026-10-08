@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Update } from '../App';
-import { DIV_LEVEL, fmtMoney, roundMoney } from '../game/economy';
+import { DIV_LEVEL, fmtMoney, playerValue, roundMoney } from '../game/economy';
 import {
   askingPrice, askingSalary, buyPlayer, marketOpen, myTeam, releasePlayer, renewPlayer, renewSalary, sellPlayer, sellPrice,
   teamById,
@@ -14,7 +14,21 @@ import { LOAN_GROWTH_APPS, MAX_LOANS_IN, loanAnswer, loanFee, loanIn, loanOut, l
 import { PEAK, TREND_TEXT, persuadeVeteran, trendOf } from '../game/aging';
 import { requestReport, shownPot } from '../game/scouting';
 import { FLAG } from '../game/continental';
+import { condition } from '../game/fatigue';
+import { fatiguePenalty } from '../game/match';
 import { TeamLink } from '../nav/context';
+
+/** Condición física con lo que le resta en el campo */
+export function Condicion({ p }: { p: Player }) {
+  const c = condition(p);
+  const pen = fatiguePenalty(p);
+  return (
+    <span className={c < 55 ? 'neg' : c < 70 ? 'warn' : undefined}>
+      🔋 Condición física: <b>{c}%</b>
+      {pen >= 0.1 ? ` (cansado: −${pen.toFixed(1).replace('.', ',')} en el campo; el entrenador puede darle descanso)` : ''}
+    </span>
+  );
+}
 
 /** Busca un jugador en cualquier sitio (también en los clubes extranjeros de la Copa de Campeones) */
 export function findPlayer(s: GameState, id: number): Player | undefined {
@@ -50,6 +64,10 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
           {sel.pos} · {sel.age} años · media {sel.ovr} · potencial {sel.pot}
           <br />
           Cobra {fmtMoney(sel.salary)}/temp. · contrato: {sel.contract} temp.
+          <br />
+          💰 Valor de mercado: <b>{fmtMoney(playerValue(sel))}</b>
+          <br />
+          <Condicion p={sel} />
           <br />
           {TREND_TEXT[trendOf(sel)].icon} Está {TREND_TEXT[trendOf(sel)].text}
           {trendOf(sel) !== 'crece' && ` (un ${sel.pos === 'POR' ? 'portero' : sel.pos === 'DEF' ? 'defensa' : sel.pos === 'MED' ? 'centrocampista' : 'delantero'} aguanta hasta los ${PEAK[sel.pos]})`}
@@ -156,6 +174,8 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
     <Sheet title={sel.name} onClose={onClose} top>
       <p className="muted">
         {sel.pos} · {sel.age} años · media {sel.ovr} · potencial {shownPot(s, sel)}
+        <br />
+        💰 Valor de mercado: <b>{fmtMoney(playerValue(sel))}</b>
         <br />
         {club ? <TeamLink id={club.id}>{club.country ? `${FLAG[club.country] ?? ''} ${club.name}` : `${club.name} (${club.division + 1}ª)`}</TeamLink> : 'Agente libre'}
         {sel.ovr >= nivel + 4 ? ' · de los buenos para nuestra categoría' : ''}

@@ -4,6 +4,7 @@ import { chance, clamp, rand } from './rng';
 import { staffStars } from './staff';
 import type { GameState, Player } from './types';
 import { hasTrait } from './traits';
+import { fatigueInjuryFactor } from './fatigue';
 
 // Lesiones de jugadores y moral del vestuario
 
@@ -37,7 +38,7 @@ export function rollInjuries(s: GameState, xi: Player[], teamId: number): Player
   const nuevas: Player[] = [];
   for (const p of xi) {
     const propension = hasTrait(p, 'fragil') ? 2 : hasTrait(p, 'profesional') ? 0.5 : 1;
-    if (isInjured(p) || !chance(prob * propension)) continue;
+    if (isInjured(p) || !chance(prob * propension * fatigueInjuryFactor(p))) continue;
     p.injury = Math.max(1, Math.round(injuryLength() * clamp(recuperacion, 0.45, 1)));
     nuevas.push(p);
   }
@@ -95,5 +96,9 @@ export function moraleAfterMatch(s: GameState, gf: number, gc: number) {
 
 export function resetSeasonMorale(s: GameState) {
   s.club.morale = Math.round((s.club.morale + moraleRest(s)) / 2);
-  for (const p of s.players) p.injury = 0;
+  // el verano cura lesiones y quita el cansancio
+  for (const p of s.players) {
+    p.injury = 0;
+    p.fatigue = 0;
+  }
 }

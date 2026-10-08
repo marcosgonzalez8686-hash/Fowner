@@ -10,6 +10,7 @@ import { conflictAfterMatch, newIdols } from './traits';
 import { matchKeys } from './insights';
 import { contDue, myContDue, mySuperDue, newContinental, newSupercopa, playContinentalRound, playSupercopa, superDue } from './continental';
 import { returnLoans } from './loans';
+import { recoverAll, tire } from './fatigue';
 import { competitionPerMatchday, promotionClauses, seasonFinances, stadiumFine, STADIUM_REQ } from './costs';
 import { markKnown, scoutingNewSeason } from './scouting';
 import { announceRetirements, develop, farewells, retireChance } from './aging';
@@ -149,6 +150,7 @@ export function playMatchday(s: GameState) {
       harvest(s, rep);
       // partidos de los cedidos (en ambos sentidos)
       for (const p of [...once(f.home).xi, ...once(f.away).xi]) if (p.loan) p.loan.apps++;
+      tire(s, [...once(f.home).xi, ...once(f.away).xi]);
       informes[d].push(rep);
       if (f.home === mio.id || f.away === mio.id) {
         if (r.attendance !== undefined) {
@@ -242,6 +244,7 @@ export function playMatchday(s: GameState) {
   }
 
   healOneMatchday(s, lesionadosAntes);
+  recoverAll(s);
   s.matchday++;
   c.cashLog.push(c.cash);
 

@@ -11,6 +11,7 @@ import { staffMatchBonus } from './staff';
 import { ourPlan, ourTactics } from './coach';
 import { cupAttendance } from './tickets';
 import { matchKeys } from './insights';
+import { tire } from './fatigue';
 import { penalties, type CupTie } from './cup';
 import type { GameState, Player, Team } from './types';
 
@@ -202,6 +203,7 @@ function playTie(s: GameState, tie: CupTie, label: string, atractivo: number) {
   const plan = (id: number) => (id === mio.id ? ourPlan(s, squadOf(s, id)) : bestEleven(squadOf(s, id)));
   const pa = plan(tie.a);
   const pb = plan(tie.b);
+  tire(s, [...pa.xi, ...pb.xi]);
   const ra = pa.strength + (tie.a === mio.id ? extra : 0);
   const rb = pb.strength + (tie.b === mio.id ? extra : 0);
   const fa = ra + (tie.home === tie.a ? 2 : 0) + gauss(0, 2);

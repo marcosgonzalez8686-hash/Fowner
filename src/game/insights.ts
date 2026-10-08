@@ -1,4 +1,5 @@
-import { STYLES, elevenFor, type Formation, type Style } from './match';
+import { STYLES, elevenFor, fatiguePenalty, type Formation, type Style } from './match';
+import { condition } from './fatigue';
 import { coachOf, ourTactics } from './coach';
 import { mySquad } from './market';
 import { moraleBonus } from './morale';
@@ -66,8 +67,18 @@ export function preMatchKeys(s: GameState, xi: Player[]): string[] {
   // titulares de siempre que se pierden el partido
   const sano = elevenFor(mySquad(s).map((p) => ({ ...p, injury: 0 })), t.formation as Formation, (p) => p.ovr + fitBonus(p, t.formation, t.style, coach)).xi;
   const enXi = new Set(xi.map((p) => p.id));
-  const bajas = sano.filter((p) => !enXi.has(p.id));
+  const lesionados = new Set(mySquad(s).filter((p) => (p.injury ?? 0) > 0).map((p) => p.id));
+  const bajas = sano.filter((p) => !enXi.has(p.id) && lesionados.has(p.id));
   if (bajas.length) out.push(`🤕 Bajas en el once: ${bajas.map((p) => `${apellido(p.name)} (${p.ovr})`).join(', ')}.`);
+  // cansancio: titulares fatigados y quién descansa por rotación
+  const cansados = xi.filter((p) => fatiguePenalty(p) >= 0.5);
+  if (cansados.length) {
+    const resta = xi.reduce((a, p) => a + fatiguePenalty(p), 0) / 11;
+    out.push(`🪫 Cansancio: ${cansados.map((p) => `${apellido(p.name)} (${condition(p)}%)`).join(', ')}: ${signo(-resta)} al once.`);
+  }
+  const sinCansancio = elevenFor(mySquad(s).filter((p) => !(p.injury && p.injury > 0)), t.formation, (p) => p.ovr + fitBonus(p, t.formation, t.style, coach)).xi;
+  const descansan = sinCansancio.filter((p) => !enXi.has(p.id));
+  if (descansan.length) out.push(`🔄 Rotación: descansan ${descansan.map((p) => `${apellido(p.name)} (${condition(p)}%)`).join(', ')}.`);
   const mb = moraleBonus(s);
   if (Math.abs(mb) >= 0.75) out.push(`${mb > 0 ? '😀 Moral alta' : '😞 Moral baja'}: ${signo(mb)}.`);
   if (!coachOf(s)) out.push('🧢 Sin entrenador: el equipo pierde 2 puntos.');

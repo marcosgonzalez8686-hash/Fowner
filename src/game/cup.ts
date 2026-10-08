@@ -10,6 +10,7 @@ import { staffMatchBonus } from './staff';
 import { ourPlan, ourTactics } from './coach';
 import { cupAttendance } from './tickets';
 import { matchKeys } from './insights';
+import { tire } from './fatigue';
 import type { GameState, Player } from './types';
 
 // Copa: eliminatoria a partido único entre 64 equipos, jugada entre semana.
@@ -129,6 +130,7 @@ export function playCupRound(s: GameState) {
     const plan = (id: number) => (id === mio.id ? ourPlan(s, porEquipo.get(id) ?? []) : bestEleven(porEquipo.get(id) ?? []));
     const xiA = plan(tie.a);
     const xiB = plan(tie.b);
+    tire(s, [...xiA.xi, ...xiB.xi]);
     const casaA = tie.home === tie.a ? 3 : 0;
     const casaB = tie.home === tie.b ? 3 : 0;
     // magia de Copa: a partido único las diferencias se acortan y el pequeño se crece en casa
