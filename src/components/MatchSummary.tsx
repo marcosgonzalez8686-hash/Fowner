@@ -17,7 +17,7 @@ const FILAS: { k: keyof SideStats; label: string; pct?: boolean }[] = [
   { k: 'reds', label: 'Rojas' },
 ];
 
-const ICONO = { gol: '⚽', amarilla: '🟨', roja: '🟥', lesion: '🤕', ocasion: '🎯' } as const;
+const ICONO = { gol: '⚽', amarilla: '🟨', roja: '🟥', lesion: '🤕', ocasion: '🎯', cambio: '🔁' } as const;
 
 export default function MatchSummary({ s, r, onClose }: { s: GameState; r: MatchReport; onClose: () => void }) {
   const team = (id: number) => s.teams.find((t) => t.id === id)!;
@@ -63,6 +63,7 @@ export default function MatchSummary({ s, r, onClose }: { s: GameState; r: Match
               <span>
                 {ICONO[e.type]} <b><PlayerLink id={e.pid ?? idDe(e.side, e.player)}>{e.player}</PlayerLink></b>
                 {e.assist && <small className="muted"> (asist. <PlayerLink id={idDe(e.side, e.assist)}>{e.assist}</PlayerLink>)</small>}
+                {e.out && <small className="muted"> por {e.out}</small>}
               </span>
             </li>
           ))}
@@ -95,6 +96,7 @@ export default function MatchSummary({ s, r, onClose }: { s: GameState; r: Match
                         {p.name.split(' ').slice(1).join(' ') || p.name}
                         {goles > 0 && ` ${'⚽'.repeat(goles)}`}
                         {tarjeta && (tarjeta.type === 'roja' ? ' 🟥' : ' 🟨')}
+                        {p.sub !== undefined && <small className="muted"> 🔁 {p.sub}'</small>}
                       </span>
                       <RatingBadge v={p.rating} />
                     </div>

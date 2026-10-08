@@ -7,10 +7,11 @@ import type { Formation, Style } from './match';
 export interface MatchEvent {
   min: number;
   side: 'home' | 'away';
-  type: 'gol' | 'amarilla' | 'roja' | 'lesion' | 'ocasion';
+  type: 'gol' | 'amarilla' | 'roja' | 'lesion' | 'ocasion' | 'cambio';
   detail?: 'parada' | 'fuera' | 'palo'; // cómo acaba una ocasión
   player: string;
   assist?: string;
+  out?: string; // en un cambio, el que sale (player es el que entra)
   pid?: number; // id del goleador o del amonestado
 }
 
@@ -24,7 +25,7 @@ export interface SideStats {
   reds: number;
 }
 
-export interface LineupPlayer { id: number; name: string; pos: Player['pos']; ovr: number; rating: number }
+export interface LineupPlayer { id: number; name: string; pos: Player['pos']; ovr: number; rating: number; sub?: number /* minuto en que entró */ }
 export interface TeamPlan { formation: Formation; style: Style; xi: LineupPlayer[] }
 
 export interface MatchReport {

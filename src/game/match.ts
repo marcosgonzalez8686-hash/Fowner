@@ -53,7 +53,7 @@ export function roundRobin(teamIds: number[]): Fixture[][] {
 }
 
 /** Cansancio a partir del cual un jugador rinde menos (y lo que resta por cada punto de más) */
-export const FATIGUE_FREE = 25;
+export const FATIGUE_FREE = 18;
 export const fatiguePenalty = (p: Player) => Math.max(0, (p.fatigue ?? 0) - FATIGUE_FREE) * 0.12;
 
 /** Once titular en una formación: los mejores de cada posición; si faltan, se cubre con otros con penalización */

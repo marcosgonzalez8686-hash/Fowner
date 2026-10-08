@@ -1,5 +1,6 @@
 import { DIVISION_NAMES, TEAMS_PER_DIV } from './economy';
 import { applyCards } from './discipline';
+import { applySubs } from './subs';
 import { ROUND_NAMES } from './cup';
 import { addMessage, teamById } from './market';
 import type { MatchReport } from './report';
@@ -47,10 +48,12 @@ export interface Records {
 export const emptyRecords = (): Records => ({ seasons: [], players: {}, current: {} });
 
 /** Apunta un partido nuestro: presencias, goles y posibles récords */
-export function recordMatch(s: GameState, r: MatchReport, xi: Player[]) {
+export function recordMatch(s: GameState, r: MatchReport, titulares: Player[]) {
   const rec = s.club.records;
   const mio = s.club.teamId;
   const lado: 'home' | 'away' = r.home === mio ? 'home' : 'away';
+  // los cambios: también juegan (y cuentan como partido) los que salen del banquillo
+  const xi = [...titulares, ...applySubs(s, r, titulares, lado)];
   const rival = teamById(s, lado === 'home' ? r.away : r.home)?.name ?? 'rival';
   for (const p of xi) {
     const x = (rec.players[p.id] ??= { name: p.name, goals: 0, apps: 0 });

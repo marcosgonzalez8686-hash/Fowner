@@ -1,4 +1,5 @@
 import { facilitiesOf } from '../game/rivals';
+import { cupRotation } from '../game/cup';
 import { rivalCrest } from '../game/identity';
 import { squadOf, teamById } from '../game/market';
 import { STYLES, bestEleven, chooseStyle, computeStandings, form, type Formation } from '../game/match';
@@ -47,11 +48,12 @@ function Pitch({ xi, flip }: { xi: Player[]; flip?: boolean }) {
   );
 }
 
-function teamInfo({ s, id, rivalId, home, neutral }: { s: GameState; id: number; rivalId: number; home: boolean; neutral?: boolean }) {
+function teamInfo({ s, id, rivalId, home, neutral, copa }: { s: GameState; id: number; rivalId: number; home: boolean; neutral?: boolean; copa?: boolean }) {
   const t = teamById(s, id)!;
   const mio = id === s.club.teamId;
   // nuestro equipo juega con el sistema y el estilo del entrenador
-  const planDe = (x: number) => (x === s.club.teamId ? ourPlan(s, squadOf(s, x)) : bestEleven(squadOf(s, x)));
+  const planDe = (x: number) =>
+    x === s.club.teamId ? ourPlan(s, copa ? cupRotation(s, squadOf(s, x), x === id ? rivalId : id) : squadOf(s, x)) : bestEleven(squadOf(s, x));
   const plan = planDe(id);
   const rival = planDe(rivalId);
   const extra = (x: number) => (x === s.club.teamId ? staffMatchBonus(s) + moraleBonus(s) : 0);
@@ -64,8 +66,8 @@ export default function Previa({ s, setup, onPlay, onSkip, onClose }: {
   s: GameState; setup: MatchSetup; onPlay: () => void; onSkip: () => void; onClose: () => void;
 }) {
   useBack(onClose);
-  const h = teamInfo({ s, id: setup.homeId, rivalId: setup.awayId, home: true, neutral: setup.neutral });
-  const a = teamInfo({ s, id: setup.awayId, rivalId: setup.homeId, home: false, neutral: setup.neutral });
+  const h = teamInfo({ s, id: setup.homeId, rivalId: setup.awayId, home: true, neutral: setup.neutral, copa: setup.comp === 'copa' });
+  const a = teamInfo({ s, id: setup.awayId, rivalId: setup.homeId, home: false, neutral: setup.neutral, copa: setup.comp === 'copa' });
   const crest = (x: ReturnType<typeof teamInfo>) => (x.mio ? s.club.identity.crest : rivalCrest(x.t.id, x.t.short));
 
   // datos de liga: posición, puntos y racha

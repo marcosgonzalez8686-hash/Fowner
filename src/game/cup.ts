@@ -113,6 +113,16 @@ export function penalties(fa: number, fb: number): { a: number; b: number } {
   return { a, b };
 }
 
+/** Contra un rival de nuestra categoría o inferior, en Copa juega el portero suplente (la plantilla sin el titular) */
+export function cupRotation(s: GameState, plantilla: Player[], rivalId: number) {
+  const rival = teamById(s, rivalId);
+  if (!rival || rival.division < myTeam(s).division) return plantilla;
+  const porteros = plantilla
+    .filter((p) => p.pos === 'POR' && !p.youth && !p.filial && !(p.injury && p.injury > 0) && !(p.suspended && p.suspended > 0))
+    .sort((a, b) => b.ovr - a.ovr);
+  return porteros.length >= 2 ? plantilla.filter((p) => p.id !== porteros[0].id) : plantilla;
+}
+
 /** Juega la ronda de Copa que toca (la nuestra incluida) */
 export function playCupRound(s: GameState) {
   if (!cupRoundDue(s)) return;
@@ -127,7 +137,8 @@ export function playCupRound(s: GameState) {
   const extra = staffMatchBonus(s) + moraleBonus(s);
 
   for (const tie of s.cup.rounds[ronda]) {
-    const plan = (id: number) => (id === mio.id ? ourPlan(s, porEquipo.get(id) ?? []) : bestEleven(porEquipo.get(id) ?? []));
+    const plan = (id: number) =>
+      id === mio.id ? ourPlan(s, cupRotation(s, porEquipo.get(id) ?? [], id === tie.a ? tie.b : tie.a)) : bestEleven(porEquipo.get(id) ?? []);
     const xiA = plan(tie.a);
     const xiB = plan(tie.b);
     const casaA = tie.home === tie.a ? 3 : 0;

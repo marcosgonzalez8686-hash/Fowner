@@ -9,7 +9,7 @@ import type { GameState, Player } from './types';
 export function tire(s: GameState, xi: Player[]) {
   const prep = staffStars(s, 'preparador');
   for (const p of xi) {
-    let f = 14 + Math.max(0, p.age - 29) * 1.5;
+    let f = 17 + Math.max(0, p.age - 29) * 1.5;
     if (p.teamId === s.club.teamId) f *= 1 - 0.07 * prep; // el preparador físico dosifica las cargas
     if (hasTrait(p, 'profesional')) f *= 0.8;
     p.fatigue = Math.min(100, (p.fatigue ?? 0) + f);

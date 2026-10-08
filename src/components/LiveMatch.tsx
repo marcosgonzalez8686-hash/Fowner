@@ -33,10 +33,12 @@ function narra(e: MatchEvent, equipo: string, i: number): string {
       return `¡Tarjeta roja para ${p}! El ${equipo} se queda con diez`;
     case 'lesion':
       return `${p} se duele y tiene que ser sustituido. Mala noticia para el ${equipo}`;
+    case 'cambio':
+      return `Cambio en el ${equipo}: entra ${p} por ${limpia(e.out ?? '')}`;
   }
 }
 
-const ICONO: Record<MatchEvent['type'], string> = { gol: '⚽', ocasion: '🎯', amarilla: '🟨', roja: '🟥', lesion: '🤕' };
+const ICONO: Record<MatchEvent['type'], string> = { gol: '⚽', ocasion: '🎯', amarilla: '🟨', roja: '🟥', lesion: '🤕', cambio: '🔁' };
 
 export default function LiveMatch({ s, r, onStats, onClose }: { s: GameState; r: MatchReport; onStats: () => void; onClose: () => void }) {
   const [min, setMin] = useState(0);
