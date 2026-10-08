@@ -328,13 +328,19 @@ function doStaff(s: GameState) {
   const d = s.club.director!;
   const pendientes = s.messages.filter((m) => m.status === 'pendiente' && m.proposal?.kind === 'empleado');
   const rolesPendientes = new Set(pendientes.map((m) => (m.proposal as { role: string }).role));
+  // lo ya propuesto esta temporada: no se insiste con los rechazados ni se repite el cambio de un puesto cubierto
+  const propuestas = s.messages.filter((m) => m.proposal?.kind === 'empleado' && m.season === s.season);
+  const rechazados = new Set(propuestas.filter((m) => m.status === 'rechazada').map((m) => (m.proposal as { staffId: number }).staffId));
+  const rolesYaPropuestos = new Set(propuestas.map((m) => (m.proposal as { role: string }).role));
   let margen = s.club.staffBudget - staffWages(s);
   const sinCubrir: string[] = [];
   for (const role of ROLE_ORDER) {
     if (rolesPendientes.has(role)) continue;
     const actual = s.club.staff[role];
+    // cambiar a alguien que ya está solo se plantea en pretemporada y una vez por temporada
+    if (actual && (s.phase !== 'pretemporada' || rolesYaPropuestos.has(role))) continue;
     const libre = margen + (actual?.salary ?? 0);
-    const candidatos = (s.staffMarket[role] ?? []).filter((c) => c.salary <= libre);
+    const candidatos = (s.staffMarket[role] ?? []).filter((c) => c.salary <= libre && !rechazados.has(c.id));
     if (!candidatos.length) {
       if (!actual) sinCubrir.push(ROLES[role].name.toLowerCase());
       continue;

@@ -13,7 +13,7 @@ export const DIVISION_NAMES = ['Primera División', 'Segunda División', 'Tercer
 /** Media de calidad de las plantillas en cada división */
 export const DIV_LEVEL = [76, 67, 59, 51, 43];
 /** Derechos de TV por temporada */
-export const DIV_TV = [9_000_000, 2_500_000, 600_000, 140_000, 40_000];
+export const DIV_TV = [11_000_000, 3_300_000, 900_000, 240_000, 75_000];
 /** Patrocinio base por temporada */
 export const DIV_SPONSOR = [4_000_000, 1_000_000, 250_000, 70_000, 25_000];
 /** Afición base de un club medio */
