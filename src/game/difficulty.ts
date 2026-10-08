@@ -17,9 +17,9 @@ export interface DifficultyInfo {
 }
 
 export const DIFFICULTY: Record<Difficulty, DifficultyInfo> = {
-  facil: { label: 'Fácil', icon: '🙂', desc: 'Más dinero, obras más baratas, una afición paciente y rivales algo más flojos.', cash: 1.5, income: 1.2, works: 0.75, fans: 0.7, rival: -2, injuries: 0.7 },
+  facil: { label: 'Fácil', icon: '🙂', desc: 'Más dinero, obras más baratas, una afición paciente y rivales algo más flojos.', cash: 1.5, income: 1.2, works: 0.75, fans: 0.7, rival: -1, injuries: 0.7 },
   normal: { label: 'Normal', icon: '⚖️', desc: 'La experiencia pensada para el juego.', cash: 1, income: 1, works: 1, fans: 1, rival: 0, injuries: 1 },
-  dificil: { label: 'Difícil', icon: '🔥', desc: 'Menos dinero, obras más caras, una afición exigente, rivales más fuertes y más lesiones.', cash: 0.6, income: 0.85, works: 1.25, fans: 1.3, rival: 2, injuries: 1.3 },
+  dificil: { label: 'Difícil', icon: '🔥', desc: 'Menos dinero, obras más caras, una afición exigente, rivales más fuertes y más lesiones.', cash: 0.6, income: 0.85, works: 1.25, fans: 1.2, rival: 1, injuries: 1.3 },
 };
 
 export const DIFFICULTY_KEYS: Difficulty[] = ['facil', 'normal', 'dificil'];
