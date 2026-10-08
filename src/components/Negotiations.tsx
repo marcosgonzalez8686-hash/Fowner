@@ -26,6 +26,11 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
   // propuesta por defecto: a medio camino entre lo nuestro y lo suyo
   const [oferta, setOferta] = useState(roundMoney(n.kind === 'venta' ? pide * 1.15 : (ultima + pide) / 2));
   const [anos, setAnos] = useState(String(n.years || 2));
+  // las cantidades solo aparecen si el dueño decide negociar: por defecto, aceptar o rechazar
+  const [negociar, setNegociar] = useState(false);
+  const botonNegociar = (
+    <button className="link small" onClick={() => setNegociar(true)}>💬 Prefiero negociar ›</button>
+  );
   const hacer = (fn: (g: GameState) => string | undefined, ok: string) => {
     const r = update((g) => fn(g));
     notify(typeof r === 'string' ? r : ok);
@@ -70,8 +75,12 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
             <button className="btn grow" onClick={() => hacer((g) => withdraw(g, n.id), 'Oferta rechazada')}>Rechazar</button>
           </div>
           <p className="small">{n.log[n.log.length - 1]}</p>
-          <Stepper value={oferta} step={paso(oferta)} min={pide} onChange={setOferta} format={fmtMoney} />
-          <button className="btn full" onClick={() => hacer((g) => counter(g, n.id, { fee: oferta }), `Pides ${fmtMoney(oferta)}`)}>Pedir {fmtMoney(oferta)}</button>
+          {negociar ? (
+            <>
+              <Stepper value={oferta} step={paso(oferta)} min={pide} onChange={setOferta} format={fmtMoney} />
+              <button className="btn full" onClick={() => hacer((g) => counter(g, n.id, { fee: oferta }), `Pides ${fmtMoney(oferta)}`)}>Pedir {fmtMoney(oferta)}</button>
+            </>
+          ) : botonNegociar}
         </>
       )}
 
@@ -86,6 +95,8 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
             <button className="btn primary grow" onClick={() => hacer((g) => acceptTerms(g, n.id), 'Aceptado')}>Aceptar</button>
             <button className="btn grow" onClick={() => hacer((g) => withdraw(g, n.id), 'Te retiras')}>Retirarse</button>
           </div>
+          {!negociar && botonNegociar}
+          {negociar && <>
           <Stepper value={oferta} step={paso(oferta)} min={0} onChange={setOferta} format={fmtMoney} />
           <div className="row">
             <button
@@ -107,6 +118,7 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
               options={['1', '2', '3', '4'].map((v) => ({ value: v, label: `${v} año${v === '1' ? '' : 's'}` }))}
             />
           )}
+          </>}
         </>
       )}
 
@@ -142,7 +154,7 @@ export default function NegotiationsCard({ s, update, notify, onlyPending }: {
           <p className="small muted">
             {ventas.every((n) => n.by === 'director')
               ? 'Las negocia tu director deportivo: rechaza las que no valen y te pide el visto bueno cuando hay acuerdo.'
-              : 'Puedes aceptar, rechazar o pedir más. Si tardas en contestar o pides demasiado, pueden retirarse.'}
+              : 'Acepta o rechaza. Si quieres pedir más, toca «Prefiero negociar». Si tardas en contestar o pides demasiado, pueden retirarse.'}
           </p>
           {ventas.map((n) => <Negociacion key={`${n.id}-${n.log.length}`} s={s} n={n} update={update} notify={notify} />)}
         </Card>
