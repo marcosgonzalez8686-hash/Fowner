@@ -1,4 +1,4 @@
-import { facilitiesOf } from '../game/rivals';
+import { facilitiesOf, homeAdvantage } from '../game/rivals';
 import { cupRotation } from '../game/cup';
 import { rivalCrest } from '../game/identity';
 import { squadOf, teamById } from '../game/market';
@@ -136,7 +136,9 @@ export default function Previa({ s, setup, onPlay, onSkip, onClose }: {
         </div>
         {nuestro && (() => {
           const rival = nuestro === h ? a : h;
-          const casa = setup.neutral ? 0 : nuestro === h ? 2 : -2;
+          // en liga, la ventaja de campo depende del estadio del local
+          const ventaja = setup.comp === 'liga' ? homeAdvantage(s, setup.homeId) : 2;
+          const casa = setup.neutral ? 0 : nuestro === h ? ventaja : -ventaja;
           const pr = winProbs(nuestro.plan.strength + staffMatchBonus(s) + moraleBonus(s) + casa, rival.plan.strength, nuestro.estilo, rival.estilo);
           const pct = (x: number) => Math.round(x * 100);
           const claves = preMatchKeys(s, nuestro.plan.xi);

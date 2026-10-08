@@ -93,6 +93,8 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
           {(sel.yellows ?? 0) > 0 && <>🟨 {sel.yellows} amarilla{sel.yellows! > 1 ? 's' : ''} esta temporada (con {YELLOW_LIMIT}, un partido de sanción)<br /></>}
           {TREND_TEXT[trendOf(sel)].icon} Está {TREND_TEXT[trendOf(sel)].text}
           {sel.filial && <><br />🅱️ Juega en el filial</>}
+          {sel.unhappy && <><br /><b className="warn">😤 Quiere jugar más: está descontento y escuchará ofertas</b></>}
+          {(sel.promiseUntil ?? -1) >= s.matchday && s.phase === 'temporada' && <><br />🤝 Le prometiste ser titular hasta la jornada {sel.promiseUntil}</>}
         </p>
         {sel.retiring && (
           <div className="hint warn-bg">

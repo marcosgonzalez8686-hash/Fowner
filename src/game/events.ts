@@ -6,6 +6,7 @@ import { chance, pick, randInt } from './rng';
 import type { GameState } from './types';
 import { changeSatisfaction } from './fans';
 import { changeMorale } from './morale';
+import { hasTrait } from './traits';
 
 // Eventos entre semana: de vez en cuando pasa algo y el dueño tiene que decidir
 
@@ -44,6 +45,36 @@ const aficion = (s: GameState, pct: number) => {
 };
 
 const TEMPLATES: Template[] = [
+  {
+    key: 'minutos',
+    icon: '😤',
+    create: (s) => {
+      if (s.phase !== 'temporada' || s.matchday < 8) return null;
+      const cand = minutesCandidates(s);
+      if (!cand.length) return null;
+      const p = cand[0];
+      return {
+        title: `${p.name} quiere jugar más`,
+        body: `Lleva ${p.season?.apps ?? 0} partidos en ${s.matchday} jornadas y se ha plantado en tu despacho: quiere minutos o salir.`,
+        options: [
+          { label: 'Prometerle minutos', hint: 'El entrenador le pondrá de titular las próximas jornadas' },
+          { label: 'Ponerle en el mercado', hint: 'Pasa a la lista de transferibles' },
+          { label: 'Que se gane el sitio', hint: 'Se queda descontento; el vestuario lo nota' },
+        ],
+        data: { id: p.id },
+      };
+    },
+    apply: (s, o, d) => {
+      const p = mySquad(s).find((x) => x.id === Number(d.id));
+      if (!p) return 'Ya no está en el club.';
+      if (o === 0) { p.promiseUntil = s.matchday + 6; p.unhappy = false; changeMorale(s, 1); return `${p.name} será titular las próximas seis jornadas.`; }
+      if (o === 1) { p.listed = true; p.unhappy = false; return `${p.name} pasa a la lista de transferibles.`; }
+      p.unhappy = true;
+      changeMorale(s, hasTrait(p, 'conflictivo') ? -4 : -2);
+      return `${p.name} se queda, pero descontento: aceptará con gusto cualquier oferta.`;
+    },
+  },
+
   {
     key: 'pena',
     icon: '🎉',
@@ -745,4 +776,36 @@ export function resolveEvent(s: GameState, opcion: number) {
   });
   s.pendingEvent = undefined;
   return resultado;
+}
+
+/** Jugadores que apenas juegan y podrían quejarse: los mejores primero, los ambiciosos antes */
+function minutesCandidates(s: GameState) {
+  const jornadas = Math.max(1, s.matchday);
+  return mySquad(s)
+    .filter((p) => !p.loan && !p.retiring && !p.unhappy && !p.listed && p.age >= 19 && !hasTrait(p, 'fiel') && (p.promiseUntil ?? -1) < s.matchday)
+    .filter((p) => (p.season?.apps ?? 0) / jornadas < 0.35)
+    .sort((a, b) => (hasTrait(b, 'ambicioso') ? 5 : 0) + b.ovr - ((hasTrait(a, 'ambicioso') ? 5 : 0) + a.ovr));
+}
+
+/** Cada 10 jornadas se repasan los minutos: los descontentos que vuelven a jugar se calman y alguien puede quejarse */
+export function minutesCheck(s: GameState) {
+  const jornadas = Math.max(1, s.matchday);
+  const contentos: string[] = [];
+  for (const p of mySquad(s)) {
+    if ((p.promiseUntil ?? -1) < s.matchday) delete p.promiseUntil;
+    if (!p.unhappy) continue;
+    if ((p.season?.apps ?? 0) / jornadas >= 0.45) {
+      p.unhappy = false;
+      contentos.push(p.name);
+    } else {
+      // un descontento que sigue sin jugar enrarece el vestuario
+      changeMorale(s, hasTrait(p, 'conflictivo') ? -2 : -1);
+    }
+  }
+  if (contentos.length) addMessage(s, { from: 'club', title: `🙂 Vuelven a estar contentos: ${contentos.join(', ')}`, body: 'Ahora juegan más y se les nota.' });
+  // la queja llega como la decisión de la semana (si no hay otra pendiente)
+  if (s.pendingEvent) return;
+  const t = TEMPLATES.find((x) => x.key === 'minutos')!;
+  const ev = t.create(s, DIV_SPONSOR[myTeam(s).division]);
+  if (ev) s.pendingEvent = { ...ev, id: s.nextId++, key: t.key, icon: t.icon };
 }

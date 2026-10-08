@@ -160,6 +160,8 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
                     {(p.injury ?? 0) > 0 && <b className="neg">Lesionado {p.injury} j. · </b>}
                     {(p.suspended ?? 0) > 0 && <b className="neg">🟥 Sancionado {p.suspended} partido{p.suspended! > 1 ? 's' : ''} · </b>}
                     {(p.yellows ?? 0) >= YELLOW_LIMIT - 1 && <b className="warn">🟨 {p.yellows} amarillas: a una de la sanción · </b>}
+                    {p.unhappy && <b className="warn">😤 quiere minutos · </b>}
+                    {(p.promiseUntil ?? -1) >= s.matchday && s.phase === 'temporada' && <b>🤝 titular prometido · </b>}
                     {p.retiring && <b className="warn">👴 se retira · </b>}
                     {p.loan && <b>🔁 cedido por {teamById(s, p.loan.from)?.short} · </b>}
                     {p.age} años {TREND_TEXT[trendOf(p)].icon} · {fmtMoney(p.salary)} · {p.contract <= 1 ? <b className="warn">acaba contrato</b> : `${p.contract} temp.`}

@@ -76,6 +76,7 @@ export default function TeamSheet({ s, id, onClose }: { s: GameState; id: number
               🏟️ <b>{f.stadium}</b> · {f.capacity.toLocaleString('es-ES')} espectadores
               {!t.country && <span className="muted"> (el nuestro: {s.club.capacity.toLocaleString('es-ES')})</span>}
             </p>
+            <p className="small muted">Influyen en cómo crecen sus jóvenes y en lo que aprietan en su campo.</p>
             <div className="fac-grid">
               {kinds.map((k) => {
                 const suyo = f.levels[k] ?? 0;

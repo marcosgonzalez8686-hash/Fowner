@@ -37,6 +37,8 @@ export interface Player {
   adapt?: { coach: number; apps: number }; // partidos jugados con el entrenador actual (adaptación al sistema)
   loan?: { from: number; until: number; apps: number }; // cedido: club dueño, temporada en que vuelve y partidos jugados
   valueStart?: number; // valor de mercado al empezar la temporada (para ver si se revaloriza)
+  unhappy?: boolean; // quiere más minutos (nuestros jugadores)
+  promiseUntil?: number; // le prometimos titularidad hasta esta jornada
   filial?: boolean; // juega en nuestro filial
   filialApps?: number; // partidos con el filial esta temporada
   yellows?: number; // amarillas acumuladas esta temporada (nuestros jugadores)

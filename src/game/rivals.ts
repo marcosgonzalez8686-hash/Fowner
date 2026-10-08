@@ -15,7 +15,7 @@ export interface RivalFacilities {
 // se calcula al usarla: así no depende del orden en que se cargan los módulos
 const kinds = () => Object.keys(BUILDINGS) as BuildingKind[];
 /** Aforo típico de cada categoría */
-const DIV_CAPACITY = [38_000, 15_000, 5_500, 1_800, 700];
+export const DIV_CAPACITY = [38_000, 15_000, 5_500, 1_800, 700];
 /** Nivel típico de ciudad deportiva y cantera (máx. 5) y del resto de edificios (máx. 3) */
 const DIV_MAIN = [4, 3, 2, 1, 0];
 const DIV_OTHER = [3, 2, 1, 1, 0];
@@ -82,3 +82,28 @@ export function growFacilities(s: GameState) {
     }
   }
 }
+
+// ---------- efectos en el juego ----------
+
+const nivelDe = (t: Team, k: BuildingKind) => facilitiesOf(t).levels[k] ?? 0;
+
+/** Ventaja de jugar en casa: un estadio grande para su categoría aprieta más (y uno pequeño, menos) */
+export function homeAdvantage(s: GameState, teamId: number) {
+  const t = s.teams.find((x) => x.id === teamId);
+  if (!t) return 2;
+  const aforo = teamId === s.club.teamId ? s.club.capacity : facilitiesOf(t).capacity;
+  const ratio = Math.min(2.5, Math.max(0.3, aforo / DIV_CAPACITY[t.division]));
+  return 1.4 + 0.6 * Math.log2(ratio + 1);
+}
+
+/** Cómo crecen los jugadores de un rival en verano según su ciudad deportiva, su cantera y su centro médico */
+export function rivalDevelopment(t: Team) {
+  return {
+    training: 1.5 + nivelDe(t, 'entrenamiento') * 0.5,
+    youth: 1 + nivelDe(t, 'cantera') * 0.05,
+    aging: 1 - nivelDe(t, 'medico') * 0.08,
+  };
+}
+
+/** Probabilidad de que un hueco de la plantilla rival lo cubra un canterano con proyección */
+export const rivalYouthChance = (t: Team) => nivelDe(t, 'cantera') * 0.08;

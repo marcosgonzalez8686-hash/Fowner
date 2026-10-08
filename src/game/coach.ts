@@ -34,7 +34,17 @@ export function ourPlan(s: GameState, squad: Player[] = mySquad(s)) {
   const coach = coachOf(s)?.id ?? 0;
   // el entrenador alinea por rendimiento real: nivel más encaje en su sistema
   // y rota a los cansados: un suplente fresco puede rendir más que un titular agotado
-  return { ...elevenFor(squad, t.formation, (p) => p.ovr + fitBonus(p, t.formation, t.style, coach) - fatiguePenalty(p)), ...t };
+  const rate = (p: Player) => p.ovr + fitBonus(p, t.formation, t.style, coach) - fatiguePenalty(p);
+  const plan = { ...elevenFor(squad, t.formation, rate), ...t };
+  // a quien le prometimos minutos, el entrenador lo pone en lugar del peor titular de su puesto
+  const prometidos = squad.filter((p) => (p.promiseUntil ?? -1) >= s.matchday && s.phase === 'temporada' && !plan.xi.includes(p) && !p.youth && !p.filial && !(p.injury && p.injury > 0) && !(p.suspended && p.suspended > 0));
+  for (const p of prometidos) {
+    const sale = plan.xi.filter((x) => x.pos === p.pos && (x.promiseUntil ?? -1) < s.matchday).sort((a, b) => rate(a) - rate(b))[0];
+    if (!sale) continue;
+    plan.xi = plan.xi.map((x) => (x === sale ? p : x));
+    plan.strength += (rate(p) - rate(sale)) / 11;
+  }
+  return plan;
 }
 
 /** Jugadores por línea que pide el sistema del entrenador */

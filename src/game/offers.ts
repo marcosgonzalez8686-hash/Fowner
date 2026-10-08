@@ -38,7 +38,7 @@ export function generateOffers(s: GameState, max: number) {
     const media = p.form?.length ? p.form.reduce((a, n) => a + n, 0) / p.form.length : 6;
     const interes =
       0.15 + Math.max(0, p.ovr - nivel) * 0.05 + (p.age <= 23 ? 0.1 : 0) + Math.max(0, media - 6.5) * 0.15 +
-      (hasTrait(p, 'ambicioso') ? 0.1 : 0) + (p.listed ? 0.4 : 0);
+      (hasTrait(p, 'ambicioso') ? 0.1 : 0) + (p.listed ? 0.4 : 0) + (p.unhappy ? 0.2 : 0);
     if (!chance(Math.min(0.8, interes))) continue;
     const comprador = buyerFor(s, p, p.listed);
     if (!comprador) continue;
@@ -48,7 +48,7 @@ export function generateOffers(s: GameState, max: number) {
     const rebaja = p.listed ? 0.85 : 1;
     const fee = roundMoney(valor * rand(0.75, 1.1) * (sube ? 1.1 : 1) * rebaja);
     const maxFee = roundMoney(valor * rand(0.95, 1.4) * (sube ? 1.1 : 1) * rebaja);
-    const quiereIrse = !hasTrait(p, 'fiel') && (sube || (hasTrait(p, 'ambicioso') && comprador.division <= myTeam(s).division));
+    const quiereIrse = Boolean(p.unhappy) || (!hasTrait(p, 'fiel') && (sube || (hasTrait(p, 'ambicioso') && comprador.division <= myTeam(s).division)));
     newSaleOffer(s, p, comprador.id, fee, Math.max(fee, maxFee), quiereIrse);
     nuevas++;
     addMessage(s, {

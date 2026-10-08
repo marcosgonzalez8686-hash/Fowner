@@ -24,10 +24,10 @@ import {
   makeStaffCandidates, marketingFansBonus, scoutDiscoveries, staffAgingFactor, staffEndSeason, staffMatchBonus, staffWages, youthGrowthBonus,
 } from './staff';
 import { refreshSponsorOffers, sponsorFixed, sponsorPerWin, sponsorsEndSeason } from './sponsor';
-import { maybeCreateEvent } from './events';
+import { maybeCreateEvent, minutesCheck } from './events';
 import { cupRoundDue, newCup, playCupRound, stillIn } from './cup';
 import { directorShopsListed, generateOffers } from './offers';
-import { growFacilities } from './rivals';
+import { growFacilities, homeAdvantage, rivalDevelopment, rivalYouthChance } from './rivals';
 import { resetYellows } from './discipline';
 import { aiTransfers } from './aitransfers';
 import { filialEndSeason, filialMatchday, filialSeasonCost } from './filial';
@@ -140,7 +140,7 @@ export function playMatchday(s: GameState) {
       // (el nuestro siempre juega a lo suyo)
       const sh = f.home === s.club.teamId ? ourTactics(s).style : chooseStyle(fuerza(f.home), fuerza(f.away), true);
       const sa = f.away === s.club.teamId ? ourTactics(s).style : chooseStyle(fuerza(f.away), fuerza(f.home), false);
-      const fh = fuerza(f.home) + 2 + gauss(0, 2);
+      const fh = fuerza(f.home) + homeAdvantage(s, f.home) + gauss(0, 2);
       const fa = fuerza(f.away) + gauss(0, 2);
       const { hg, ag } = simulate(fh, fa, sh, sa);
       f.hg = hg;
@@ -183,8 +183,8 @@ export function playMatchday(s: GameState) {
           gc: casa ? ag : hg,
           ours: fuerza(mio.id),
           rival: fuerza(casa ? f.away : f.home),
-          oursDay: casa ? fh - 2 : fa,
-          rivalDay: casa ? fa : fh - 2,
+          oursDay: casa ? fh - homeAdvantage(s, f.home) : fa,
+          rivalDay: casa ? fa : fh - homeAdvantage(s, f.home),
           home: casa,
           rivalStyle: casa ? sa : sh,
           xi: once(mio.id).xi,
@@ -303,6 +303,7 @@ export function playMatchday(s: GameState) {
   runDirector(s, 'jornada');
   expireProposals(s);
   if (s.matchday === 30) warnContracts(s);
+  if (s.matchday % 10 === 0 && s.matchday < MATCHDAYS) minutesCheck(s);
   if (s.matchday < MATCHDAYS) maybeCreateEvent(s);
 
   if (c.satisfaction <= 5) {
@@ -414,6 +415,7 @@ export function endSeason(s: GameState) {
   // la afición tiende a la media de su categoría
   for (const t of s.teams) t.fans = Math.round(t.fans * 0.85 + DIV_FANS[t.division] * 0.15 * rand(0.7, 1.3));
   resetYellows(s);
+  for (const p of s.players) { delete p.unhappy; delete p.promiseUntil; }
   // los demás clubes amplían estadio e instalaciones según su nueva categoría
   growFacilities(s);
   mio.fans = Math.round(mio.fans * fansGrowthBonus(s) * marketingFansBonus(s) * fansGrowthSatisfaction(s) * seasonTicketFansGrowth(s));
@@ -441,7 +443,10 @@ export function endSeason(s: GameState) {
       return false;
     }
     const antes = p.ovr;
-    develop(p, esMio ? s.club.training : 2.5, esMio ? agingFactor(s) * staffAgingFactor(s) : 1, esMio ? youthGrowthBonus(s) : 1);
+    // los rivales crecen según sus instalaciones
+    const rival = !esMio && p.teamId !== null ? teamById(s, p.teamId) : undefined;
+    const dev = rival && !rival.country ? rivalDevelopment(rival) : { training: 2.5, youth: 1, aging: 1 };
+    develop(p, esMio ? s.club.training : dev.training, esMio ? agingFactor(s) * staffAgingFactor(s) : dev.aging, esMio ? youthGrowthBonus(s) : dev.youth);
     if (esMio && !p.youth && p.ovr !== antes) evolucion.push({ name: p.name, d: p.ovr - antes });
     if (p.teamId === null) return p.age < 34 || chance(0.3);
     p.contract--;
@@ -477,7 +482,14 @@ export function endSeason(s: GameState) {
     const faltan = SQUAD_TARGET - restantes.length;
     for (let i = 0; i < faltan; i++) {
       const pos = (['POR', 'DEF', 'DEF', 'MED', 'MED', 'DEL'] as const)[i % 6];
-      s.players.push(makePlayer(s, nivel + rand(-2, 2), { teamId: t.id, pos, contract: randInt(1, 4) }));
+      // con buena cantera, algunos huecos los cubre un chaval con proyección
+      if (chance(rivalYouthChance(t))) {
+        const joven = makePlayer(s, nivel - 4 + rand(-2, 2), { teamId: t.id, pos, contract: randInt(2, 4), age: randInt(17, 19) });
+        joven.pot = Math.min(95, Math.max(joven.pot, joven.ovr + randInt(8, 16)));
+        s.players.push(joven);
+      } else {
+        s.players.push(makePlayer(s, nivel + rand(-2, 2), { teamId: t.id, pos, contract: randInt(1, 4) }));
+      }
     }
   }
   // si algún club se ha quedado sin portero, se le da uno
