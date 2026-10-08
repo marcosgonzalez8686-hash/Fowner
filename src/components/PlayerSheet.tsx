@@ -16,11 +16,11 @@ import { MAX_LOANS_IN, loanAnswer, loanFee, loanTarget } from '../game/loans';
 import { negFor, startLoanIn, startLoanOut, startPurchase, startRenewal } from '../game/negotiation';
 import { TREND_TEXT, persuadeVeteran, trendOf } from '../game/aging';
 import { potLabel, requestReport, shownPot } from '../game/scouting';
-import { FLAG } from '../game/continental';
+import { countryName, flagOf } from '../game/world';
 import { condition } from '../game/fatigue';
 import { fatiguePenalty } from '../game/match';
 import { TeamLink } from '../nav/context';
-import { marketValue, valueTrend } from '../game/market';
+import { marketValue, valueTrend, willJoin } from '../game/market';
 
 /** Cuánto se ha revalorizado (o depreciado) esta temporada */
 function Tendencia({ s, p }: { s: GameState; p: Player }) {
@@ -41,12 +41,24 @@ export function Condicion({ p }: { p: Player }) {
   );
 }
 
+/** Nacionalidad y partidos con su selección */
+function Nacion({ p }: { p: Player }) {
+  const c = p.caps ?? {};
+  const partes = [c.abs ? `${c.abs} con la absoluta` : '', c.u21 ? `${c.u21} con la sub-21` : '', c.u19 ? `${c.u19} con la sub-19` : ''].filter(Boolean);
+  return (
+    <span>
+      {flagOf(p.nat ?? 'ESP')} {countryName(p.nat ?? 'ESP')}
+      {partes.length ? ` · 🎽 Internacional (partidos): ${partes.join(', ')}` : ''}
+    </span>
+  );
+}
+
 /** Paso de dinero adecuado para la cantidad */
 const paso = (v: number) => (v >= 1_000_000 ? 50_000 : v >= 100_000 ? 5_000 : v >= 10_000 ? 1_000 : 100);
 
-/** Busca un jugador en cualquier sitio (también en los clubes extranjeros de la Copa de Campeones) */
+/** Busca un jugador por su id */
 export function findPlayer(s: GameState, id: number): Player | undefined {
-  return s.players.find((p) => p.id === id) ?? Object.values(s.continental?.squads ?? {}).flat().find((p) => p.id === id);
+  return s.players.find((p) => p.id === id);
 }
 
 /** Ficha de cualquier jugador: la nuestra con renovar/vender/ceder; la de otro club con fichar/pedir cedido */
@@ -82,6 +94,10 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
       <Sheet title={sel.name} onClose={onClose} top>
         <p className="muted">
           {sel.pos} · {sel.age} años · media {sel.ovr} · {potLabel(sel.ovr, shownPot(s, sel))}
+        <br />
+        <Nacion p={sel} />
+          <br />
+          <Nacion p={sel} />
           <br />
           Cobra {fmtMoney(sel.salary)}/temp. · contrato: {sel.contract} temp.
           <br />
@@ -237,7 +253,7 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
         <br />
         💰 Valor de mercado: <b>{fmtMoney(marketValue(s, sel))}</b> <Tendencia s={s} p={sel} />
         <br />
-        {club ? <TeamLink id={club.id}>{club.country ? `${FLAG[club.country] ?? ''} ${club.name}` : `${club.name} (${club.division + 1}ª)`}</TeamLink> : 'Agente libre'}
+        {club ? <TeamLink id={club.id}>{club.country ? `${flagOf(club.country)} ${club.name}` : `${club.name} (${club.division + 1}ª)`}</TeamLink> : 'Agente libre'}
         {sel.ovr >= nivel + 4 ? ' · de los buenos para nuestra categoría' : ''}
       </p>
       {liga?.apps ? (
@@ -249,8 +265,8 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
       <ProfileDetail s={s} p={sel} fichaje onReport={() => notify(update((g) => requestReport(g, sel.id)) ?? '')} />
       {nuestroCedido ? (
         <p className="hint">🔁 Es nuestro, cedido esta temporada. Vuelve en verano.</p>
-      ) : club?.country ? (
-        <p className="small muted">Juega en el extranjero: no está en nuestro mercado.</p>
+      ) : !willJoin(s, sel) ? (
+        <p className="small muted">🚫 Ahora mismo no vendría a un club de nuestra categoría. Cuando el club crezca, quizá sí.</p>
       ) : sel.loan ? (
         <p className="small muted">Está cedido: no se puede fichar hasta que vuelva a su club.</p>
       ) : (

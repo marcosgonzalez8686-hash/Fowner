@@ -8,6 +8,7 @@ import { Card, Ovr } from '../ui';
 import NegotiationsCard from '../components/Negotiations';
 import { PlayerTags } from '../components/Traits';
 import { useNav } from '../nav/context';
+import { countryName, flagOf } from '../game/world';
 
 type Filtro = 'TODOS' | Pos;
 
@@ -15,6 +16,8 @@ export default function Mercado({ s, update, notify }: ScreenProps) {
   const [pos, setPos] = useState<Filtro>('TODOS');
   const [soloAsequibles, setSoloAsequibles] = useState(true);
   const [libres, setLibres] = useState(false);
+  // 'TODAS', 'ESP' o el país de una liga extranjera
+  const [liga, setLiga] = useState('TODAS');
   const { openPlayer } = useNav();
   const nivel = DIV_LEVEL[myTeam(s).division];
 
@@ -23,11 +26,17 @@ export default function Mercado({ s, update, notify }: ScreenProps) {
       .filter((p) => p.teamId !== s.club.teamId && !p.youth && !p.loan)
       .filter((p) => pos === 'TODOS' || p.pos === pos)
       .filter((p) => !libres || p.teamId === null)
-      .filter((p) => willJoin(s, p))
+      .filter((p) => {
+        if (liga === 'TODAS' || p.teamId === null) return liga === 'TODAS' || libres;
+        const c = teamById(s, p.teamId)?.country;
+        return liga === 'ESP' ? !c : c === liga;
+      })
+      // en las ligas de fuera se ve a todos, aunque no vendrían todavía
+      .filter((p) => willJoin(s, p) || (liga !== 'TODAS' && liga !== 'ESP'))
       .filter((p) => !soloAsequibles || askingPrice(s, p) <= s.club.cash)
       .sort((a, b) => b.ovr - a.ovr)
       .slice(0, 40);
-  }, [s, pos, soloAsequibles, libres]);
+  }, [s, pos, soloAsequibles, libres, liga]);
 
   return (
     <>
@@ -49,15 +58,23 @@ export default function Mercado({ s, update, notify }: ScreenProps) {
         <button className={soloAsequibles ? 'on' : ''} onClick={() => setSoloAsequibles(!soloAsequibles)}>💰 Asequibles</button>
         <button className={libres ? 'on' : ''} onClick={() => setLibres(!libres)}>🆓 Solo libres</button>
       </div>
+      <div className="chips">
+        <button className={liga === 'TODAS' ? 'on' : ''} onClick={() => setLiga('TODAS')}>🌍 Todas las ligas</button>
+        <button className={liga === 'ESP' ? 'on' : ''} onClick={() => setLiga('ESP')}>{flagOf('ESP')} España</button>
+        {(s.world?.leagues ?? []).map((l) => (
+          <button key={l.country} className={liga === l.country ? 'on' : ''} onClick={() => setLiga(l.country)}>{flagOf(l.country)} {countryName(l.country)}</button>
+        ))}
+      </div>
       <Card>
         {lista.length === 0 && <p className="muted">No hay jugadores con estos filtros.</p>}
         {lista.map((p) => (
           <button key={p.id} className="player as-btn" onClick={() => openPlayer(p.id)}>
             <span className="pos">{p.pos}</span>
             <span className="name">
-              {p.name}
+              {p.nat && p.nat !== 'ESP' ? `${flagOf(p.nat)} ` : ''}{p.name}
               <small>
-                {p.age} años · {p.teamId === null ? 'libre' : teamById(s, p.teamId)!.name} · {fmtMoney(askingPrice(s, p))}
+                {!willJoin(s, p) && <b className="warn">🚫 no vendría a tu categoría · </b>}
+                {p.age} años · {p.teamId === null ? 'libre' : `${teamById(s, p.teamId)!.country ? `${flagOf(teamById(s, p.teamId)!.country)} ` : ''}${teamById(s, p.teamId)!.name}`} · {fmtMoney(askingPrice(s, p))}
               </small>
               <PlayerTags s={s} p={p} />
             </span>

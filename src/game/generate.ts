@@ -1,11 +1,13 @@
 import { fansExpectationMessage } from './fans';
 import { ensureFacilities } from './rivals';
+import { createWorld, randomNat } from './world';
+import { newEurope } from './europe';
 import { emptyStats } from './stats';
 import { rollIdentity } from './traits';
 import {
   DIV_FANS, DIV_LEVEL, DIV_PRICE, DIVISIONS, TEAMS_PER_DIV, emptyLedger, fairSalary,
 } from './economy';
-import { roundRobin } from './match';
+import { bestEleven, roundRobin } from './match';
 import { clubName, personName, shortName, townNames } from './names';
 import { clamp, gauss, pick, rand, randInt } from './rng';
 import { STANDING, newLand } from './land';
@@ -18,7 +20,7 @@ import { emptyRecords } from './history';
 import { defaultIdentity, ownerTitle, type Identity } from './identity';
 import type { Level, Task } from './types';
 import { STYLE_LABEL, runDirector } from './director';
-import { addMessage } from './market';
+import { addMessage, squadOf } from './market';
 import type { DDStyle, Director, GameState, Player, Pos, Team } from './types';
 
 export const SAVE_VERSION = 1;
@@ -41,9 +43,11 @@ export function makePlayer(s: GameState, level: number, opts: Partial<Player> = 
   // los jóvenes tienen más margen de mejora
   const margen = age <= 21 ? rand(4, 18) : age <= 25 ? rand(1, 9) : 0;
   const pot = clamp(Math.round(opts.pot ?? ovr + margen), ovr, 97);
+  const nat = opts.nat ?? randomNat('ESP', 0.82);
   const p: Player = {
     id: newId(s),
-    name: personName(),
+    name: personName(nat),
+    nat,
     pos: opts.pos ?? pick(PLANTILLA),
     age,
     ovr,
@@ -173,6 +177,9 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
   }
 
   ensureFacilities(s.teams.filter((t) => t.id !== s.club.teamId));
+  createWorld(s);
+  // competiciones europeas de la primera temporada: los mejores de cada liga según su plantilla
+  newEurope(s, s.teams.filter((t) => t.division === 0).sort((a, b) => bestEleven(squadOf(s, b.id)).strength - bestEleven(squadOf(s, a.id)).strength).map((t) => t.id));
   s.fixtures = buildAllFixtures(s);
   s.directorsMarket = makeDirectors(s, ultima);
   s.staffMarket = makeStaffCandidates(s, ultima);

@@ -4,7 +4,7 @@ import type { MatchReport } from './report';
 import type { Role, Staff } from './staff';
 import type { Profile, Trait } from './traits';
 import type { LeagueStats } from './stats';
-import type { Continental, Supercopa } from './continental';
+import type { Supercopa } from './continental';
 import type { Negotiation } from './negotiation';
 import type { SponsorContract, SponsorSlot } from './sponsor';
 import type { PendingEvent } from './events';
@@ -37,6 +37,8 @@ export interface Player {
   adapt?: { coach: number; apps: number }; // partidos jugados con el entrenador actual (adaptación al sistema)
   loan?: { from: number; until: number; apps: number }; // cedido: club dueño, temporada en que vuelve y partidos jugados
   valueStart?: number; // valor de mercado al empezar la temporada (para ver si se revaloriza)
+  nat?: string; // nacionalidad (código de país; España si falta)
+  caps?: { abs?: number; u21?: number; u19?: number }; // partidos con la selección
   unhappy?: boolean; // quiere más minutos (nuestros jugadores)
   promiseUntil?: number; // le prometimos titularidad hasta esta jornada
   filial?: boolean; // juega en nuestro filial
@@ -55,7 +57,7 @@ export interface Team {
   short: string;
   division: number; // 0 = Primera ... 4 = la más baja
   fans: number;
-  country?: string; // solo clubes extranjeros (Copa de Campeones)
+  country?: string; // clubes extranjeros: código del país de su liga
   fac?: import('./rivals').RivalFacilities; // estadio y edificios (los rivales)
 }
 
@@ -194,6 +196,8 @@ export interface GameState {
   pendingEvent?: PendingEvent;
   cup: Cup;
   negotiations: Negotiation[]; // fichajes, ventas y cesiones en marcha (y las últimas cerradas)
+  world?: { leagues: import('./world').ForeignLeague[] };
+  nations?: import('./nations').NationsState; // selecciones: última convocatoria y palmarés // ligas de otros países
   playoffs?: import('./playoff').Playoff[]; // playoffs de ascenso de la temporada que acaba
   introPending?: boolean; // partida nueva: falta enseñar la bienvenida
   skipCoach?: number; // temporada en la que el dueño decidió seguir sin entrenador
@@ -206,7 +210,8 @@ export interface GameState {
   lastReport?: MatchReport; // informe de nuestro último partido
   leagueStats: LeagueStats; // goleadores, asistentes y notas de la temporada
   supercopa?: Supercopa;
-  continental?: Continental; // Copa de Campeones (solo si nos clasificamos)
+  continental?: unknown; // antigua Copa de Campeones (partidas de antes; se borra al cargar)
+  europe?: import('./europe').Europe; // Champions, Europa League y Conference de la temporada
   gameOver?: string;
   nextId: number;
 }

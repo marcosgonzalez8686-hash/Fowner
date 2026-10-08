@@ -1,4 +1,5 @@
 import { DIV_LEVEL, DIVISION_NAMES, fairSalary, fmtMoney, playerValue, roundMoney } from './economy';
+import { COUNTRIES, worldTeams } from './world';
 import { addMessage, marketOpen, myTeam, squadOf, teamById } from './market';
 import { FORMACION } from './match';
 import { breakNegotiationsFor } from './negotiation';
@@ -23,10 +24,11 @@ export function aiTransfers(s: GameState) {
   const movimientos: Movimiento[] = [];
   const ops = s.phase === 'pretemporada' ? randInt(6, 10) : randInt(3, 6);
   for (let i = 0; i < ops; i++) {
-    const comprador = pick(s.teams.filter((t) => t.id !== mio));
+    // compran los clubes españoles y los de las ligas extranjeras
+    const comprador = pick([...s.teams, ...worldTeams(s)].filter((t) => t.id !== mio));
     const plantilla = squadOf(s, comprador.id);
     if (plantilla.length >= MAX_PLANTILLA + 1) continue;
-    const nivel = DIV_LEVEL[comprador.division];
+    const nivel = comprador.country ? COUNTRIES[comprador.country].level! : DIV_LEVEL[comprador.division];
     const pos = pick(POSICIONES);
     const titulares = plantilla.filter((p) => p.pos === pos).sort((a, b) => b.ovr - a.ovr).slice(0, FORMACION[pos]);
     const liston = titulares.length >= FORMACION[pos] ? titulares[titulares.length - 1].ovr : nivel - 6;
@@ -37,8 +39,10 @@ export function aiTransfers(s: GameState) {
       if (p.ovr < liston + 2 || p.ovr > nivel + 8 || p.age > 32) return false;
       if (p.teamId === null) return true;
       const vendedor = teamById(s, p.teamId);
-      // se ficha a clubes de la misma categoría o de abajo, y el vendedor no se queda corto
-      return Boolean(vendedor && !vendedor.country && vendedor.division >= comprador.division && squadOf(s, vendedor.id).length > MIN_PLANTILLA);
+      // se ficha a clubes de un nivel igual o inferior (también de otras ligas), y el vendedor no se queda corto
+      if (!vendedor) return false;
+      const nivelVendedor = vendedor.country ? COUNTRIES[vendedor.country].level! : DIV_LEVEL[vendedor.division];
+      return nivelVendedor <= nivel + 1 && squadOf(s, vendedor.id).length > MIN_PLANTILLA;
     });
     if (!candidatos.length) continue;
     const p = pick(candidatos.sort((a, b) => b.ovr - a.ovr).slice(0, 5));
@@ -81,7 +85,8 @@ export function aiTransfers(s: GameState) {
 /** Resumen en el buzón: los de nuestra categoría, los grandes y los que nos afectan */
 function noticias(s: GameState, movs: Movimiento[]) {
   const div = myTeam(s).division;
-  const relevantes = movs.filter((m) => m.nuestro || m.to.division === div || m.from?.division === div || m.to.division === 0);
+  // noticias de España (nuestra categoría y Primera) y de los fichajes de los grandes de fuera a clubes españoles o al revés
+  const relevantes = movs.filter((m) => m.nuestro || (!m.to.country && (m.to.division === div || m.to.division === 0)) || (!m.from?.country && m.from?.division === div) || (Boolean(m.to.country) !== Boolean(m.from?.country) && m.p.ovr >= 70));
   if (!relevantes.length) return;
   const linea = (m: Movimiento) =>
     `• ${m.p.name} (${m.p.pos}, ${m.p.ovr}): ${m.from ? `${m.from.name} → ` : 'libre → '}${m.to.name}${m.fee ? ` · ${fmtMoney(m.fee)}` : ''}`;

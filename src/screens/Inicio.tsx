@@ -22,7 +22,9 @@ import LiveMatch from '../components/LiveMatch';
 import { levelOf } from '../game/director';
 import { ROUND_NAMES, myCupMatchDue, myTie, playCupRound } from '../game/cup';
 import { TeamLink } from '../nav/context';
-import { CONT_NAME, CONT_ROUNDS, FLAG, SUPER_NAME, myContDue, myContTie, mySuperDue, playContinentalRound, playSupercopa } from '../game/continental';
+import { SUPER_NAME, mySuperDue, playSupercopa } from '../game/continental';
+import { EURO, EURO_STAGES, myEuroDue, myEuroTie, playEuroStage } from '../game/europe';
+import { countryName, flagOf } from '../game/world';
 import FansCard from '../components/FansCard';
 import Pretemporada from '../components/Pretemporada';
 import { facilitiesOf } from '../game/rivals';
@@ -58,9 +60,9 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
       const sc = s.supercopa!;
       return { comp: 'super' as const, icon: '🏅', label: SUPER_NAME, rivalId: sc.a === t.id ? sc.b : sc.a, home: null as number | null };
     }
-    if (!copaAhora && myContDue(s)) {
-      const tie = myContTie(s)!;
-      return { comp: 'europa' as const, icon: '🌍', label: `${CONT_NAME} · ${CONT_ROUNDS[s.continental!.current]}`, rivalId: tie.a === t.id ? tie.b : tie.a, home: tie.home };
+    if (!copaAhora && myEuroDue(s)) {
+      const { comp, tie } = myEuroTie(s)!;
+      return { comp: 'europa' as const, icon: EURO[comp.key].icon, label: `${EURO[comp.key].name} · ${EURO_STAGES[comp.stage]}`, rivalId: tie.a === t.id ? tie.b : tie.a, home: tie.home };
     }
     return null;
   })();
@@ -91,7 +93,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const abrirPrevia = (setup: MatchSetup) => setFase({ tipo: 'previa', setup });
   const disputar = (comp: MatchSetup['comp'], enDirecto: boolean) => {
     update((g) =>
-      comp === 'copa' ? playCupRound(g) : comp === 'super' ? playSupercopa(g) : comp === 'europa' ? playContinentalRound(g) : comp === 'playoff' ? playPlayoffRound(g) : playMatchday(g),
+      comp === 'copa' ? playCupRound(g) : comp === 'super' ? playSupercopa(g) : comp === 'europa' ? playEuroStage(g) : comp === 'playoff' ? playPlayoffRound(g) : playMatchday(g),
     );
     if (enDirecto) setFase({ tipo: 'directo' });
     else {
@@ -158,7 +160,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
                 {local === t.id ? el : yo}
               </div>
               <p className="muted center small">
-                {rival.country ? `${FLAG[rival.country] ?? ''} ${rival.country}` : especial.comp === 'playoff' ? `${computeStandings(s.teams.filter((x) => x.division === t.division).map((x) => x.id), s.fixtures[t.division]).findIndex((r) => r.teamId === rival.id) + 1}º en la liga` : `${rival.division + 1}ª división`} ·{' '}
+                {rival.country ? `${flagOf(rival.country)} ${countryName(rival.country)}` : especial.comp === 'playoff' ? `${computeStandings(s.teams.filter((x) => x.division === t.division).map((x) => x.id), s.fixtures[t.division]).findIndex((r) => r.teamId === rival.id) + 1}º en la liga` : `${rival.division + 1}ª división`} ·{' '}
                 {especial.home === null ? 'campo neutral' : especial.home === t.id ? 'en casa' : 'a domicilio'}
               </p>
               <div className="row">

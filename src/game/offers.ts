@@ -1,6 +1,7 @@
 import { DIV_LEVEL, fmtMoney, roundMoney } from './economy';
 import { addMessage, marketOpen, marketValue, myTeam, mySquad } from './market';
 import { directorSells, negFor, newSaleOffer } from './negotiation';
+import { COUNTRIES, countryName, flagOf, worldTeams } from './world';
 import { pick, rand, chance } from './rng';
 import { hasTrait } from './traits';
 import type { GameState, Player } from './types';
@@ -19,6 +20,11 @@ function buyerFor(s: GameState, p: Player, amplio = false) {
   // preferimos categorías iguales o superiores a la nuestra
   const arriba = divs.filter((d) => d <= mia);
   const d = pick(arriba.length ? arriba : divs);
+  // a los que tienen nivel de Primera también los quieren en el extranjero
+  if (d === 0 && Math.random() < 0.4) {
+    const fuera = worldTeams(s).filter((t) => Math.abs(COUNTRIES[t.country!].level! - p.ovr) <= 8);
+    if (fuera.length) return pick(fuera);
+  }
   return pick(s.teams.filter((t) => t.division === d && t.id !== s.club.teamId));
 }
 
@@ -55,7 +61,7 @@ export function generateOffers(s: GameState, max: number) {
       from: 'club',
       title: `📨 Oferta por ${p.name}: ${fmtMoney(fee)}`,
       body:
-        `${comprador.name} (${comprador.division + 1}ª) quiere a ${p.name} (${p.pos}, ${p.ovr}).` +
+        `${comprador.name} (${comprador.country ? `${flagOf(comprador.country)} ${countryName(comprador.country)}` : `${comprador.division + 1}ª`}) quiere a ${p.name} (${p.pos}, ${p.ovr}).` +
         (quiereIrse ? ' Al jugador le seduce dar el salto.' : '') +
         (directorSells(s, p) ? '\nLa negocia tu director deportivo: te pedirá el visto bueno si hay acuerdo.' : '\nResponde en Equipo → Mercado: si tardas, pueden retirarla.'),
     });
@@ -79,7 +85,7 @@ export function directorShopsListed(s: GameState) {
     addMessage(s, {
       from: 'director',
       title: `Oferta por ${p.name}: he encontrado comprador`,
-      body: `He movido a ${p.name} entre los clubes y el ${comprador.name} (${comprador.division + 1}ª) ofrece ${fmtMoney(fee)}. Negocio yo y te pido el visto bueno si cerramos.`,
+      body: `He movido a ${p.name} entre los clubes y el ${comprador.name} (${comprador.country ? `${flagOf(comprador.country)} ${countryName(comprador.country)}` : `${comprador.division + 1}ª`}) ofrece ${fmtMoney(fee)}. Negocio yo y te pido el visto bueno si cerramos.`,
     });
   }
 }

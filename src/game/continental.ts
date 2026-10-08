@@ -1,22 +1,21 @@
-import { DIV_LEVEL, fmtMoney } from './economy';
+import { fmtMoney } from './economy';
 import { changeSatisfaction } from './fans';
-import { makePlayer, PLANTILLA } from './generate';
 import { recordMatch } from './history';
 import { addMessage, myTeam, squadOf, teamById } from './market';
 import { bestEleven, chooseStyle, simulate } from './match';
 import { changeMorale, injuryName, isInjured, moraleBonus, rollInjuries } from './morale';
 import { buildReport } from './report';
-import { gauss, pick, rand, shuffle } from './rng';
+import { gauss } from './rng';
 import { staffMatchBonus } from './staff';
 import { ourPlan, ourTactics } from './coach';
 import { cupAttendance } from './tickets';
 import { matchKeys } from './insights';
 import { tire } from './fatigue';
 import { penalties, type CupTie } from './cup';
-import type { GameState, Player, Team } from './types';
+import type { GameState } from './types';
 
-// Supercopa (campeón de Liga de Primera contra campeón de Copa) y Copa de Campeones
-// (los 4 primeros de Primera contra 12 clubes extranjeros), a partido único.
+// Supercopa (campeón de Liga de Primera contra campeón de Copa) y el partido de eliminatoria
+// que usan las demás competiciones (europeas y playoff).
 
 export interface Supercopa {
   season: number;
@@ -28,34 +27,8 @@ export interface Supercopa {
   winner?: number;
 }
 
-export interface Continental {
-  season: number;
-  foreign: Team[];
-  squads: Record<number, Player[]>;
-  rounds: CupTie[][];
-  current: number;
-  champion?: number;
-}
-
 export const SUPER_NAME = 'Supercopa';
 export const SUPER_PRIZE = { win: 250_000, lose: 80_000 };
-export const CONT_NAME = 'Copa de Campeones';
-export const CONT_ROUNDS = ['Octavos', 'Cuartos', 'Semifinales', 'Final'];
-/** La ronda i se juega tras la jornada de liga indicada (sin pisar a la Copa) */
-export const CONT_AFTER = [10, 16, 23, 30];
-export const CONT_PRIZE = [500_000, 1_000_000, 2_000_000, 5_000_000];
-export const CONT_ENTRY = 1_000_000;
-
-const CLUBES: Record<string, string[]> = {
-  Italia: ['AC Vesuvia', 'Real Torrese', 'Unione Lagunare', 'Sporting Montefiore'],
-  Inglaterra: ['Ashford Rovers', 'Kingsbridge United', 'Northvale Athletic', 'Westmoor City'],
-  Alemania: ['FC Rheinfeld', 'Borussia Altdorf', 'SV Edelburg', 'Eintracht Hohenwald'],
-  Francia: ['Olympique Valmont', 'AS Saint-Lucien', 'Racing Belleville', 'FC Montclair'],
-  Portugal: ['Sporting Ribamar', 'FC Alvorada', 'Vitória de Serrana', 'Académica do Douro'],
-  'Países Bajos': ['SC Lindehoven', 'Willem Westerdam', 'FC Zuidburg', 'VV Delfhaven'],
-};
-export const FLAG: Record<string, string> = { Italia: '🇮🇹', Inglaterra: '🇬🇧', Alemania: '🇩🇪', Francia: '🇫🇷', Portugal: '🇵🇹', 'Países Bajos': '🇳🇱' };
-
 // ---------- Supercopa ----------
 
 export function newSupercopa(s: GameState, ligaCampeon: number, ligaSegundo: number, copaCampeon?: number, copaFinalista?: number) {
@@ -102,91 +75,6 @@ export function playSupercopa(s: GameState) {
   });
 }
 
-// ---------- Copa de Campeones ----------
-
-/** Se crea en verano si hemos quedado entre los 4 primeros de Primera */
-export function newContinental(s: GameState, top4: number[]) {
-  if (!top4.includes(s.club.teamId)) {
-    s.continental = undefined;
-    return;
-  }
-  const foreign: Team[] = [];
-  const squads: Record<number, Player[]> = {};
-  const paises = Object.keys(CLUBES);
-  const nombres = shuffle(paises.flatMap((c) => CLUBES[c].map((n) => ({ c, n })))).slice(0, 12);
-  for (const { c, n } of nombres) {
-    const id = s.nextId++;
-    const corto = n.replace(/^(AC|FC|SC|AS|SV|VV|Real|Sporting|Unione|Borussia|Eintracht|Olympique|Racing|Willem|Vitória de|Académica do)\s+/, '').slice(0, 3).toUpperCase();
-    foreign.push({ id, name: n, short: corto, division: 0, fans: 40_000, country: c });
-    // nivel de un grande europeo: como los mejores de Primera
-    const nivel = DIV_LEVEL[0] + rand(-3, 5);
-    squads[id] = PLANTILLA.map((pos) => makePlayer(s, nivel, { pos, teamId: id, contract: 3 }));
-  }
-  const ids = shuffle([...top4, ...foreign.map((t) => t.id)]);
-  s.continental = { season: s.season, foreign, squads, rounds: [pairs(ids, false)], current: 0 };
-  s.club.cash += CONT_ENTRY;
-  s.club.ledger.copa += CONT_ENTRY;
-  const nuestra = myContTie(s)!;
-  const rival = teamById(s, nuestra.a === s.club.teamId ? nuestra.b : nuestra.a)!;
-  addMessage(s, {
-    from: 'liga',
-    title: `🌍 ¡Jugamos la ${CONT_NAME}!`,
-    body:
-      `Por quedar entre los 4 primeros de Primera. Solo por participar: ${fmtMoney(CONT_ENTRY)}.\n` +
-      `Octavos: ${rival.name} (${FLAG[rival.country!] ?? ''} ${rival.country}), tras la jornada ${CONT_AFTER[0]}.`,
-  });
-}
-
-function pairs(ids: number[], final: boolean): CupTie[] {
-  const out: CupTie[] = [];
-  for (let i = 0; i < ids.length; i += 2) out.push({ a: ids[i], b: ids[i + 1], home: final ? null : pick([ids[i], ids[i + 1]]) });
-  return out;
-}
-
-export const myContTie = (s: GameState) => s.continental?.rounds[s.continental.current]?.find((t) => t.a === s.club.teamId || t.b === s.club.teamId);
-
-export const contDue = (s: GameState) =>
-  s.phase === 'temporada' && s.continental?.season === s.season && s.continental.champion === undefined && s.matchday >= CONT_AFTER[s.continental.current];
-export const myContDue = (s: GameState) => contDue(s) && myContTie(s)?.winner === undefined && Boolean(myContTie(s));
-
-export function playContinentalRound(s: GameState) {
-  if (!contDue(s)) return;
-  const c = s.continental!;
-  const ronda = c.current;
-  const mio = s.club.teamId;
-  for (const tie of c.rounds[ronda]) {
-    playTie(s, tie, `${CONT_NAME} · ${CONT_ROUNDS[ronda]}`, 1.6);
-    if (tie.a !== mio && tie.b !== mio) continue;
-    const rival = teamById(s, tie.a === mio ? tie.b : tie.a)!;
-    if (tie.winner === mio) {
-      const premio = CONT_PRIZE[ronda];
-      s.club.cash += premio;
-      s.club.ledger.copa += premio;
-      changeMorale(s, 5);
-      const final = ronda === CONT_ROUNDS.length - 1;
-      changeSatisfaction(s, final ? 20 : 4, final ? `¡Campeones de la ${CONT_NAME}!` : `${CONT_NAME}: pasamos ${CONT_ROUNDS[ronda].toLowerCase()}`);
-      if (final) s.club.trophies.push({ season: s.season, name: CONT_NAME });
-      addMessage(s, {
-        from: 'liga',
-        title: final ? `🌍 ¡¡CAMPEONES DE LA ${CONT_NAME.toUpperCase()}!!` : `🌍 ${CONT_NAME}: pasamos ${CONT_ROUNDS[ronda].toLowerCase()}`,
-        body: `${marcador(s, tie)} ante el ${rival.name}. Premio: ${fmtMoney(premio)}.${final ? ' El club entra en la historia del fútbol europeo.' : ''}`,
-      });
-    } else {
-      changeMorale(s, -2);
-      changeSatisfaction(s, -1, `${CONT_NAME}: eliminados`);
-      addMessage(s, { from: 'liga', title: `🌍 ${CONT_NAME}: eliminados en ${CONT_ROUNDS[ronda].toLowerCase()}`, body: `${marcador(s, tie)} ante el ${rival.name}.` });
-    }
-  }
-  const ganadores = c.rounds[ronda].map((t) => t.winner!);
-  c.current++;
-  if (ronda === CONT_ROUNDS.length - 1) {
-    c.champion = ganadores[0];
-    if (c.champion !== mio) addMessage(s, { from: 'liga', title: `🌍 ${teamById(s, c.champion)!.name}, campeón de la ${CONT_NAME}`, body: 'Termina la competición europea.' });
-  } else {
-    c.rounds.push(pairs(shuffle(ganadores), c.current === CONT_ROUNDS.length - 1));
-  }
-}
-
 // ---------- partido de eliminatoria ----------
 
 const marcador = (s: GameState, t: CupTie) => {
@@ -197,7 +85,7 @@ const marcador = (s: GameState, t: CupTie) => {
 };
 
 /** Juega una eliminatoria a partido único; si es nuestra, deja el informe para el resumen */
-export function playTie(s: GameState, tie: CupTie, label: string, atractivo: number) {
+export function playTie(s: GameState, tie: CupTie, label: string, atractivo: number, allowDraw = false) {
   const mio = myTeam(s);
   const extra = staffMatchBonus(s) + moraleBonus(s);
   const plan = (id: number) => (id === mio.id ? ourPlan(s, squadOf(s, id)) : bestEleven(squadOf(s, id)));
@@ -213,6 +101,7 @@ export function playTie(s: GameState, tie: CupTie, label: string, atractivo: num
   tie.ga = ga;
   tie.gb = gb;
   if (ga !== gb) tie.winner = ga > gb ? tie.a : tie.b;
+  else if (allowDraw) tie.winner = undefined; // fase liga: el empate vale un punto
   else {
     const p = penalties(fa, fb);
     tie.pens = `${p.a}-${p.b}`;

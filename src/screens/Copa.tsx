@@ -8,7 +8,9 @@ import { teamById } from '../game/market';
 import type { GameState } from '../game/types';
 import { Card } from '../ui';
 import { TeamLink } from '../nav/context';
-import { CONT_AFTER, CONT_ENTRY, CONT_NAME, CONT_PRIZE, CONT_ROUNDS, FLAG, SUPER_NAME, SUPER_PRIZE } from '../game/continental';
+import { SUPER_NAME, SUPER_PRIZE } from '../game/continental';
+import { EURO, EURO_AFTER, EURO_KEYS, EURO_STAGES, euroTable, myEuroComp, type EuroKey } from '../game/europe';
+import { flagOf } from '../game/world';
 import type { CupTie } from '../game/cup';
 
 function Cruce({ s, t, mine }: { s: GameState; t: CupTie; mine?: boolean }) {
@@ -24,11 +26,14 @@ function Cruce({ s, t, mine }: { s: GameState; t: CupTie; mine?: boolean }) {
   );
 }
 
-/** Supercopa y Copa de Campeones de esta temporada */
+/** Supercopa y competiciones europeas de esta temporada */
 function OtrasCompeticiones({ s }: { s: GameState }) {
   const mio = s.club.teamId;
   const sc = s.supercopa?.season === s.season ? s.supercopa : undefined;
-  const c = s.continental?.season === s.season ? s.continental : undefined;
+  const europa = s.europe?.season === s.season ? s.europe : undefined;
+  const mia = myEuroComp(s);
+  const [ver, setVer] = useState<EuroKey>(mia?.key ?? 'ucl');
+  const c = europa?.comps.find((x) => x.key === ver);
   return (
     <>
       {sc && (
@@ -40,24 +45,50 @@ function OtrasCompeticiones({ s }: { s: GameState }) {
           </p>
         </Card>
       )}
-      {c ? (
-        <Card title={`🌍 ${CONT_NAME} · temporada ${s.season}`}>
+      {europa && c && (
+        <Card title={`🇪🇺 Competiciones europeas · temporada ${s.season}`}>
+          <div className="chips">
+            {EURO_KEYS.map((k) => (
+              <button key={k} className={ver === k ? 'on' : ''} onClick={() => setVer(k)}>
+                {EURO[k].icon} {EURO[k].name}{mia?.key === k ? ' ★' : ''}
+              </button>
+            ))}
+          </div>
           <p className="small muted">
-            16 clubes de Europa a partido único. Participar: {fmtMoney(CONT_ENTRY)}; pasar cada ronda:{' '}
-            {CONT_PRIZE.map((x) => fmtMoney(x)).join(' / ')}.
+            16 clubes. Fase liga de 4 jornadas (tras las jornadas {EURO_AFTER.slice(0, 4).join(', ')}): los 8 primeros pasan a cuartos (jornada {EURO_AFTER[4]}), semifinales ({EURO_AFTER[5]}) y final en campo neutral ({EURO_AFTER[6]}).
+            Participar: {fmtMoney(EURO[ver].entry)} · victoria: {fmtMoney(EURO[ver].win)} · pasar ronda: {EURO[ver].ko.map((x) => fmtMoney(x)).join(' / ')}.
           </p>
-          {[...c.rounds].map((r, i) => ({ r, i })).reverse().map(({ r, i }) => (
+          {c.champion !== undefined && <p><b>🏆 Campeón: {teamById(s, c.champion)?.name}</b></p>}
+          {[...c.ko].map((r, i) => ({ r, i })).reverse().map(({ r, i }) => (
             <div key={i}>
-              <h4>{CONT_ROUNDS[i]} · tras la jornada {CONT_AFTER[i]}</h4>
-              {[...r].sort((x, y) => Number(y.a === mio || y.b === mio) - Number(x.a === mio || x.b === mio)).map((t, j) => (
-                <Cruce key={j} s={s} t={t} mine={t.a === mio || t.b === mio} />
-              ))}
+              <h4>{EURO_STAGES[4 + i]}</h4>
+              {r.map((t, j) => <Cruce key={j} s={s} t={t} mine={t.a === mio || t.b === mio} />)}
             </div>
           ))}
-          {c.champion !== undefined && <p><b>Campeón: {teamById(s, c.champion)?.name}</b></p>}
+          <h4>Fase liga{c.stage < 4 ? ` · jornada ${c.stage + 1} tras la jornada ${EURO_AFTER[c.stage]}` : ''}</h4>
+          <table className="table">
+            <thead><tr><th>#</th><th className="left">Equipo</th><th>PJ</th><th>DG</th><th>Pts</th></tr></thead>
+            <tbody>
+              {euroTable(c).map((r, i) => {
+                const tm = teamById(s, r.teamId)!;
+                return (
+                  <tr key={r.teamId} className={`${i < 8 ? 'up' : ''} ${r.teamId === mio ? 'me' : ''}`}>
+                    <td>{i + 1}</td>
+                    <td className="left">{flagOf(tm.country ?? 'ESP')} <TeamLink id={r.teamId === mio ? undefined : r.teamId}>{tm.name}</TeamLink></td>
+                    <td>{r.pj}</td>
+                    <td>{r.gf - r.gc > 0 ? '+' : ''}{r.gf - r.gc}</td>
+                    <td><b>{r.pts}</b></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </Card>
-      ) : (
-        <p className="small muted center">🌍 Los 4 primeros de Primera juegan la {CONT_NAME} la temporada siguiente.</p>
+      )}
+      {!mia && (
+        <p className="small muted center">
+          🇪🇺 Desde la Primera española: del 1º al 4º a la Champions, 5º y 6º (o el campeón de Copa) a la Europa League, 7º y 8º a la Conference.
+        </p>
       )}
     </>
   );
@@ -70,7 +101,7 @@ function Equipo({ s, id, ganador }: { s: GameState; id: number; ganador?: number
     <span className={`cup-team${mio ? ' me' : ''}${ganador !== undefined && ganador !== id ? ' out' : ''}`}>
       <Crest c={mio ? s.club.identity.crest : rivalCrest(t.id, t.short)} size={18} />
       <span className="cup-name"><TeamLink id={mio ? undefined : t.id}>{t.name}</TeamLink></span>
-      <small>{t.country ? FLAG[t.country] : `${t.division + 1}ª`}</small>
+      <small>{t.country ? flagOf(t.country) : `${t.division + 1}ª`}</small>
     </span>
   );
 }

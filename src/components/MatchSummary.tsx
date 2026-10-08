@@ -1,3 +1,4 @@
+import { teamById } from '../game/market';
 import { fmtMoney } from '../game/economy';
 import { rivalCrest } from '../game/identity';
 import type { MatchReport, SideStats } from '../game/report';
@@ -20,7 +21,7 @@ const FILAS: { k: keyof SideStats; label: string; pct?: boolean }[] = [
 const ICONO = { gol: '⚽', amarilla: '🟨', roja: '🟥', lesion: '🤕', ocasion: '🎯', cambio: '🔁' } as const;
 
 export default function MatchSummary({ s, r, onClose }: { s: GameState; r: MatchReport; onClose: () => void }) {
-  const team = (id: number) => s.teams.find((t) => t.id === id)!;
+  const team = (id: number) => teamById(s, id)!;
   const mio = s.club.teamId;
   const crest = (id: number) => (id === mio ? s.club.identity.crest : rivalCrest(id, team(id).short));
   const nuestroLado = r.home === mio ? 'home' : 'away';

@@ -18,6 +18,7 @@ import { TREND_TEXT, trendOf } from '../game/aging';
 import { condition } from '../game/fatigue';
 import { potLabel } from '../game/scouting';
 import { YELLOW_LIMIT } from '../game/discipline';
+import { flagOf } from '../game/world';
 import { negFor } from '../game/negotiation';
 
 /** Marcas de salida: transferible, cesión o venta en marcha, renovación */
@@ -85,7 +86,7 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
           </p>
         )}
         <p className="small muted">
-          ⭐ titular · 🤕 lesionado · 🟥 sancionado · 🔋 condición física · ✅ encaja en el sistema · ➖ normal · ❌ no encaja · 🏷️ transferible · 🔁 ofrecido cedido. Toca un jugador para ver su perfil y su carácter.
+          ⭐ titular · 🤕 lesionado · 🟥 sancionado · 🎽 internacional · 🔋 condición física · ✅ encaja en el sistema · ➖ normal · ❌ no encaja · 🏷️ transferible · 🔁 ofrecido cedido. Toca un jugador para ver su perfil y su carácter.
         </p>
       </Card>
 
@@ -154,7 +155,7 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
               <button key={p.id} className="player as-btn" onClick={() => openPlayer(p.id)}>
                 <span className="pos">{(p.injury ?? 0) > 0 ? '🤕' : (p.suspended ?? 0) > 0 ? '🟥' : titulares.has(p.id) ? '⭐' : ''}</span>
                 <span className="name">
-                  {p.name}
+                  {p.nat && p.nat !== 'ESP' ? `${flagOf(p.nat)} ` : ''}{p.name}{(p.caps?.abs ?? 0) > 0 ? ' 🎽' : ''}
                   {marcas(s, p).map((m) => <span key={m.text} className={`mark ${m.cls}`}>{m.text}</span>)}
                   <small>
                     {(p.injury ?? 0) > 0 && <b className="neg">Lesionado {p.injury} j. · </b>}

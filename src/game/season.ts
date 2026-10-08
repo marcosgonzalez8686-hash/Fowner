@@ -8,7 +8,8 @@ import { addMessage, marketOpen, marketValue, myTeam, mySquad, myYouth, teamById
 import { bestEleven, chooseStyle, computeStandings, simulate, type Formation } from './match';
 import { conflictAfterMatch, newIdols } from './traits';
 import { matchKeys } from './insights';
-import { contDue, myContDue, mySuperDue, newContinental, newSupercopa, playContinentalRound, playSupercopa, superDue } from './continental';
+import { mySuperDue, newSupercopa, playSupercopa, superDue } from './continental';
+import { euroDue, myEuroDue, newEurope, playEuroStage } from './europe';
 import { returnLoans } from './loans';
 import { recoverAll, tire } from './fatigue';
 import { competitionPerMatchday, promotionClauses, seasonFinances, stadiumFine, STADIUM_REQ } from './costs';
@@ -27,6 +28,8 @@ import { refreshSponsorOffers, sponsorFixed, sponsorPerWin, sponsorsEndSeason } 
 import { maybeCreateEvent, minutesCheck } from './events';
 import { cupRoundDue, newCup, playCupRound, stillIn } from './cup';
 import { directorShopsListed, generateOffers } from './offers';
+import { playWorldMatchday, worldEndSeason } from './world';
+import { WINDOWS, nationsSummer, nationsWindow } from './nations';
 import { growFacilities, homeAdvantage, rivalDevelopment, rivalYouthChance } from './rivals';
 import { resetYellows } from './discipline';
 import { aiTransfers } from './aitransfers';
@@ -107,9 +110,9 @@ export function playMatchday(s: GameState) {
     if (stillIn(s)) return;
     playCupRound(s);
   }
-  while (contDue(s)) {
-    if (myContDue(s)) return;
-    playContinentalRound(s);
+  while (euroDue(s)) {
+    if (myEuroDue(s)) return;
+    playEuroStage(s);
   }
   const porEquipo = new Map<number, Player[]>();
   for (const p of s.players) {
@@ -232,6 +235,9 @@ export function playMatchday(s: GameState) {
     s.leagueStats.bestXI[d] = { matchday: md + 1, xi: bestXIOf(informes[d]) };
   }
 
+  // ligas de otros países
+  playWorldMatchday(s, md, porEquipo);
+
   // ingresos y gastos fijos repartidos por jornada
   const c = s.club;
   const tv = Math.round(DIV_TV[mio.division] / MATCHDAYS);
@@ -303,6 +309,7 @@ export function playMatchday(s: GameState) {
   runDirector(s, 'jornada');
   expireProposals(s);
   if (s.matchday === 30) warnContracts(s);
+  if (WINDOWS.includes(s.matchday)) nationsWindow(s);
   if (s.matchday % 10 === 0 && s.matchday < MATCHDAYS) minutesCheck(s);
   if (s.matchday < MATCHDAYS) maybeCreateEvent(s);
 
@@ -427,6 +434,9 @@ export function endSeason(s: GameState) {
   directorEndSeason(s);
   newIdols(s, (title, body) => addMessage(s, { from: 'club', title, body }));
 
+  // verano de selecciones (antes de que los jugadores cumplan años)
+  nationsSummer(s);
+
   // los cedidos vuelven a casa antes de repasar contratos
   returnLoans(s);
 
@@ -465,6 +475,9 @@ export function endSeason(s: GameState) {
 
   // el filial: extra de crecimiento para los que han jugado y suben los que cumplen la edad
   filialEndSeason(s);
+
+  // ligas de otros países: clasificación final, plantillas y calendario nuevo
+  worldEndSeason(s);
 
   // 3. plantillas de la IA: se adaptan a su nueva categoría
   for (const t of s.teams) {
@@ -541,7 +554,7 @@ export function endSeason(s: GameState) {
   const copaCampeon = s.cup.champion;
   s.cup = newCup(s);
   newSupercopa(s, primera[0], primera[1], copaCampeon, copaFinalista);
-  newContinental(s, primera.slice(0, 4));
+  newEurope(s, primera, copaCampeon);
   scoutingNewSeason(s);
   seasonTicketsNewSeason(s, mio.division !== divAntes);
   refreshInvestorOffers(s);

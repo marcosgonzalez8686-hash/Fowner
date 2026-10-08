@@ -2,7 +2,7 @@ import { DIVISION_NAMES, DIV_LEVEL } from '../game/economy';
 import { rivalCrest } from '../game/identity';
 import { myTeam, squadOf, teamById } from '../game/market';
 import { bestEleven, computeStandings, form, STYLES } from '../game/match';
-import { FLAG } from '../game/continental';
+import { flagOf, leagueName } from '../game/world';
 import type { GameState, Pos } from '../game/types';
 import { Ovr, Sheet } from '../ui';
 import Crest from './Crest';
@@ -50,7 +50,7 @@ export default function TeamSheet({ s, id, onClose }: { s: GameState; id: number
         <div>
           <b>{t.name}</b>
           <div className="small muted">
-            {t.country ? `${FLAG[t.country] ?? ''} ${t.country}` : DIVISION_NAMES[t.division]} · {t.fans.toLocaleString('es-ES')} aficionados
+            {t.country ? `${flagOf(t.country)} ${leagueName(t.country)}` : DIVISION_NAMES[t.division]} · {t.fans.toLocaleString('es-ES')} aficionados
           </div>
           {liga?.row && (
             <div className="small">

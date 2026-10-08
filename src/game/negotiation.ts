@@ -115,7 +115,6 @@ export function startPurchase(
   const libre = p.teamId === null;
   if (!libre && fee > 0 && s.club.transferBan === s.season) return 'Sanción por deuda: esta temporada solo puedes fichar jugadores libres.';
   const vendedor = teamById(s, p.teamId);
-  if (vendedor?.country) return 'Juega en el extranjero.';
   // lo que de verdad aceptaría el club: más si es titular, menos si es un club pequeño
   const titular = vendedor ? bestEleven(squadOf(s, vendedor.id)).xi.some((x) => x.id === p.id) : false;
   const clubMin = libre ? 0 : roundMoney(askingPrice(s, p) * rand(0.78, 1.02) * (titular ? 1.15 : 0.95) * (vendedor!.division > myTeam(s).division ? 0.95 : 1.05));

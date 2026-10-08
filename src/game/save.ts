@@ -1,6 +1,9 @@
-import { compressToUTF16, decompressFromUTF16 } from 'lz-string';
+import LZString from 'lz-string';
+
+const { compressToUTF16, decompressFromUTF16 } = LZString;
 import { emptyStats } from './stats';
 import { ensureFacilities } from './rivals';
+import { createWorld } from './world';
 import { DIVISION_NAMES } from './economy';
 import { SAVE_VERSION } from './generate';
 import { emptyLedger } from './economy';
@@ -133,6 +136,13 @@ function migrate(s: GameState) {
   // contratos del director y los empleados (antes no tenían): conservan el sueldo y renuevan pronto
   if (c.director && c.director.contract === undefined) c.director.contract = 1 + Math.round(Math.random());
   for (const e of Object.values(c.staff)) if (e && e.contract === undefined) e.contract = 1 + Math.round(Math.random());
+  // el resto del mundo (partidas de antes): nacionalidades y ligas extranjeras
+  if (!s.world) {
+    for (const p of s.players) p.nat ??= Math.random() < 0.88 ? 'ESP' : 'ARG';
+    createWorld(s);
+  }
+  // la antigua Copa de Campeones da paso a las tres competiciones europeas (desde la temporada siguiente)
+  delete s.continental;
   // instalaciones de los rivales (partidas de antes)
   ensureFacilities(s.teams.filter((t) => t.id !== c.teamId));
   c.ledger = { ...emptyLedger(), ...c.ledger };

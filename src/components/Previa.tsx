@@ -9,7 +9,7 @@ import type { GameState, Player } from '../game/types';
 import Crest from './Crest';
 import { useBack } from '../nav/back';
 import { TeamLink, useNav } from '../nav/context';
-import { FLAG } from '../game/continental';
+import { countryName, flagOf } from '../game/world';
 import { preMatchKeys, winProbs } from '../game/insights';
 import { coachOf, ourPlan, ourTactics } from '../game/coach';
 
@@ -95,13 +95,13 @@ export default function Previa({ s, setup, onPlay, onSkip, onClose }: {
           <div className={h.mio ? 'me' : ''}>
             <Crest c={crest(h)} size={52} />
             <span><TeamLink id={h.mio ? undefined : h.t.id}>{h.t.name}</TeamLink></span>
-            <small className="muted">{h.t.country ? `${FLAG[h.t.country] ?? ''} ${h.t.country}` : `${h.t.division + 1}ª división`}</small>
+            <small className="muted">{h.t.country ? `${flagOf(h.t.country)} ${countryName(h.t.country)}` : `${h.t.division + 1}ª división`}</small>
           </div>
           <div className="vs">vs</div>
           <div className={a.mio ? 'me' : ''}>
             <Crest c={crest(a)} size={52} />
             <span><TeamLink id={a.mio ? undefined : a.t.id}>{a.t.name}</TeamLink></span>
-            <small className="muted">{a.t.country ? `${FLAG[a.t.country] ?? ''} ${a.t.country}` : `${a.t.division + 1}ª división`}</small>
+            <small className="muted">{a.t.country ? `${flagOf(a.t.country)} ${countryName(a.t.country)}` : `${a.t.division + 1}ª división`}</small>
           </div>
         </div>
 

@@ -1,4 +1,6 @@
 import { DIV_LEVEL, SQUAD_MAX, fairSalary, fmtMoney, playerValue, roundMoney } from './economy';
+import { capsBoost } from './nations';
+import { euroBoost } from './europe';
 import { newId } from './generate';
 import { pick } from './rng';
 import type { GameState, Message, Player, Team } from './types';
@@ -7,9 +9,10 @@ import { changeSatisfaction } from './fans';
 import { changeMorale } from './morale';
 
 export const myTeam = (s: GameState) => s.teams.find((t) => t.id === s.club.teamId)!;
-// los clubes extranjeros de la Copa de Campeones viven aparte, con su plantilla
-export const teamById = (s: GameState, id: number | null) => s.teams.find((t) => t.id === id) ?? s.continental?.foreign.find((t) => t.id === id);
-export const squadOf = (s: GameState, teamId: number) => s.continental?.squads[teamId] ?? s.players.filter((p) => p.teamId === teamId);
+// los clubes extranjeros viven en las ligas de otros países (s.world)
+export const teamById = (s: GameState, id: number | null) =>
+  s.teams.find((t) => t.id === id) ?? s.world?.leagues.find((l) => l.teams.some((t) => t.id === id))?.teams.find((t) => t.id === id);
+export const squadOf = (s: GameState, teamId: number) => s.players.filter((p) => p.teamId === teamId);
 export const mySquad = (s: GameState) => squadOf(s, s.club.teamId).filter((p) => !p.youth && !p.filial);
 /** Jugadores en el filial (son nuestros: cobran, pero no juegan con el primer equipo) */
 export const myFilial = (s: GameState) => squadOf(s, s.club.teamId).filter((p) => p.filial);
@@ -43,10 +46,12 @@ export function marketValue(s: GameState, p: Player) {
   }
   // contrato: con poco contrato vale menos (el último año, mucho menos)
   if (p.teamId !== null) v *= p.contract <= 1 ? 0.6 : p.contract === 2 ? 0.9 : 1;
-  // escaparate: la categoría del club y la Copa de Campeones
+  // escaparate: la categoría del club y jugar en Europa
   const club = teamById(s, p.teamId);
   if (club && !club.country) v *= 1 + (2 - club.division) * 0.06;
-  if (club && s.continental?.season === s.season && s.continental.rounds[0]?.some((t) => t.a === club.id || t.b === club.id)) v *= 1.1;
+  if (club) v *= euroBoost(s, club.id);
+  // internacional con su selección
+  v *= capsBoost(p);
   // lesiones largas y retirada anunciada
   if ((p.injury ?? 0) > 6) v *= 0.8;
   if (p.retiring) v *= 0.3;
