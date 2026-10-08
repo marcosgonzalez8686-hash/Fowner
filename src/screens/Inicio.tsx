@@ -15,7 +15,7 @@ import { rivalCrest } from '../game/identity';
 import { resolveEvent } from '../game/events';
 import { SlotOffers } from '../components/Sponsors';
 import NegotiationsCard from '../components/Negotiations';
-import { PRE_WEEKS, activeNegs, myTurn } from '../game/negotiation';
+import { PRE_WEEKS, myTurn } from '../game/negotiation';
 import Previa, { type MatchSetup } from '../components/Previa';
 import LiveMatch from '../components/LiveMatch';
 import { levelOf } from '../game/director';
@@ -182,14 +182,10 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
                 ⏩ Avanzar una semana
               </button>
             )}
-            {activeNegs(s).length > 0 && (
-              <p className="small muted center">🤝 {activeNegs(s).length} negociación(es) abiertas: al empezar la liga se cierra el mercado y se caen las que no estén firmadas.</p>
-            )}
             <button
               className="btn primary big full"
               disabled={faltaCamiseta || faltaObjetivo}
               onClick={() => {
-                if (activeNegs(s).length && !confirm('Hay negociaciones abiertas que se perderán al cerrar el mercado. ¿Empezar la temporada igualmente?')) return;
                 const err = update((g) => startSeason(g));
                 if (err) notify(err);
               }}

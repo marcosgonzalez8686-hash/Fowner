@@ -27,7 +27,7 @@ import { refreshSponsorOffers, sponsorFixed, sponsorPerWin, sponsorsEndSeason } 
 import { maybeCreateEvent } from './events';
 import { cupRoundDue, newCup, playCupRound, stillIn } from './cup';
 import { generateOffers } from './offers';
-import { PRE_WEEKS, closeMarket, tickNegotiations } from './negotiation';
+import { PRE_WEEKS, executeAgreed, tickNegotiations } from './negotiation';
 import { payDividends, payLoans, refreshInvestorOffers } from './bank';
 import { leagueAttendance, seasonTicketFansGrowth, seasonTicketLoyalty, seasonTicketsNewSeason, sellSeasonTickets } from './tickets';
 import { changeMorale, healOneMatchday, injuryName, isInjured, moraleAfterMatch, moraleBonus, resetSeasonMorale, rollInjuries } from './morale';
@@ -66,8 +66,6 @@ export function startSeason(s: GameState): string | undefined {
   // los juveniles sin decidir se van
   for (const y of myYouth(s)) { y.teamId = null; y.youth = false; }
   s.phase = 'temporada';
-  // el mercado de verano se cierra: lo que no esté firmado se cae
-  closeMarket(s);
   sellSeasonTickets(s);
   expireProposals(s);
   addMessage(s, {
@@ -282,12 +280,11 @@ export function playMatchday(s: GameState) {
   }
 
   // ofertas por nuestros jugadores durante el mercado de invierno
-  // parón de invierno: cada jornada avanzan las negociaciones y llegan ofertas
-  if (marketOpen(s)) {
-    tickNegotiations(s);
-    generateOffers(s, 1);
-  }
-  if (s.matchday === 21) closeMarket(s);
+  // las negociaciones avanzan cada jornada; en el parón de invierno además llegan ofertas
+  // y se hace efectivo lo acordado mientras el mercado estaba cerrado
+  if (s.matchday === 18) executeAgreed(s);
+  tickNegotiations(s);
+  if (marketOpen(s)) generateOffers(s, 1);
   runDirector(s, 'jornada');
   expireProposals(s);
   if (s.matchday < MATCHDAYS) maybeCreateEvent(s);
@@ -536,6 +533,8 @@ export function endSeason(s: GameState) {
     return;
   }
   s.preWeek = 0;
+  // abre el mercado de verano: llega lo acordado durante la temporada
+  executeAgreed(s);
   generateOffers(s, 2);
   runDirector(s, 'pretemporada');
 }

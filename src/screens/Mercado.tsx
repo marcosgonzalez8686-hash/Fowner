@@ -29,18 +29,13 @@ export default function Mercado({ s, update, notify }: ScreenProps) {
       .slice(0, 40);
   }, [s, pos, soloAsequibles, libres]);
 
-  if (!marketOpen(s)) {
-    return (
-      <Card title="Mercado cerrado">
-        <p className="muted">
-          El mercado abre en pretemporada y en el parón de invierno (jornadas 19 a 21).
-        </p>
-      </Card>
-    );
-  }
-
   return (
     <>
+      {!marketOpen(s) && (
+        <p className="hint">
+          🔒 Mercado cerrado hasta {s.phase === 'temporada' && s.matchday < 18 ? 'la jornada 19' : 'la pretemporada'}. Puedes negociar igual: los acuerdos se harán efectivos (jugador y pago) al abrirse.
+        </p>
+      )}
       <NegotiationsCard s={s} update={update} notify={notify} />
       {levelOf(s, 'fichajes') !== 'manual' && (
         <p className="hint">💼 Tu director deportivo también está buscando fichajes. Puedes fichar tú igualmente.</p>

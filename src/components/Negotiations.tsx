@@ -43,9 +43,12 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
         {p.pos} · {p.age} años · media {p.ovr} · valor {fmtMoney(playerValue(p))}
         {delDirector && ' · 💼 la lleva el director'}
       </div>
-      <p className="small">{n.log[n.log.length - 1]}</p>
+      {!(tuTurno && !delDirector) && <p className="small">{n.log[n.log.length - 1]}</p>}
 
       {n.state === 'esperando' && <p className="small muted">⏳ Esperando respuesta: llegará {cuando(s)}.</p>}
+      {n.state === 'acordada' && (
+        <p className="small">✍️ Acuerdo firmado: se hará efectivo cuando abra el mercado ({s.phase === 'temporada' && s.matchday < 18 ? 'jornada 19' : 'pretemporada'}).</p>
+      )}
 
       {tuTurno && !delDirector && n.kind === 'venta' && (
         <>
@@ -54,10 +57,9 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
             <button className="btn primary grow" onClick={() => hacer((g) => acceptTerms(g, n.id), 'Aceptada')}>Aceptar {fmtMoney(pide)}</button>
             <button className="btn grow" onClick={() => hacer((g) => withdraw(g, n.id), 'Oferta rechazada')}>Rechazar</button>
           </div>
-          <div className="row">
-            <Stepper value={oferta} step={paso(oferta)} min={pide} onChange={setOferta} format={fmtMoney} />
-            <button className="btn grow" onClick={() => hacer((g) => counter(g, n.id, { fee: oferta }), `Pides ${fmtMoney(oferta)}`)}>Pedir más</button>
-          </div>
+          <p className="small">{n.log[n.log.length - 1]}</p>
+          <Stepper value={oferta} step={paso(oferta)} min={pide} onChange={setOferta} format={fmtMoney} />
+          <button className="btn full" onClick={() => hacer((g) => counter(g, n.id, { fee: oferta }), `Pides ${fmtMoney(oferta)}`)}>Pedir {fmtMoney(oferta)}</button>
         </>
       )}
 
@@ -72,8 +74,8 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
             <button className="btn primary grow" onClick={() => hacer((g) => acceptTerms(g, n.id), 'Aceptado')}>Aceptar</button>
             <button className="btn grow" onClick={() => hacer((g) => withdraw(g, n.id), 'Te retiras')}>Retirarse</button>
           </div>
+          <Stepper value={oferta} step={paso(oferta)} min={0} onChange={setOferta} format={fmtMoney} />
           <div className="row">
-            <Stepper value={oferta} step={paso(oferta)} min={0} onChange={setOferta} format={fmtMoney} />
             <button
               className="btn grow"
               onClick={() =>
@@ -83,7 +85,7 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
                 )
               }
             >
-              Contraofertar
+              Contraofertar {fmtMoney(oferta)}{n.stage === 'jugador' ? '/temp.' : ''}
             </button>
           </div>
           {n.stage === 'jugador' && (
@@ -96,7 +98,7 @@ function Negociacion({ s, n, update, notify }: { s: GameState; n: Negotiation; u
         </>
       )}
 
-      {isActive(n) && (delDirector || n.state === 'esperando') && n.kind !== 'venta' && (
+      {(n.state === 'esperando' || (delDirector && n.state === 'tu_turno')) && n.kind !== 'venta' && (
         <button className="link small" onClick={() => hacer((g) => withdraw(g, n.id), 'Te retiras de la negociación')}>Retirarse</button>
       )}
 

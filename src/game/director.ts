@@ -11,6 +11,7 @@ import { gauss } from './rng';
 import { ownerTitle } from './identity';
 import { scoutingFactor } from './land';
 import { negFor, startPurchase } from './negotiation';
+import { annualIncome } from './bank';
 import { ROLES, ROLE_ORDER, hireStaff, staffScoutFactor, staffWages, type Role, type Staff } from './staff';
 import type { Director, GameState, Level, Player, Pos, Proposal, Task } from './types';
 
@@ -48,6 +49,16 @@ const MIN_POS: Record<Pos, number> = { POR: 2, DEF: 6, MED: 6, DEL: 4 };
 const MAX_POS: Record<Pos, number> = { POR: 3, DEF: 8, MED: 8, DEL: 5 };
 /** Plantilla mínima que el director intenta mantener (por debajo, ficha aunque sea un fondo de armario) */
 export const SQUAD_SAFE = 20;
+/** El director no deja que los sueldos de la plantilla pasen de esta parte de los ingresos estables */
+export const WAGE_SHARE = 0.7;
+
+/** Ingresos de una temporada normal (sin ventas extraordinarias ni préstamos) */
+function ingresosEstables(s: GameState) {
+  return Math.max(50_000, annualIncome(s) - (s.club.lastLedger?.traspasosIn ?? 0) - (s.club.lastLedger?.copa ?? 0));
+}
+
+/** Masa salarial máxima que el director se permite: la que le marques o la prudente, la menor */
+export const prudentWageCap = (s: GameState) => Math.min(s.club.wageCap, roundMoney(ingresosEstables(s) * WAGE_SHARE));
 
 export const levelOf = (s: GameState, t: Task): Level => (s.club.director ? s.club.delegation[t] : 'manual');
 
@@ -85,8 +96,13 @@ export function executeProposal(s: GameState, pr: Proposal): string | undefined 
     case 'fichar': {
       // el director abre la negociación: empieza por debajo y como mucho paga un 10% más de lo previsto
       const tope = Math.min(roundMoney(pr.fee * 1.1), Math.max(pr.fee, s.club.transferBudget));
+      // con el sueldo es prudente: empieza por debajo y apenas sube, sin pasarse de la masa salarial prudente
+      const p = s.players.find((x) => x.id === pr.playerId);
+      const pide = p ? askingSalary(s, p) : pr.salary;
+      const margen = Math.max(0, prudentWageCap(s) - wageBill(s));
+      const maxSalary = roundMoney(Math.min(pide * 1.1, Math.max(margen, pr.salary)));
       return startPurchase(s, pr.playerId, roundMoney(pr.fee * 0.85), {
-        by: 'director', salary: roundMoney(pr.salary * 0.95), years: pr.years, maxFee: tope, maxSalary: roundMoney(pr.salary * 1.15),
+        by: 'director', salary: roundMoney(pr.salary * 0.9), years: pr.years, maxFee: tope, maxSalary,
       });
     }
     case 'vender': {
@@ -184,8 +200,9 @@ function doSignings(s: GameState, maxOps: number) {
     const presupuesto = s.club.transferBan === s.season ? 0 : Math.min(s.club.transferBudget, s.club.cash);
     // en una emergencia (menos de 18) puede pasarse un 10% del tope salarial
     // si la masa salarial ya pasa del tope, al menos puede traer jugadores baratos para completar
-    const barato = roundMoney(s.club.wageCap * 0.03);
-    const margenSalarial = Math.max(s.club.wageCap * (squad.length < 18 ? 1.1 : 1) - wageBill(s), corta ? barato : 0);
+    // sueldo de un fondo de armario: algo menos que la media de la plantilla
+    const barato = roundMoney(Math.max(s.club.wageCap * 0.03, (wageBill(s) / Math.max(1, squad.length)) * 0.8));
+    const margenSalarial = Math.max(prudentWageCap(s) * (squad.length < 18 ? 1.1 : 1) - wageBill(s), corta ? barato : 0);
     const rebaja = 1 - d.stars * 0.03;
 
     let mejor: { p: Player; fee: number; salary: number; score: number; perc: number } | null = null;
@@ -272,8 +289,11 @@ function doRenewals(s: GameState) {
     if (!top.has(p.id) && !(joven && d.style === 'cantera')) continue;
     if (p.age >= 34) continue;
     const salary = roundMoney(renewSalary(p) * (1 - d.stars * 0.02));
-    if (wageBill(s) - p.salary + salary > s.club.wageCap) {
-      warnOnce(s, `No llego para renovar a ${p.name}`, `Pide ${fmtMoney(salary)}/temp. y nos pasaríamos del tope salarial que me has marcado (${fmtMoney(s.club.wageCap)}).`);
+    // renovar a quien hace falta se permite siempre que no pida una subida grande;
+    // lo prudente solo frena cuando la plantilla va sobrada o la subida es mucha
+    const necesario = squad.length <= SQUAD_SAFE + 2 && salary <= p.salary * 1.15;
+    if (!necesario && wageBill(s) - p.salary + salary > prudentWageCap(s)) {
+      warnOnce(s, `No llego para renovar a ${p.name}`, `Pide ${fmtMoney(salary)}/temp. y la masa salarial pasaría de lo prudente (${fmtMoney(prudentWageCap(s))}: el tope que me marcas o el 70% de lo que ingresamos, lo que sea menor).`);
       continue;
     }
     const years = p.age >= 31 ? 1 : p.age <= 24 ? 4 : 2;

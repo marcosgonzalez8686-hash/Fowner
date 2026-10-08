@@ -9,8 +9,9 @@ import { loanAnswer, loanFee, loanIn, loanOut, loanTarget } from './loans';
 import { hasTrait } from './traits';
 import type { GameState, Player } from './types';
 
-// Negociaciones: nada es inmediato. Cada paso tiene respuesta a la semana (pretemporada) o jornada siguiente
-// (parón de invierno); se contraoferta, se agota la paciencia, aparecen otros clubes y se rompen.
+// Negociaciones: nada es inmediato. Cada paso tiene respuesta a la semana (pretemporada) o a la jornada siguiente;
+// se contraoferta, se agota la paciencia, aparecen otros clubes y se rompen. Se puede negociar en cualquier momento,
+// pero lo acordado con el mercado cerrado se hace efectivo al abrirse el siguiente.
 
 export type NegKind = 'compra' | 'cesion' | 'venta' | 'cedo';
 
@@ -21,7 +22,7 @@ export interface Negotiation {
   clubId: number | null; // el otro club (null = agente libre)
   by: 'dueño' | 'director';
   stage: 'club' | 'jugador'; // en una compra, primero el traspaso y después el contrato
-  state: 'esperando' | 'tu_turno' | 'cerrada' | 'rota';
+  state: 'esperando' | 'tu_turno' | 'acordada' | 'cerrada' | 'rota'; // acordada = firmada, pendiente del próximo mercado
   fee: number; // nuestra última oferta (o la suya, en una venta)
   salary: number;
   years: number;
@@ -42,7 +43,9 @@ export interface Negotiation {
 export const MAX_ABIERTAS = 5;
 export const PRE_WEEKS = 4;
 
-export const isActive = (n: Negotiation) => n.state === 'esperando' || n.state === 'tu_turno';
+export const isActive = (n: Negotiation) => n.state === 'esperando' || n.state === 'tu_turno' || n.state === 'acordada';
+/** Todavía se está negociando (no está firmada) */
+const enCurso = (n: Negotiation) => n.state === 'esperando' || n.state === 'tu_turno';
 export const activeNegs = (s: GameState) => s.negotiations.filter(isActive);
 export const negFor = (s: GameState, playerId: number) => s.negotiations.find((n) => isActive(n) && n.playerId === playerId);
 /** Las que esperan una decisión del dueño */
@@ -86,7 +89,6 @@ function aTuTurno(n: Negotiation) {
 export function startPurchase(
   s: GameState, playerId: number, fee: number, opts: { by?: 'dueño' | 'director'; salary?: number; years?: number; maxFee?: number; maxSalary?: number } = {},
 ): string | undefined {
-  if (!marketOpen(s)) return 'El mercado está cerrado.';
   const p = s.players.find((x) => x.id === playerId);
   if (!p || p.teamId === s.club.teamId) return 'No está disponible.';
   if (p.loan) return 'Está cedido: no se puede fichar hasta que vuelva a su club.';
@@ -111,7 +113,6 @@ export function startPurchase(
 
 /** Pedir cedido a un jugador ofreciendo una cuota */
 export function startLoanIn(s: GameState, playerId: number, cuota: number): string | undefined {
-  if (!marketOpen(s)) return 'El mercado está cerrado.';
   const p = s.players.find((x) => x.id === playerId);
   if (!p) return 'No está disponible.';
   if (negFor(s, playerId)) return 'Ya hay una negociación abierta por él.';
@@ -128,7 +129,6 @@ export function startLoanIn(s: GameState, playerId: number, cuota: number): stri
 
 /** Ofrecer cedido a uno de nuestros jugadores */
 export function startLoanOut(s: GameState, playerId: number): string | undefined {
-  if (!marketOpen(s)) return 'Solo con el mercado abierto.';
   const p = mySquad(s).find((x) => x.id === playerId);
   if (!p || p.loan) return 'No se puede ceder.';
   if (negFor(s, playerId)) return 'Ya hay una negociación abierta por él.';
@@ -216,7 +216,7 @@ export function withdraw(s: GameState, id: number): string | undefined {
 
 /** Pasa una semana (o una jornada del parón): llegan respuestas y se agota la paciencia */
 export function tickNegotiations(s: GameState) {
-  for (const n of activeNegs(s)) {
+  for (const n of s.negotiations.filter(enCurso)) {
     if (n.state === 'tu_turno') {
       n.expires = (n.expires ?? 2) - 1;
       if (n.expires <= 0) rompe(s, n, n.kind === 'venta' ? `El ${nombreClub(s, n)} se cansa de esperar y retira la oferta.` : 'No contestamos a tiempo y se cansan de esperar.');
@@ -226,18 +226,6 @@ export function tickNegotiations(s: GameState) {
     if (n.wait <= 0) responde(s, n);
   }
   directorNegotiates(s);
-}
-
-/** Se cierra el mercado: lo que no se haya cerrado se cae */
-export function closeMarket(s: GameState) {
-  const abiertas = activeNegs(s);
-  for (const n of abiertas) {
-    n.state = 'rota';
-    apunta(s, n, '🔒 Se cerró el mercado');
-  }
-  if (abiertas.length) {
-    addMessage(s, { from: 'club', title: `🔒 Cierre de mercado: ${abiertas.length} negociación(es) sin cerrar`, body: abiertas.map((n) => `• ${jugador(s, n)?.name ?? '—'}`).join('\n') });
-  }
 }
 
 function responde(s: GameState, n: Negotiation) {
@@ -315,8 +303,54 @@ function acuerdoConClub(s: GameState, n: Negotiation) {
   aTuTurno(n);
 }
 
-/** Firma final */
+/** Firma: con el mercado abierto se hace ya; si no, queda acordada para el próximo mercado */
 function cierra(s: GameState, n: Negotiation): string | undefined {
+  if (marketOpen(s)) return ejecuta(s, n);
+  const p = jugador(s, n);
+  n.state = 'acordada';
+  apunta(s, n, '✍️ Acuerdo firmado: se hará efectivo en el próximo mercado');
+  addMessage(s, {
+    from: n.by === 'director' ? 'director' : 'club',
+    title: `✍️ Acuerdo cerrado: ${p?.name ?? 'jugador'}`,
+    body: `${TEXTO_ACUERDO[n.kind]} Se hará efectivo cuando abra el mercado (pretemporada o jornada 19).`,
+  });
+}
+
+const TEXTO_ACUERDO: Record<NegKind, string> = {
+  compra: 'Fichaje acordado: llegará y se pagará el traspaso',
+  cesion: 'Cesión acordada: llegará',
+  venta: 'Venta acordada: se irá y cobraremos el traspaso',
+  cedo: 'Cesión acordada: se irá cedido',
+};
+
+/** Al abrirse el mercado se ejecuta todo lo que estaba acordado */
+export function executeAgreed(s: GameState) {
+  for (const n of s.negotiations.filter((x) => x.state === 'acordada')) {
+    const p = jugador(s, n);
+    if (!p) {
+      rompe(s, n, 'El jugador se ha retirado o ya no está en activo.');
+      continue;
+    }
+    if ((n.kind === 'compra' || n.kind === 'cesion') && p.teamId !== n.clubId) {
+      // si su contrato acabó y quedó libre, viene igual (y sin traspaso)
+      if (n.kind === 'compra' && p.teamId === null) {
+        n.fee = 0;
+        apunta(s, n, 'Su contrato con el club acabó: llega libre');
+      } else {
+        rompe(s, n, 'El jugador ya no está en ese club.');
+        continue;
+      }
+    }
+    if ((n.kind === 'venta' || n.kind === 'cedo') && p.teamId !== s.club.teamId) {
+      rompe(s, n, 'El jugador ya no está en el club.');
+      continue;
+    }
+    ejecuta(s, n);
+  }
+}
+
+/** Firma final */
+function ejecuta(s: GameState, n: Negotiation): string | undefined {
   const p = jugador(s, n);
   if (!p) return void rompe(s, n, 'El jugador ya no está.');
   let err: string | undefined;

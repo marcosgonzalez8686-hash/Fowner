@@ -160,7 +160,7 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
             </button>
 
             <h4>Ceder</h4>
-            {marketOpen(s) && destino && !enCurso ? (
+            {destino && !enCurso ? (
               <>
                 <p className="small muted">
                   Una temporada en el {destino.team.name} ({destino.division + 1}ª), que pagaría su ficha. A los jóvenes, jugar minutos les viene bien. Te contestarán {s.phase === 'pretemporada' ? 'la semana que viene' : 'tras la próxima jornada'}.
@@ -170,7 +170,7 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
                 </button>
               </>
             ) : (
-              <p className="small muted">{marketOpen(s) ? 'Nadie lo quiere cedido.' : 'Solo con el mercado abierto.'}</p>
+              <p className="small muted">{enCurso ? 'Hay una negociación abierta por él.' : 'Nadie lo quiere cedido.'}</p>
             )}
           </>
         )}
@@ -203,8 +203,6 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
         <p className="hint">🔁 Es nuestro, cedido esta temporada. Vuelve en verano.</p>
       ) : club?.country ? (
         <p className="small muted">Juega en el extranjero: no está en nuestro mercado.</p>
-      ) : !marketOpen(s) ? (
-        <p className="small muted">🔒 Mercado cerrado: podrás ficharlo en pretemporada o en el parón de invierno (jornadas 19 a 21).</p>
       ) : sel.loan ? (
         <p className="small muted">Está cedido: no se puede fichar hasta que vuelva a su club.</p>
       ) : (
@@ -219,6 +217,7 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
                   ? `Es libre: solo hay que convencerle. Pide unos ${fmtMoney(askingSalary(s, sel))}/temp.`
                   : `Su club pide unos ${fmtMoney(askingPrice(sel))}. Primero se negocia el traspaso y después el contrato con el jugador.`}{' '}
                 Te contestarán {s.phase === 'pretemporada' ? 'la semana que viene' : 'tras la próxima jornada'}.
+                {!marketOpen(s) && ' Con el mercado cerrado se puede negociar igual: si hay acuerdo, llegará al abrirse el próximo mercado.'}
               </p>
               {sel.teamId !== null ? (
                 <div className="row">
