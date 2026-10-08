@@ -30,6 +30,6 @@ export function tabAlerts(s: GameState) {
 }
 
 /** Mensajes que merecen el aviso del buzón (el resto se leen cuando se quiera) */
-const IMPORTANTE = /^(✅|💔|🔒|🏆|🥇|🏅|🌍|🔥|👴|📨|🎖️|🙌|💎|⚠️|😤|😒|👋|🧢|📈|👟|💪|🎉|😞|🚨|💸|🏦|📣|🟥|🟨)/u;
+const IMPORTANTE = /^(✅|💔|🔒|🏆|🥇|🏅|🌍|🔥|👴|📨|🎖️|🙌|💎|⚠️|😤|😒|👋|🧢|📈|👟|💪|🎉|😞|🚨|💸|🏦|📣|🟥|🟨|📝)/u;
 export const isImportant = (m: Message) =>
   m.from === 'director' ? !/^(Hecho|Oferta por|He renovado)/.test(m.title) : IMPORTANTE.test(m.title);

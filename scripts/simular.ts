@@ -1,5 +1,5 @@
 // Simula varias temporadas sin interfaz para comprobar que el motor no se rompe y la economía es razonable
-import { hireDirector } from '../src/game/director';
+import { hireDirector, renewDirector } from '../src/game/director';
 import { fmtMoney, ledgerExpense, ledgerIncome } from '../src/game/economy';
 import { newGame } from '../src/game/generate';
 import { mySquad, myTeam, squadOf, wageBill } from '../src/game/market';
@@ -49,6 +49,8 @@ for (let temp = 0; temp < temporadas && !s.gameOver; temp++) {
   console.log('   entrenador:', ent ? `${ent.name} ${ent.stars}★ ${ent.formation} ${ent.style} · contrato ${ent.contract} · confianza ${ent.confidence}` : 'ninguno');
   const negs = s.negotiations.filter((n) => n.season === s.season);
   console.log('   negociaciones:', negs.length, '| cerradas', negs.filter((n) => n.state === 'cerrada').length, '| rotas', negs.filter((n) => n.state === 'rota').length, '| tipos', [...new Set(negs.map((n) => n.kind))].join(','));
+  // un dueño atento renueva al director cuando le toca
+  if ((s.club.director?.contract ?? 2) <= 1) renewDirector(s);
   while (myPlayoffDue(s)) {
     playPlayoffRound(s);
     console.log('   playoff:', s.messages[0].title);

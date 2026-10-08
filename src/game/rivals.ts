@@ -12,7 +12,8 @@ export interface RivalFacilities {
   levels: Partial<Record<BuildingKind, number>>;
 }
 
-const KINDS = Object.keys(BUILDINGS) as BuildingKind[];
+// se calcula al usarla: así no depende del orden en que se cargan los módulos
+const kinds = () => Object.keys(BUILDINGS) as BuildingKind[];
 /** Aforo típico de cada categoría */
 const DIV_CAPACITY = [38_000, 15_000, 5_500, 1_800, 700];
 /** Nivel típico de ciudad deportiva y cantera (máx. 5) y del resto de edificios (máx. 3) */
@@ -48,7 +49,7 @@ function target(t: Team) {
   let capacity = DIV_CAPACITY[div] * afic * entre(t.id, 2, 0.8, 1.25);
   if (!t.country) capacity = Math.max(capacity, (STADIUM_REQ[div] ?? 0) * 1.05);
   const levels: Partial<Record<BuildingKind, number>> = {};
-  KINDS.forEach((k, i) => {
+  kinds().forEach((k, i) => {
     const principal = k === 'entrenamiento' || k === 'cantera';
     const base = (principal ? DIV_MAIN : DIV_OTHER)[div] + (t.country ? 1 : 0);
     const v = (hash(t.id, 10 + i) % 3) - 1; // -1, 0 o +1
@@ -76,7 +77,7 @@ export function growFacilities(s: GameState) {
     const f = (t.fac ??= facilitiesOf(t));
     const tg = target(t);
     if (tg.capacity > f.capacity) f.capacity = Math.round((f.capacity + (tg.capacity - f.capacity) * 0.4) / 100) * 100;
-    for (const k of KINDS) {
+    for (const k of kinds()) {
       if ((tg.levels[k] ?? 0) > (f.levels[k] ?? 0) && Math.random() < 0.5) f.levels[k] = (f.levels[k] ?? 0) + 1;
     }
   }

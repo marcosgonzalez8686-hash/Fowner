@@ -8,12 +8,12 @@ import { FORMACION } from './match';
 import { ourShape, ourTactics, tacticsLabel } from './coach';
 import { FIT_ICON, PROFILES, TRAITS, fitBonus, fitOf } from './traits';
 import { potLabel } from './scouting';
-import { gauss } from './rng';
+import { gauss, randInt } from './rng';
 import { ownerTitle } from './identity';
 import { scoutingFactor } from './land';
 import { agreedBalance, negFor, startPurchase, startRenewal } from './negotiation';
 import { annualIncome } from './bank';
-import { ROLES, ROLE_ORDER, hireStaff, staffScoutFactor, staffWages, type Role, type Staff } from './staff';
+import { DIRECTOR_PAY, ROLES, ROLE_ORDER, hireStaff, refusesRenewal, renewalSalary, staffScoutFactor, staffWages, type Role, type Staff } from './staff';
 import type { Director, GameState, Level, Player, Pos, Proposal, Task } from './types';
 
 export const TASK_LABEL: Record<Task, string> = {
@@ -447,6 +447,7 @@ export function hireDirector(s: GameState, id: number) {
   const d = s.directorsMarket.find((x) => x.id === id);
   if (!d) return;
   if (s.club.director) fireDirector(s);
+  d.contract ??= randInt(2, 3);
   s.club.director = d;
   s.directorsMarket = s.directorsMarket.filter((x) => x.id !== id);
   addMessage(s, {
@@ -455,6 +456,39 @@ export function hireDirector(s: GameState, id: number) {
     body: `Encantado, ${ownerTitle(s.club.identity)}. Mi estilo: ${STYLE_LABEL[d.style].toLowerCase()}. Dime qué tareas me encargas en Dirección → Director.`,
   });
   runDirector(s, 'cambio');
+}
+
+/** Lo que pide el director por renovar 2 temporadas (o null si no quiere) */
+export function directorRenewal(s: GameState) {
+  const d = s.club.director;
+  if (!d) return null;
+  if (refusesRenewal(s, d.stars)) return null;
+  return { years: 2, salary: renewalSalary(d.salary, DIRECTOR_PAY[d.stars - 1], d.stars) };
+}
+
+export function renewDirector(s: GameState): string | undefined {
+  const d = s.club.director;
+  if (!d) return 'No tienes director deportivo.';
+  const r = directorRenewal(s);
+  if (!r) return `${d.name} busca un club de más nivel y no quiere renovar.`;
+  d.salary = r.salary;
+  d.contract = (d.contract ?? 1) + r.years;
+  addMessage(s, { from: 'club', title: `✍️ ${d.name} renueva`, body: `${r.years} temporadas más como director deportivo por ${fmtMoney(r.salary)}/temp.` });
+}
+
+/** Fin de temporada: corre su contrato; si acaba sin renovar, se marcha */
+export function directorEndSeason(s: GameState) {
+  const d = s.club.director;
+  if (!d) return;
+  d.contract = (d.contract ?? 2) - 1;
+  if (d.contract > 0) return;
+  s.club.director = null;
+  for (const m of s.messages) if (m.status === 'pendiente' && m.from === 'director') m.status = 'caducada';
+  addMessage(s, {
+    from: 'club',
+    title: `👋 ${d.name} deja el club`,
+    body: 'Acabó su contrato de director deportivo sin renovar. Hasta que contrates otro (Dirección → Director), las decisiones deportivas son tuyas.',
+  });
 }
 
 export function fireDirector(s: GameState) {

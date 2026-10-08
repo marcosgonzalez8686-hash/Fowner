@@ -129,6 +129,9 @@ function migrate(s: GameState) {
   // perfil de juego y rasgos para los jugadores de antes
   for (const p of s.players) rollIdentity(p);
   migrateSponsors(s);
+  // contratos del director y los empleados (antes no tenían): conservan el sueldo y renuevan pronto
+  if (c.director && c.director.contract === undefined) c.director.contract = 1 + Math.round(Math.random());
+  for (const e of Object.values(c.staff)) if (e && e.contract === undefined) e.contract = 1 + Math.round(Math.random());
   // instalaciones de los rivales (partidas de antes)
   ensureFacilities(s.teams.filter((t) => t.id !== c.teamId));
   c.ledger = { ...emptyLedger(), ...c.ledger };

@@ -1,6 +1,7 @@
 import type { ScreenProps } from '../App';
 import { setAllDelegation, setDelegation } from '../game/club';
-import { LEVEL_LABEL, STYLE_LABEL, TASK_HELP, TASK_LABEL, fireDirector, hireDirector } from '../game/director';
+import { LEVEL_LABEL, STYLE_LABEL, TASK_HELP, TASK_LABEL, directorRenewal, fireDirector, hireDirector, renewDirector } from '../game/director';
+import { clubMaxStars } from '../game/staff';
 import { fmtMoney } from '../game/economy';
 import type { Level, Task } from '../game/types';
 import { Card, Segmented, Stars } from '../ui';
@@ -20,7 +21,9 @@ export default function DirectorScreen({ s, update, notify }: ScreenProps) {
             <div className="dd">
               <div>
                 <b>{d.name}</b> <Stars n={d.stars} />
-                <div className="small muted">{STYLE_LABEL[d.style]} · {fmtMoney(d.salary)}/temp.</div>
+                <div className="small muted">
+                  {STYLE_LABEL[d.style]} · {fmtMoney(d.salary)}/temp. · {(d.contract ?? 2) <= 1 ? <b className="warn">acaba contrato</b> : `${d.contract} temp. de contrato`}
+                </div>
               </div>
               <button
                 className="btn small danger"
@@ -31,6 +34,16 @@ export default function DirectorScreen({ s, update, notify }: ScreenProps) {
                 Despedir
               </button>
             </div>
+            {(d.contract ?? 2) <= 1 && (() => {
+              const r = directorRenewal(s);
+              return r ? (
+                <button className="btn full" onClick={() => notify(update((g) => renewDirector(g)) ?? `${d.name} renovado`)}>
+                  ✍️ Renovar {r.years} temporadas por {fmtMoney(r.salary)}/temp.
+                </button>
+              ) : (
+                <p className="small warn">🚪 Busca un club de más nivel: no quiere renovar. Se irá al acabar la temporada.</p>
+              );
+            })()}
             <p className="small muted">
               Cuantas más estrellas, mejor valora a los jugadores y mejor negocia precios y salarios.
             </p>
@@ -70,11 +83,14 @@ export default function DirectorScreen({ s, update, notify }: ScreenProps) {
       </Card>
 
       <Card title={d ? 'Otros candidatos' : 'Candidatos disponibles'}>
+        <p className="small muted">
+          El sueldo depende de sus estrellas, no de la categoría. Con el prestigio actual del club aceptan venir los de hasta {clubMaxStars(s)}★ (alguno más, si cree en el proyecto). Firman por 2 o 3 temporadas.
+        </p>
         {s.directorsMarket.map((c) => (
           <div key={c.id} className="dd">
             <div>
               <b>{c.name}</b> <Stars n={c.stars} />
-              <div className="small muted">{STYLE_LABEL[c.style]} · {fmtMoney(c.salary)}/temp.</div>
+              <div className="small muted">{STYLE_LABEL[c.style]} · {fmtMoney(c.salary)}/temp.{c.contract ? ` · ${c.contract} temp.` : ''}</div>
             </div>
             <button
               className="btn small primary"

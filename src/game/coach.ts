@@ -1,8 +1,8 @@
-import { MATCHDAYS, fmtMoney, roundMoney } from './economy';
+import { MATCHDAYS, fmtMoney } from './economy';
 import { changeSatisfaction, currentPosition, objectiveTarget } from './fans';
 import { addMessage, myTeam, mySquad } from './market';
 import { FORMATIONS, STYLES, elevenFor, fatiguePenalty, type Formation, type Style } from './match';
-import { coachSeverance, ROLES, type Staff } from './staff';
+import { coachSeverance, refusesRenewal, renewalSalary, ROLES, staffPay, type Staff } from './staff';
 import { pick } from './rng';
 import type { GameState, Player } from './types';
 import { fitBonus } from './traits';
@@ -88,13 +88,14 @@ export function coachAfterMatch(s: GameState, gf: number, gc: number) {
 
 /** Lo que pide el entrenador por renovar 2 temporadas */
 export function coachRenewal(c: Staff) {
-  return { years: 2, salary: roundMoney(c.salary * (1.05 + 0.04 * c.stars)) };
+  return { years: 2, salary: renewalSalary(c.salary, staffPay('entrenador', c.stars), c.stars) };
 }
 
 export function renewCoach(s: GameState): string {
   const c = coachOf(s);
   if (!c) return 'No tienes entrenador.';
   ensureCoach(c);
+  if (refusesRenewal(s, c.stars)) return `${c.name} busca un club de más nivel y no quiere renovar.`;
   const r = coachRenewal(c);
   c.contract! += r.years;
   c.salary = r.salary;
@@ -112,7 +113,7 @@ export function coachEndSeason(s: GameState) {
   c.confidence = Math.round(60 + (c.confidence! - 60) * 0.5);
   c.warned = false;
   if (c.contract! > 0) return;
-  if (s.club.director && s.club.delegation.empleados === 'auto' && c.confidence >= 50) {
+  if (s.club.director && s.club.delegation.empleados === 'auto' && c.confidence >= 50 && !refusesRenewal(s, c.stars)) {
     renewCoach(s);
     addMessage(s, { from: 'director', title: `He renovado a ${c.name}`, body: 'El equipo funciona con él: dos temporadas más.' });
     return;

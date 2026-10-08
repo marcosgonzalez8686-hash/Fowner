@@ -9,7 +9,7 @@ import { roundRobin } from './match';
 import { clubName, personName, shortName, townNames } from './names';
 import { clamp, gauss, pick, rand, randInt } from './rng';
 import { STANDING, newLand } from './land';
-import { makeStaffCandidates } from './staff';
+import { DIRECTOR_PAY, candidateStars, clubMaxStars, makeStaffCandidates, maxStarsFor } from './staff';
 import { refreshSponsorOffers } from './sponsor';
 import { newCup } from './cup';
 import { defaultSeasonTickets } from './tickets';
@@ -65,14 +65,15 @@ export function makeSquad(s: GameState, teamId: number, level: number) {
 const ESTILOS: DDStyle[] = ['equilibrado', 'ahorrador', 'cantera', 'estrellas'];
 
 export function makeDirectors(s: GameState, division: number): Director[] {
-  // el mercado de directores se ajusta a la categoría del club
-  const base = [400_000, 160_000, 60_000, 25_000, 10_000][division];
-  return [1, 2, 3, 3, 4, 5].map((stars) => ({
+  // el sueldo depende de su calidad; quién acepta venir, del prestigio del club
+  const max = s.club ? clubMaxStars(s) : maxStarsFor(division);
+  return candidateStars(6, max).map((stars) => ({
     id: newId(s),
     name: personName(),
     stars,
     style: pick(ESTILOS),
-    salary: Math.round((base * Math.pow(1.9, stars - 1) * rand(0.9, 1.1)) / 1000) * 1000,
+    salary: Math.round((DIRECTOR_PAY[stars - 1] * rand(0.9, 1.1)) / 1000) * 1000,
+    contract: randInt(2, 3),
   }));
 }
 

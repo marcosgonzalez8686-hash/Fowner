@@ -87,6 +87,7 @@ export interface Director {
   stars: number; // 1-5
   style: DDStyle;
   salary: number; // € por temporada
+  contract?: number; // temporadas que le quedan (incluida la actual)
 }
 
 export type Proposal =

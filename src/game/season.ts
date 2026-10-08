@@ -2,7 +2,7 @@ import {
   DIV_FANS, DIV_LEVEL, DIV_SPONSOR, DIV_TV, DIVISION_NAMES, DIVISIONS, MATCHDAYS, PROMOTE, DIRECT_UP, PLAYOFF_FROM, PLAYOFF_TO,
   SQUAD_TARGET, emptyLedger, fmtMoney, ledgerExpense, ledgerIncome, roundMoney,
 } from './economy';
-import { expireProposals, levelOf, runDirector } from './director';
+import { directorEndSeason, expireProposals, levelOf, runDirector } from './director';
 import { buildAllFixtures, makeDirectors, makePlayer } from './generate';
 import { addMessage, marketOpen, marketValue, myTeam, mySquad, myYouth, teamById, wageBill } from './market';
 import { bestEleven, chooseStyle, computeStandings, simulate, type Formation } from './match';
@@ -21,7 +21,7 @@ import { recordMatch, recordSeason } from './history';
 import { buildReport, type MatchReport } from './report';
 import { bestXIOf, emptyStats, harvest, leaders } from './stats';
 import {
-  makeStaffCandidates, marketingFansBonus, scoutDiscoveries, staffAgingFactor, staffMatchBonus, staffWages, youthGrowthBonus,
+  makeStaffCandidates, marketingFansBonus, scoutDiscoveries, staffAgingFactor, staffEndSeason, staffMatchBonus, staffWages, youthGrowthBonus,
 } from './staff';
 import { refreshSponsorOffers, sponsorFixed, sponsorPerWin, sponsorsEndSeason } from './sponsor';
 import { maybeCreateEvent } from './events';
@@ -31,6 +31,7 @@ import { growFacilities } from './rivals';
 import { resetYellows } from './discipline';
 import { aiTransfers } from './aitransfers';
 import { filialEndSeason, filialMatchday, filialSeasonCost } from './filial';
+import { warnContracts } from './contracts';
 import { finishPlayoffs, myPlayoffDue, playoffWinner, startPlayoffs } from './playoff';
 import { PRE_WEEKS, executeAgreed, tickNegotiations } from './negotiation';
 import { payDividends, payLoans, refreshInvestorOffers } from './bank';
@@ -301,6 +302,7 @@ export function playMatchday(s: GameState) {
   }
   runDirector(s, 'jornada');
   expireProposals(s);
+  if (s.matchday === 30) warnContracts(s);
   if (s.matchday < MATCHDAYS) maybeCreateEvent(s);
 
   if (c.satisfaction <= 5) {
@@ -419,6 +421,8 @@ export function endSeason(s: GameState) {
   const fuerzanVenta = satisfactionEndSeason(s, miPos, divAntes, mio.division);
   resetSeasonMorale(s);
   coachEndSeason(s);
+  staffEndSeason(s);
+  directorEndSeason(s);
   newIdols(s, (title, body) => addMessage(s, { from: 'club', title, body }));
 
   // los cedidos vuelven a casa antes de repasar contratos

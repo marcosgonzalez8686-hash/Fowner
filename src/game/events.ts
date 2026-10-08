@@ -648,6 +648,69 @@ const TEMPLATES: Template[] = [
       return 'Pocos las compran y en redes se ríen del club.';
     },
   },
+
+  {
+    key: 'robo_director',
+    icon: '🕵️',
+    create: (s) => {
+      const d = s.club.director;
+      const div = myTeam(s).division;
+      if (!d || d.stars < 3 || div === 0) return null;
+      const grandes = s.teams.filter((t) => t.division < div);
+      if (!grandes.length) return null;
+      const club = pick(grandes);
+      const subida = roundMoney(d.salary * 1.4);
+      return {
+        title: `El ${club.name} quiere a tu director deportivo`,
+        body: `${d.name} ha recibido una oferta del ${club.name} (${club.division + 1}ª). Te pide que mejores su contrato para quedarse.`,
+        options: [
+          { label: 'Mejorarle el contrato', hint: `${fmtMoney(subida)}/temp. y 2 temporadas más` },
+          { label: 'Dejarle marchar', hint: 'Se va ya; el club te paga una compensación' },
+        ],
+        data: { subida, club: club.name, compensa: roundMoney(d.salary * 0.5) },
+      };
+    },
+    apply: (s, o, d) => {
+      const dd = s.club.director;
+      if (!dd) return 'El director ya no está.';
+      if (o === 0) { dd.salary = Number(d.subida); dd.contract = (dd.contract ?? 1) + 2; return `${dd.name} se queda con contrato nuevo.`; }
+      caja(s, Number(d.compensa));
+      s.club.director = null;
+      for (const m of s.messages) if (m.status === 'pendiente' && m.from === 'director') m.status = 'caducada';
+      return `${dd.name} se marcha al ${d.club}. Cobras ${fmtMoney(Number(d.compensa))} de compensación. Busca otro en Dirección → Director.`;
+    },
+  },
+  {
+    key: 'robo_entrenador',
+    icon: '🕵️',
+    create: (s) => {
+      const c = s.club.staff.entrenador;
+      const div = myTeam(s).division;
+      if (!c || c.stars < 3 || div === 0 || (c.confidence ?? 60) < 55) return null;
+      const grandes = s.teams.filter((t) => t.division < div);
+      if (!grandes.length) return null;
+      const club = pick(grandes);
+      const subida = roundMoney(c.salary * 1.4);
+      return {
+        title: `El ${club.name} quiere a tu entrenador`,
+        body: `Las cosas van bien y ${c.name} ha llamado la atención del ${club.name} (${club.division + 1}ª). Quiere saber si le mejoras el contrato.`,
+        options: [
+          { label: 'Mejorarle el contrato', hint: `${fmtMoney(subida)}/temp. y 2 temporadas más` },
+          { label: 'Dejarle marchar', hint: 'Se va ya; el club te paga una compensación' },
+        ],
+        data: { subida, club: club.name, compensa: roundMoney(c.salary * 0.6) },
+      };
+    },
+    apply: (s, o, d) => {
+      const c = s.club.staff.entrenador;
+      if (!c) return 'El entrenador ya no está.';
+      if (o === 0) { c.salary = Number(d.subida); c.contract = (c.contract ?? 1) + 2; changeMorale(s, 2); return `${c.name} se queda con contrato nuevo.`; }
+      caja(s, Number(d.compensa));
+      delete s.club.staff.entrenador;
+      changeMorale(s, -3);
+      return `${c.name} se marcha al ${d.club}. Cobras ${fmtMoney(Number(d.compensa))}. Busca entrenador en Dirección → Empleados.`;
+    },
+  },
 ];
 
 /** Probabilidad de que pase algo después de cada jornada */
