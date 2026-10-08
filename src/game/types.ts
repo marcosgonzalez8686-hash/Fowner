@@ -152,7 +152,8 @@ export interface Club {
   transferBudget: number; // presupuesto que el dueño concede al DD para fichajes
   wageCap: number; // tope de masa salarial anual que el DD debe respetar
   staffBudget: number; // tope de sueldos de empleados que el DD debe respetar
-  works: { kind: 'estadio' | 'training' | 'academy'; matchdaysLeft: number; amount: number } | null;
+  works: { kind: 'estadio' | 'remodelacion' | 'training' | 'academy'; matchdaysLeft: number; amount: number; model?: import('./stadium').StadiumModel } | null;
+  stadiumModel?: import('./stadium').StadiumModel;
   ledger: Ledger; // temporada actual
   lastLedger: Ledger | null;
   land: Land;

@@ -29,6 +29,8 @@ export const DIV_FANS = [28_000, 11_000, 4_000, 2_000, 900];
 export const DIV_PRICE = [45, 25, 14, 10, 8];
 
 export const ESTADIO_JORNADAS_OBRA = 6;
+/** Personas que caben de pie alrededor del campo, sin gradas */
+export const STANDING = 600;
 export const NIVEL_MAX = 5;
 /** Coste de subir instalaciones al nivel indicado (índice = nivel destino) */
 export const COSTE_INSTALACION = [0, 0, 90_000, 450_000, 1_800_000, 6_000_000];

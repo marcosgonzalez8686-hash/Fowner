@@ -9,6 +9,7 @@ import { DIVISIONS, fmtMoney } from '../game/economy';
 import type { Director, GameState, Level } from '../game/types';
 import { Segmented, Stars } from '../ui';
 import { DIFFICULTY, DIFFICULTY_KEYS, type Difficulty } from '../game/difficulty';
+import { STADIUM_MODELS, STADIUM_MODEL_KEYS, type StadiumModel } from '../game/stadium';
 import { DEFAULT_STADIUM, LAND_SIZE, clampStadium } from '../game/land';
 import type { MapModel } from '../components/Map3D';
 
@@ -33,6 +34,7 @@ export default function NewGame({ onCancel, onCreate }: Props) {
   const [director, setDirector] = useState<Director | null>(null);
   const [delegar, setDelegar] = useState<Level>('propone');
   const [dificultad, setDificultad] = useState<Difficulty>('normal');
+  const [modelo, setModelo] = useState<StadiumModel>('clasico');
 
   // terreno virgen con el estadio donde el dueño lo coloque
   const mapa: MapModel = useMemo(() => {
@@ -43,8 +45,9 @@ export default function NewGame({ onCancel, onCreate }: Props) {
         tiles.push({ x, y, state: dentro ? ('owned' as const) : ('locked' as const), stadium: dentro });
       }
     }
-    return { size: LAND_SIZE, tiles, capacity: 600, standColor: id.home.shirt, accentColor: id.home.shirt2, selected: null };
-  }, [estadio, id.home]);
+    // de muestra, con algo de grada para que se vea el modelo
+    return { size: LAND_SIZE, tiles, capacity: 6000, stadiumModel: modelo, standColor: id.home.shirt, accentColor: id.home.shirt2, selected: null };
+  }, [estadio, id.home, modelo]);
 
   const set = <K extends keyof Identity>(k: K, v: Identity[K]) => setId((x) => ({ ...x, [k]: v }));
 
@@ -68,7 +71,7 @@ export default function NewGame({ onCancel, onCreate }: Props) {
     onCreate(
       club.trim(),
       { ...id, ownerName: id.ownerName.trim(), ownerSurname: id.ownerSurname.trim(), stadium: id.stadium.trim() },
-      { stadium: estadio, director: director ?? undefined, delegation: delegar, difficulty: dificultad },
+      { stadium: estadio, director: director ?? undefined, delegation: delegar, difficulty: dificultad, stadiumModel: modelo },
     );
 
   return (
@@ -144,6 +147,18 @@ export default function NewGame({ onCancel, onCreate }: Props) {
           <div className="row">
             <button className="btn small grow" onClick={() => setEstadio(DEFAULT_STADIUM)}>Centrar</button>
           </div>
+          <h2>Modelo de estadio</h2>
+          <p className="small muted">Así crecerá cuando construyas gradas (en el mapa se ve con unas 6.000 plazas). Se puede cambiar más adelante con una remodelación.</p>
+          <ul className="model-pick">
+            {STADIUM_MODEL_KEYS.map((k) => (
+              <li key={k}>
+                <button className={k === modelo ? 'on' : ''} onClick={() => setModelo(k)}>
+                  <b>{STADIUM_MODELS[k].icon} {STADIUM_MODELS[k].name}</b>
+                  <small>{STADIUM_MODELS[k].desc} {STADIUM_MODELS[k].effect}</small>
+                </button>
+              </li>
+            ))}
+          </ul>
         </>
       )}
 

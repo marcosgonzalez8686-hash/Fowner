@@ -2,6 +2,7 @@ import { DIV_FANS } from './economy';
 import { BUILDINGS, type BuildingKind } from './land';
 import { STADIUM_REQ } from './costs';
 import type { GameState, Team } from './types';
+import { modelInfo } from './stadium';
 
 // Instalaciones de los demás clubes: estadio y edificios. Se generan según la categoría y la afición
 // y crecen poco a poco cuando el club sube o gana aficionados (nunca se derriban).
@@ -93,7 +94,8 @@ export function homeAdvantage(s: GameState, teamId: number) {
   if (!t) return 2;
   const aforo = teamId === s.club.teamId ? s.club.capacity : facilitiesOf(t).capacity;
   const ratio = Math.min(2.5, Math.max(0.3, aforo / DIV_CAPACITY[t.division]));
-  return 1.4 + 0.6 * Math.log2(ratio + 1);
+  // el modelo de nuestro estadio también cuenta: la grada pegada al campo aprieta más
+  return 1.4 + 0.6 * Math.log2(ratio + 1) + (teamId === s.club.teamId ? modelInfo(s).ambiente : 0);
 }
 
 /** Cómo crecen los jugadores de un rival en verano según su ciudad deportiva, su cantera y su centro médico */

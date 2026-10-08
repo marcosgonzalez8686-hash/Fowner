@@ -87,6 +87,7 @@ export interface NewGameOptions {
   director?: Director;
   delegation?: Level;
   difficulty?: Difficulty;
+  stadiumModel?: import('./stadium').StadiumModel;
 }
 
 export function newGame(clubNameInput: string, identityInput?: Identity, opts: NewGameOptions = {}): GameState {
@@ -160,6 +161,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
     wageCap: 170_000,
     staffBudget: 25_000,
     works: null,
+    stadiumModel: opts.stadiumModel ?? 'clasico',
     ledger: emptyLedger(),
     lastLedger: null,
     land: newLand(stadiumPos),

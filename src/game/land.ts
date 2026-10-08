@@ -1,4 +1,5 @@
-import { COSTE_INSTALACION, NIVEL_MAX, fmtMoney, roundMoney } from './economy';
+import { COSTE_INSTALACION, NIVEL_MAX, STANDING, fmtMoney, roundMoney } from './economy';
+import { modelInfo } from './stadium';
 import { addMessage } from './market';
 import { refreshSponsorOffers } from './sponsor';
 import { changeSatisfaction } from './fans';
@@ -9,8 +10,7 @@ import type { GameState } from './types';
 // y en el resto de parcelas propias se construyen instalaciones.
 
 export const LAND_SIZE = 8;
-/** Personas que caben de pie alrededor del campo, sin gradas */
-export const STANDING = 600;
+export { STANDING };
 /** Posición por defecto del estadio (esquina superior izquierda del bloque 2x2) */
 export const DEFAULT_STADIUM = { x: 3, y: 3 };
 
@@ -198,7 +198,7 @@ export function maintenancePerSeason(s: GameState) {
     total += invertido * MANTENIMIENTO;
   }
   // las gradas también hay que mantenerlas
-  total += Math.max(0, s.club.capacity - STANDING) * MANTENIMIENTO_ASIENTO;
+  total += Math.max(0, s.club.capacity - STANDING) * MANTENIMIENTO_ASIENTO * modelInfo(s).upkeep;
   return roundMoney(total);
 }
 
@@ -208,10 +208,10 @@ const lvl = buildingLevel;
 export function commercialPerMatch(s: GameState, attendance: number, fans: number) {
   // los ídolos de la grada venden camisetas aunque no haya tienda
   const idolos = s.players.filter((p) => p.teamId === s.club.teamId && p.traits?.includes('idolo')).length;
-  return Math.round((fans * 0.45 * lvl(s, 'tienda') + attendance * 1.2 * lvl(s, 'bar')) * (1 + 0.08 * idolos) + fans * 0.1 * idolos);
+  return Math.round(((fans * 0.45 * lvl(s, 'tienda') + attendance * 1.2 * lvl(s, 'bar')) * (1 + 0.08 * idolos) + fans * 0.1 * idolos) * modelInfo(s).commercial);
 }
 
-export const attendanceBonus = (s: GameState) => 1 + 0.06 * lvl(s, 'parking');
+export const attendanceBonus = (s: GameState) => (1 + 0.06 * lvl(s, 'parking')) * modelInfo(s).attendance;
 export const sponsorBonus = (s: GameState) => 1 + 0.05 * lvl(s, 'museo');
 export const fansGrowthBonus = (s: GameState) => 1 + 0.025 * lvl(s, 'museo');
 export const scoutingFactor = (s: GameState) => 1 - 0.18 * lvl(s, 'ojeadores');

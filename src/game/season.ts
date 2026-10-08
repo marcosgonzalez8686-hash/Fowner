@@ -34,6 +34,7 @@ import { growFacilities, homeAdvantage, rivalDevelopment, rivalYouthChance } fro
 import { resetYellows } from './discipline';
 import { aiTransfers } from './aitransfers';
 import { diff } from './difficulty';
+import { STADIUM_MODELS } from './stadium';
 import { filialEndSeason, filialMatchday, filialSeasonCost } from './filial';
 import { warnContracts } from './contracts';
 import { finishPlayoffs, myPlayoffDue, playoffWinner, startPlayoffs } from './playoff';
@@ -357,6 +358,10 @@ function finishWorks(s: GameState) {
     s.club.capacity += w.amount;
     changeSatisfaction(s, 2, 'Estadio ampliado');
     addMessage(s, { from: 'club', title: 'Obras del estadio terminadas', body: `Nuevo aforo de «${s.club.identity.stadium}»: ${s.club.capacity.toLocaleString('es-ES')} espectadores.` });
+  } else if (w.kind === 'remodelacion' && w.model) {
+    s.club.stadiumModel = w.model;
+    changeSatisfaction(s, 2, 'Estadio remodelado');
+    addMessage(s, { from: 'club', title: `${STADIUM_MODELS[w.model].icon} Estadio remodelado`, body: `«${s.club.identity.stadium}» ya es un estadio ${STADIUM_MODELS[w.model].name.toLowerCase()}. ${STADIUM_MODELS[w.model].effect}` });
   }
   s.club.works = null;
   // con gradas nuevas, el nombre del estadio ya se puede patrocinar

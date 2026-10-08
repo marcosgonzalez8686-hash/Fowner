@@ -601,3 +601,16 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .cal-res.draw { background: #8a8f8c; }
 .cal-res.loss { background: var(--neg); }
 .cal-next { flex: none; font-size: 0.7rem; font-weight: 700; color: var(--brand-2); }
+
+/* modelos de estadio */
+.remodel { margin-top: 10px; }
+.remodel summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+.models { list-style: none; padding: 0; margin: 4px 0 0; }
+.models li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.models li > div { flex: 1; min-width: 0; }
+.models li p { margin: 2px 0 0; }
+.models li .btn { flex-shrink: 0; }
+.model-pick { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
+.model-pick button { width: 100%; text-align: left; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: inherit; }
+.model-pick button.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.model-pick small { display: block; color: var(--muted); }

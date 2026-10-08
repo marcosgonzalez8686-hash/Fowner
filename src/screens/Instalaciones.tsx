@@ -2,7 +2,10 @@ import { Suspense, lazy, useMemo, useState } from 'react';
 import type { ScreenProps } from '../App';
 import { STADIUM_REQ, stadiumFine } from '../game/costs';
 import type { MapModel } from '../components/Map3D';
-import { expandStadium, stadiumCost } from '../game/club';
+import {
+  FOOTPRINT_STEPS, STADIUM_MODELS, STADIUM_MODEL_KEYS, expandStadium, expansionNeeds, modelInfo, remodelCost, remodelStadium, stadiumBlock,
+  stadiumCost, stadiumModel,
+} from '../game/stadium';
 import { fmtMoney } from '../game/economy';
 import { myTeam } from '../game/market';
 import {
@@ -29,6 +32,7 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
     () => ({
       size: LAND_SIZE,
       capacity: c.capacity,
+      stadiumModel: stadiumModel(s),
       standColor: c.identity.home.shirt,
       accentColor: c.identity.home.shirt2,
       selected: sel,
@@ -42,7 +46,7 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
       })),
     }),
     // se rehace cuando cambia el terreno, el estadio, los colores o la selección
-    [c.land, c.capacity, c.identity.home, c.training, c.academy, sel],
+    [c.land, c.capacity, c.stadiumModel, c.identity.home, c.training, c.academy, sel],
   );
 
   const run = (fn: () => string | undefined | void, ok: string) => notify(fn() ?? ok);
@@ -84,26 +88,67 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
                   </p>
                 );
               })()}
+              <p className="small">
+                Modelo: <b>{modelInfo(s).icon} {modelInfo(s).name}</b>. <span className="muted">{modelInfo(s).effect}</span>
+              </p>
               <p className="small muted">
                 {c.capacity <= STANDING
                   ? `Todavía no hay gradas: caben ${STANDING} personas de pie alrededor de la valla. Amplía el aforo para construir la primera grada.`
-                  : 'Con más aforo, las gradas crecen y aparecen en los demás lados del campo.'}
+                  : (() => {
+                      // cuándo necesitará más terreno
+                      const n = stadiumBlock(s).n;
+                      const sig = [...FOOTPRINT_STEPS].reverse().find(([desde, lado]) => lado > n && desde >= c.capacity);
+                      return `Ocupa ${n}×${n} parcelas.` + (sig ? ` Por encima de ${sig[0].toLocaleString('es-ES')} espectadores necesitará ${sig[1]}×${sig[1]}: ten comprado y libre el terreno de alrededor.` : '');
+                    })()}
               </p>
               {c.works ? (
-                <p className="hint">🚧 Obras en marcha: +{c.works.amount} asientos, faltan {c.works.matchdaysLeft} jornadas.</p>
+                <p className="hint">
+                  🚧 {c.works.kind === 'remodelacion' && c.works.model
+                    ? `Remodelación a ${STADIUM_MODELS[c.works.model].name.toLowerCase()}`
+                    : `Obras en marcha: +${c.works.amount.toLocaleString('es-ES')} asientos`}, faltan {c.works.matchdaysLeft} jornadas.
+                </p>
               ) : (
-                <div className="row wrap">
-                  {[250, 1000, 5000].map((n) => (
-                    <button
-                      key={n}
-                      className="btn"
-                      disabled={c.cash < stadiumCost(s, n)}
-                      onClick={() => run(() => update((g) => expandStadium(g, n)), 'Obras iniciadas')}
-                    >
-                      +{n.toLocaleString('es-ES')} asientos · {fmtMoney(stadiumCost(s, n))}
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <div className="row wrap">
+                    {(c.capacity >= 15_000 ? [1000, 5000, 10_000] : [250, 1000, 5000]).map((n) => {
+                      const tope = modelInfo(s).maxCapacity;
+                      const need = expansionNeeds(s, n);
+                      const bloqueado = (tope !== undefined && c.capacity + n > tope) || (need.grows && !need.block);
+                      return (
+                        <button
+                          key={n}
+                          className="btn"
+                          disabled={c.cash < stadiumCost(s, n) || bloqueado}
+                          onClick={() => run(() => update((g) => expandStadium(g, n)), 'Obras iniciadas')}
+                        >
+                          +{n.toLocaleString('es-ES')} asientos · {fmtMoney(stadiumCost(s, n))}
+                          {need.grows && <small className="muted"> · {need.block ? `pasa a ${need.n}×${need.n}` : `necesita ${need.n}×${need.n} parcelas`}</small>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <details className="remodel">
+                    <summary>Cambiar el modelo de estadio</summary>
+                    <ul className="models">
+                      {STADIUM_MODEL_KEYS.filter((k) => k !== stadiumModel(s)).map((k) => {
+                        const m = STADIUM_MODELS[k];
+                        const coste = remodelCost(s, k);
+                        const cabe = !m.maxCapacity || c.capacity <= m.maxCapacity;
+                        return (
+                          <li key={k}>
+                            <div>
+                              <b>{m.icon} {m.name}</b>
+                              <p className="small muted">{m.desc} {m.effect}</p>
+                            </div>
+                            <button className="btn" disabled={!cabe || c.cash < coste} onClick={() => run(() => update((g) => remodelStadium(g, k)), coste ? 'Remodelación iniciada' : 'Modelo cambiado')}>
+                              {!cabe ? 'Demasiado grande' : coste ? fmtMoney(coste) : 'Gratis'}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </details>
+                </>
               )}
             </>
           )}
