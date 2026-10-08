@@ -10,7 +10,7 @@ import { potLabel } from './scouting';
 import { gauss } from './rng';
 import { ownerTitle } from './identity';
 import { scoutingFactor } from './land';
-import { negFor, startPurchase, startRenewal } from './negotiation';
+import { agreedBalance, negFor, startPurchase, startRenewal } from './negotiation';
 import { annualIncome } from './bank';
 import { ROLES, ROLE_ORDER, hireStaff, staffScoutFactor, staffWages, type Role, type Staff } from './staff';
 import type { Director, GameState, Level, Player, Pos, Proposal, Task } from './types';
@@ -100,7 +100,9 @@ export function executeProposal(s: GameState, pr: Proposal): string | undefined 
       const p = s.players.find((x) => x.id === pr.playerId);
       const pide = p ? askingSalary(s, p) : pr.salary;
       const margen = Math.max(0, prudentWageCap(s) - wageBill(s));
-      const maxSalary = roundMoney(Math.min(pide * 1.1, Math.max(margen, pr.salary)));
+      // con la plantilla corta acepta el sueldo de mercado: es un fondo de armario barato que hace falta
+      const corta = mySquad(s).length + agreedBalance(s) < SQUAD_SAFE;
+      const maxSalary = roundMoney(corta ? pide * 1.1 : Math.min(pide * 1.1, Math.max(margen, pr.salary)));
       return startPurchase(s, pr.playerId, roundMoney(pr.fee * 0.85), {
         by: 'director', salary: roundMoney(pr.salary * 0.9), years: pr.years, maxFee: tope, maxSalary,
       });
@@ -114,7 +116,7 @@ export function executeProposal(s: GameState, pr: Proposal): string | undefined 
     }
     case 'renovar':
       // el director negocia: empieza un poco por debajo y como mucho sube un 10%
-      return startRenewal(s, pr.playerId, roundMoney(pr.salary * 0.95), pr.years, { by: 'director', maxSalary: roundMoney(pr.salary * 1.1) });
+      return startRenewal(s, pr.playerId, roundMoney(pr.salary * 0.95), pr.years, { by: 'director', maxSalary: roundMoney(pr.salary * 1.15) });
     case 'cantera':
       r = promoteYouth(s, pr.playerId);
       break;
@@ -137,6 +139,8 @@ function act(s: GameState, task: Task, pr: Proposal, title: string, body: string
   const negociaYa = pr.kind === 'fichar' && levelOf(s, task) === 'propone';
   if (levelOf(s, task) === 'auto' || negociaYa) {
     const err = executeProposal(s, pr);
+    // sin mesa libre para negociar no se insiste ni se avisa: lo intentará más adelante
+    if (err?.startsWith('Como mucho')) return;
     // fichar y vender ya no son inmediatos: se abren negociaciones
     const hecho = pr.kind === 'fichar' || pr.kind === 'renovar' ? 'Negociando' : pr.kind === 'vender' ? 'Transferible' : 'Hecho';
     addMessage(s, {
@@ -163,17 +167,23 @@ function scoreSigning(d: Director, p: Player, coste: number, perc: number) {
   }
 }
 
+/** Fichajes que el director tiene en marcha (cuentan como plazas ya ocupadas) */
+const directorBuysOpen = (s: GameState) =>
+  s.negotiations.filter((n) => n.by === 'director' && n.kind === 'compra' && (n.state === 'esperando' || n.state === 'tu_turno')).length;
+
 function doSignings(s: GameState, maxOps: number) {
   const d = s.club.director!;
   if (pendingFor(s, 'fichar').length >= 2) return;
   // como mucho dos negociaciones suyas a la vez
-  if (s.negotiations.filter((n) => n.by === 'director' && n.kind === 'compra' && (n.state === 'esperando' || n.state === 'tu_turno')).length >= 2) return;
+  if (directorBuysOpen(s) >= 2) return;
   let ops = 0;
   // con la plantilla corta hace las operaciones que hagan falta para llegar al mínimo
-  const limite = maxOps + Math.max(0, SQUAD_SAFE - mySquad(s).length);
+  const limite = maxOps + Math.max(0, SQUAD_SAFE - mySquad(s).length - agreedBalance(s));
   for (let intento = 0; intento < limite; intento++) {
     const squad = mySquad(s);
-    if (squad.length >= 26) return;
+    // los que ya tienen firmado llegar (o irse) en el próximo mercado también cuentan
+    const efectiva = squad.length + agreedBalance(s) + directorBuysOpen(s);
+    if (efectiva >= 26) return;
     // posición con más necesidad: primero huecos, luego el titular más flojo respecto a la categoría
     const objetivo = DIV_LEVEL[myTeam(s).division];
     let pos: Pos | null = null;
@@ -187,7 +197,7 @@ function doSignings(s: GameState, maxOps: number) {
       if (minimo - objetivo < peor) { peor = minimo - objetivo; pos = ps; }
     }
     // con la plantilla corta se cubre la línea con menos jugadores respecto a su mínimo
-    const corta = squad.length < SQUAD_SAFE;
+    const corta = efectiva < SQUAD_SAFE;
     if (corta && peor !== -Infinity) {
       pos = (Object.keys(MIN_POS) as Pos[]).sort(
         (a, b) => squad.filter((p) => p.pos === a).length / MIN_POS[a] - squad.filter((p) => p.pos === b).length / MIN_POS[b],
@@ -204,7 +214,7 @@ function doSignings(s: GameState, maxOps: number) {
     // si la masa salarial ya pasa del tope, al menos puede traer jugadores baratos para completar
     // sueldo de un fondo de armario: algo menos que la media de la plantilla
     const barato = roundMoney(Math.max(s.club.wageCap * 0.03, (wageBill(s) / Math.max(1, squad.length)) * 0.8));
-    const margenSalarial = Math.max(prudentWageCap(s) * (squad.length < 18 ? 1.1 : 1) - wageBill(s), corta ? barato : 0);
+    const margenSalarial = Math.max(prudentWageCap(s) * (efectiva < 18 ? 1.1 : 1) - wageBill(s), corta ? barato : 0);
     const rebaja = 1 - d.stars * 0.03;
 
     let mejor: { p: Player; fee: number; salary: number; score: number; perc: number } | null = null;
@@ -218,7 +228,8 @@ function doSignings(s: GameState, maxOps: number) {
       const t = ourTactics(s);
       const perc = perceived(s, d, p) + fitBonus(p, t.formation, t.style, -1);
       if (necesitaHueco ? perc < objetivo - 8 : perc < listón + 2) continue;
-      const score = scoreSigning(d, p, fee + salary, perc);
+      // con la plantilla corta manda el precio: hacen falta jugadores que cumplan, no estrellas
+      const score = corta ? -(salary + fee / 3) : scoreSigning(d, p, fee + salary, perc);
       if (!mejor || score > mejor.score) mejor = { p, fee, salary, score, perc };
     }
     if (!mejor) {
@@ -264,11 +275,14 @@ function doSales(s: GameState) {
       break;
     }
   }
-  // 2. el ahorrador vende al veterano caro que no es titular
-  if (!candidato && d.style === 'ahorrador') {
+  // 2. con la masa salarial muy por encima de lo prudente (p. ej. tras un descenso), sale el suplente que más cobra
+  const sobrecoste = wageBill(s) > prudentWageCap(s) * 1.15;
+  if (!candidato && (d.style === 'ahorrador' || sobrecoste)) {
     const titulares = new Set((Object.keys(FORMACION) as Pos[]).flatMap((pos) => starters(squad, pos, ourShape(s)).map((p) => p.id)));
-    candidato = squad.filter((p) => !titulares.has(p.id) && p.age >= 29 && p.signedSeason !== s.season).sort((a, b) => b.salary - a.salary)[0] ?? null;
-    motivo = 'Cobra mucho para no ser titular.';
+    candidato = squad.filter((p) => !titulares.has(p.id) && (sobrecoste || p.age >= 29) && p.signedSeason !== s.season).sort((a, b) => b.salary - a.salary)[0] ?? null;
+    motivo = sobrecoste
+      ? `Pagamos ${fmtMoney(wageBill(s))} en sueldos y lo prudente son ${fmtMoney(prudentWageCap(s))}: cobra mucho para no ser titular.`
+      : 'Cobra mucho para no ser titular.';
   }
   if (!candidato || candidato.listed || negFor(s, candidato.id) || alreadyProposed(s, candidato.id)) return;
   const fee = roundMoney(sellPrice(s, candidato) * (1 + d.stars * 0.03));
@@ -293,7 +307,10 @@ function doRenewals(s: GameState) {
     const salary = roundMoney(renewSalary(p) * (1 - d.stars * 0.02));
     // renovar a quien hace falta se permite siempre que no pida una subida grande;
     // lo prudente solo frena cuando la plantilla va sobrada o la subida es mucha
-    const necesario = squad.length <= SQUAD_SAFE + 2 && salary <= p.salary * 1.15;
+    // cuenta con quién se queda el año que viene: los que acaban contrato se irían
+    const seQuedan = squad.filter((x) => x.contract > 1 && !x.loan && !x.retiring).length + agreedBalance(s);
+    // si hace falta, se renueva salvo que dispare los sueldos: sustituirlo costaría lo mismo o más
+    const necesario = seQuedan < SQUAD_SAFE + 2 && (salary <= p.salary * 1.2 || wageBill(s) - p.salary + salary <= prudentWageCap(s) * 1.15);
     if (!necesario && wageBill(s) - p.salary + salary > prudentWageCap(s)) {
       warnOnce(s, `No llego para renovar a ${p.name}`, `Pide ${fmtMoney(salary)}/temp. y la masa salarial pasaría de lo prudente (${fmtMoney(prudentWageCap(s))}: el tope que me marcas o el 70% de lo que ingresamos, lo que sea menor).`);
       continue;
@@ -316,7 +333,8 @@ function doYouth(s: GameState) {
     if (alreadyProposed(s, y.id)) continue;
     const exigencia = d.style === 'cantera' ? 10 : 4;
     const vale = perceived(s, d, y) >= objetivo - 6 || y.pot >= objetivo + exigencia;
-    if (vale && squad.length < 26) {
+    // con la plantilla corta, un juvenil es la forma más barata de completarla
+    if ((vale || squad.length + agreedBalance(s) < SQUAD_SAFE) && squad.length < 26) {
       act(s, 'cantera', { kind: 'cantera', playerId: y.id }, `subir a ${y.name} (${y.pos}, ${y.ovr})`,
         `Juvenil de ${y.age} años, media ${y.ovr} y ${potLabel(y.ovr, y.pot)}. Creo que puede aportar.`);
     } else if (levelOf(s, 'cantera') === 'auto') {

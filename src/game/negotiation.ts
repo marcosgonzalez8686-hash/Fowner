@@ -49,6 +49,11 @@ export const isActive = (n: Negotiation) => n.state === 'esperando' || n.state =
 /** Todavía se está negociando (no está firmada) */
 const enCurso = (n: Negotiation) => n.state === 'esperando' || n.state === 'tu_turno';
 export const activeNegs = (s: GameState) => s.negotiations.filter(isActive);
+/** Jugadores que ya tienen firmado llegar (+) o irse (−) en el próximo mercado */
+export function agreedBalance(s: GameState) {
+  const acordadas = s.negotiations.filter((n) => n.state === 'acordada');
+  return acordadas.filter((n) => n.kind === 'compra' || n.kind === 'cesion').length - acordadas.filter((n) => n.kind === 'venta' || n.kind === 'cedo').length;
+}
 export const negFor = (s: GameState, playerId: number) => s.negotiations.find((n) => isActive(n) && n.playerId === playerId);
 /** Las que esperan una decisión del dueño */
 export const myTurn = (s: GameState) => s.negotiations.filter((n) => n.state === 'tu_turno' && (n.by === 'dueño' || n.approval));
@@ -105,7 +110,7 @@ export function startPurchase(
   if (!p || p.teamId === s.club.teamId) return 'No está disponible.';
   if (p.loan) return 'Está cedido: no se puede fichar hasta que vuelva a su club.';
   if (negFor(s, playerId)) return 'Ya hay una negociación abierta por él.';
-  if (activeNegs(s).filter((n) => n.kind === 'compra' || n.kind === 'cesion').length >= MAX_ABIERTAS) return `Como mucho ${MAX_ABIERTAS} negociaciones a la vez.`;
+  if (s.negotiations.filter((n) => enCurso(n) && (n.kind === 'compra' || n.kind === 'cesion')).length >= MAX_ABIERTAS) return `Como mucho ${MAX_ABIERTAS} negociaciones a la vez.`;
   const libre = p.teamId === null;
   if (!libre && fee > 0 && s.club.transferBan === s.season) return 'Sanción por deuda: esta temporada solo puedes fichar jugadores libres.';
   const vendedor = teamById(s, p.teamId);
@@ -485,6 +490,8 @@ export function saleAdvice(s: GameState, n: Negotiation): { action: 'aceptar' | 
   const ratio = (n.counterFee ?? n.fee) / Math.max(1, valor);
   const clave = !p.listed && [...mySquad(s)].sort((a, b) => b.ovr - a.ovr).slice(0, 3).some((x) => x.id === p.id);
   if (mySquad(s).length <= 20) return { action: 'rechazar', text: 'Nos quedaríamos cortos de plantilla.' };
+  // a un ídolo solo se le vende si el dueño lo ha puesto en la lista
+  if (hasTrait(p, 'idolo') && !p.listed) return { action: 'rechazar', text: 'Es un ídolo de la grada: venderlo nos costaría muy caro con la afición.' };
   if (ratio >= (clave ? 1.4 : p.listed ? 0.85 : 1.1)) return { action: 'aceptar', text: 'Es una buena oferta.' };
   if (ratio >= (clave ? 1.0 : 0.75) && n.log.length < 3) return { action: 'pedir', text: 'Pidamos un 15% más: creo que pueden subir.' };
   return { action: 'rechazar', text: clave ? 'Es de nuestros mejores: así no se vende.' : 'Se queda corta para lo que vale.' };
