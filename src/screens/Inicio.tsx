@@ -2,10 +2,10 @@ import { useState } from 'react';
 import type { ScreenProps } from '../App';
 import { executeProposal } from '../game/director';
 import { MATCHDAYS } from '../game/economy';
-import { marketOpen, myTeam, mySquad, myYouth, squadOf, teamById } from '../game/market';
+import { marketOpen, myTeam, mySquad, squadOf, teamById } from '../game/market';
 import { bestEleven, computeStandings, form } from '../game/match';
 import { ourPlan } from '../game/coach';
-import { advanceWeek, endSeason, playMatchday, startSeason } from '../game/season';
+import { endSeason, playMatchday } from '../game/season';
 import type { GameState, Message } from '../game/types';
 import { Card } from '../ui';
 import MatchSummary from '../components/MatchSummary';
@@ -15,16 +15,15 @@ import { rivalCrest } from '../game/identity';
 import { resolveEvent } from '../game/events';
 import { SlotOffers } from '../components/Sponsors';
 import NegotiationsCard from '../components/Negotiations';
-import { PRE_WEEKS, myTurn } from '../game/negotiation';
+import { myTurn } from '../game/negotiation';
 import Previa, { type MatchSetup } from '../components/Previa';
 import LiveMatch from '../components/LiveMatch';
 import { levelOf } from '../game/director';
 import { ROUND_NAMES, myCupMatchDue, myTie, playCupRound } from '../game/cup';
 import { TeamLink } from '../nav/context';
 import { CONT_NAME, CONT_ROUNDS, FLAG, SUPER_NAME, myContDue, myContTie, mySuperDue, playContinentalRound, playSupercopa } from '../game/continental';
-import { seasonTicketForecast } from '../game/tickets';
-import { fmtMoney } from '../game/economy';
-import FansCard, { ObjectivePicker } from '../components/FansCard';
+import FansCard from '../components/FansCard';
+import Pretemporada from '../components/Pretemporada';
 
 function nextMatch(s: GameState) {
   const t = myTeam(s);
@@ -65,8 +64,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
   const mia = ourPlan(s).strength;
   const propuestas = s.messages.filter((m) => m.status === 'pendiente');
   const miUltimo = s.lastResults.find((r) => r.home === t.id || r.away === t.id);
-  const faltaObjetivo = s.phase === 'pretemporada' && !s.club.objective;
-  const hayPendientes = Boolean(s.pendingEvent) || propuestas.length > 0 || faltaCamiseta || ofertasPendientes > 0 || faltaObjetivo || myTurn(s).length > 0;
+  const hayPendientes = Boolean(s.pendingEvent) || propuestas.length > 0 || (faltaCamiseta && s.phase !== 'pretemporada') || ofertasPendientes > 0 || myTurn(s).length > 0;
 
   const nosotros = prox && (
     <div className="me">
@@ -131,69 +129,12 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
     notify(err ? `No se pudo: ${err}` : aprobar ? 'Aprobado' : 'Rechazado');
   };
 
-  // lista de tareas de pretemporada
   const plantilla = mySquad(s);
-  const tareas = [
-    { ok: !faltaCamiseta, texto: 'Firmar patrocinador de camiseta', obligatoria: true, ir: undefined },
-    { ok: !faltaObjetivo, texto: 'Fijar el objetivo de la temporada', obligatoria: true, ir: undefined },
-    { ok: Boolean(s.club.staff.entrenador), texto: 'Contratar entrenador', obligatoria: false, ir: () => go('direccion', 'empleados') },
-    {
-      ok: plantilla.length >= 18 && plantilla.some((p) => p.pos === 'POR'),
-      texto: `Plantilla completa (${plantilla.length} jugadores)`,
-      obligatoria: false,
-      ir: () => go('equipo', 'plantilla'),
-    },
-    ...(myYouth(s).length
-      ? [{ ok: false, texto: `Decidir ${myYouth(s).length} juvenil(es) de la cantera`, obligatoria: false, ir: () => go('equipo', 'plantilla') }]
-      : []),
-    { ok: false, texto: `Campaña de abonos: ~${seasonTicketForecast(s).toLocaleString('es-ES')} abonos a ${fmtMoney(s.club.seasonTickets.price)}`, obligatoria: false, ir: () => go('finanzas', 'entradas') },
-    { ok: Boolean(s.club.director), texto: 'Director deportivo (opcional)', obligatoria: false, ir: () => go('direccion', 'director') },
-  ];
 
   return (
     <>
       <Card>
-        {s.phase === 'pretemporada' && (
-          <>
-            <h2>Pretemporada {s.season}</h2>
-            <p className="muted small">
-              Semana {(s.preWeek ?? 0) + 1} de {PRE_WEEKS} · mercado abierto. Las negociaciones avanzan cada semana. Prepara el club antes de empezar:
-            </p>
-            <ul className="checklist">
-              {tareas.map((x) => (
-                <li key={x.texto} className={x.ok ? 'ok' : x.obligatoria ? 'must' : ''}>
-                  <span className="check">{x.ok ? '✅' : x.obligatoria ? '❗' : '⬜'}</span>
-                  {x.ir && !x.ok ? (
-                    <button className="link" onClick={x.ir}>{x.texto} ›</button>
-                  ) : (
-                    <span>{x.texto}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {(s.preWeek ?? 0) < PRE_WEEKS - 1 && (
-              <button
-                className="btn big full"
-                onClick={() => {
-                  const err = update((g) => advanceWeek(g));
-                  notify(err ?? 'Pasa una semana de pretemporada');
-                }}
-              >
-                ⏩ Avanzar una semana
-              </button>
-            )}
-            <button
-              className="btn primary big full"
-              disabled={faltaCamiseta || faltaObjetivo}
-              onClick={() => {
-                const err = update((g) => startSeason(g));
-                if (err) notify(err);
-              }}
-            >
-              Empezar temporada
-            </button>
-          </>
-        )}
+        {s.phase === 'pretemporada' && <Pretemporada s={s} update={update} notify={notify} go={go} />}
         {especial && (() => {
           const rival = teamById(s, especial.rivalId)!;
           const local = especial.home === null ? t.id : especial.home;
@@ -337,9 +278,7 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
         </Card>
       )}
 
-      {s.phase === 'pretemporada' && <ObjectivePicker s={s} update={update} notify={notify} />}
-
-      {faltaCamiseta && (
+      {faltaCamiseta && s.phase !== 'pretemporada' && (
         <Card title="👕 Patrocinador de camiseta">
           <p className="small muted">
             Tres empresas quieren poner su nombre en tu camiseta. Elige una para poder empezar la temporada.

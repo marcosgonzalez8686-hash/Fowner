@@ -185,6 +185,8 @@ export interface GameState {
   pendingEvent?: PendingEvent;
   cup: Cup;
   negotiations: Negotiation[]; // fichajes, ventas y cesiones en marcha (y las últimas cerradas)
+  introPending?: boolean; // partida nueva: falta enseñar la bienvenida
+  skipCoach?: number; // temporada en la que el dueño decidió seguir sin entrenador
   preWeek?: number; // semana de pretemporada (el mercado avanza por semanas)
   lastEventKey?: string;
   messages: Message[];

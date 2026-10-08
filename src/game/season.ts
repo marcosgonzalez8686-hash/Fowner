@@ -31,7 +31,7 @@ import { PRE_WEEKS, executeAgreed, tickNegotiations } from './negotiation';
 import { payDividends, payLoans, refreshInvestorOffers } from './bank';
 import { leagueAttendance, seasonTicketFansGrowth, seasonTicketLoyalty, seasonTicketsNewSeason, sellSeasonTickets } from './tickets';
 import { changeMorale, healOneMatchday, injuryName, isInjured, moraleAfterMatch, moraleBonus, resetSeasonMorale, rollInjuries } from './morale';
-import { changeSatisfaction, fansGrowthSatisfaction, objectiveTarget, satisfactionAfterMatch, satisfactionEndSeason } from './fans';
+import { changeSatisfaction, fansExpectationMessage, fansGrowthSatisfaction, objectiveTarget, satisfactionAfterMatch, satisfactionEndSeason } from './fans';
 import {
   agingFactor, commercialPerMatch, fansGrowthBonus, maintenancePerSeason,
 } from './land';
@@ -539,4 +539,5 @@ export function endSeason(s: GameState) {
   executeAgreed(s);
   generateOffers(s, 2);
   runDirector(s, 'pretemporada');
+  fansExpectationMessage(s);
 }

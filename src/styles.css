@@ -553,3 +553,26 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
   .mark.loan { background: #16324d; color: #a9d4ff; }
   .mark.renew { background: #1d3a22; color: #a8e2ae; }
 }
+
+/* pretemporada guiada */
+.stepbar { display: flex; gap: 4px; margin: 6px 0 10px; }
+.stepbar i { flex: 1; height: 5px; border-radius: 3px; background: var(--line); }
+.stepbar i.on { background: var(--brand-2); }
+.stepbar i.now { background: var(--brand-2); opacity: 0.4; }
+.done-steps { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; }
+.done-steps li { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.step-now { border-top: 1px solid var(--line); padding-top: 10px; margin-bottom: 12px; }
+.step-now h3 { margin: 2px 0 6px; }
+.step-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--brand-2); }
+.suggest { list-style: none; padding: 0; margin: 4px 0 12px; display: flex; flex-direction: column; gap: 6px; }
+.suggest .link { text-align: left; font-weight: 500; }
+
+/* bienvenida */
+.intro .overlay-inner { justify-content: center; }
+.intro-skip { align-self: flex-end; }
+.intro-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; padding: 0 8px; }
+.intro-ico { font-size: 4.5rem; line-height: 1; margin-bottom: 8px; }
+.intro-body p { color: var(--muted); font-size: 1.05rem; line-height: 1.5; max-width: 360px; }
+.intro-dots { display: flex; justify-content: center; gap: 8px; margin: 12px 0; }
+.intro-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.intro-dots i.on { background: var(--brand-2); }

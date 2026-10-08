@@ -1,6 +1,6 @@
 import type { Update } from '../App';
 import {
-  OBJECTIVES, currentPosition, expectedObjective, objectiveTarget, objectiveText, satisfactionLabel, setObjective,
+  OBJECTIVES, currentPosition, objectiveReaction, objectiveTarget, objectiveText, satisfactionLabel, setObjective,
   type Objective,
 } from '../game/fans';
 import { myTeam, mySquad } from '../game/market';
@@ -11,15 +11,13 @@ import { Card } from '../ui';
 
 const ORDEN: Objective[] = ['ascenso', 'mitad', 'salvacion'];
 
-/** Elección del objetivo de la temporada (pretemporada) */
+/** Elección del objetivo de la temporada (pretemporada). Lo que espera la grada se cuenta en el buzón, no aquí. */
 export function ObjectivePicker({ s, update, notify }: { s: GameState; update: Update; notify: (m: string) => void }) {
   const division = myTeam(s).division;
-  const esperado = expectedObjective(s);
   return (
-    <Card title="🎯 Objetivo de la temporada">
+    <>
       <p className="small muted">
-        Lo anuncias ante los socios. Si lo cumples, la afición te respalda; si fallas, se enfada. Ser más ambicioso de lo
-        que espera la grada ilusiona al principio, pero arriesga más.
+        Lo anuncias ante los socios. Si lo cumples, la afición te respalda; si fallas, se enfada. ¿Dudas? En el 📨 buzón la peña cuenta qué espera.
       </p>
       <div className="options">
         {ORDEN.map((o) => {
@@ -30,22 +28,23 @@ export function ObjectivePicker({ s, update, notify }: { s: GameState; update: U
               key={o}
               className={`btn option${elegido ? ' primary' : ''}`}
               onClick={() => {
-                update((g) => setObjective(g, o));
-                notify(`Objetivo: ${info.label}`);
+                const r = update((g) => {
+                  setObjective(g, o);
+                  const re = objectiveReaction(g);
+                  return re ? `${re.emoji} ${re.text}` : undefined;
+                });
+                notify(`${info.label}${r ? ` · ${r}` : ''}`);
               }}
             >
-              {o === esperado && <span className="tag">👥 Lo que espera la afición</span>}
               <b>
                 {info.icon} {info.label}
               </b>
-              <small>
-                {objectiveText(o, division)}
-              </small>
+              <small>{objectiveText(o, division)}</small>
             </button>
           );
         })}
       </div>
-    </Card>
+    </>
   );
 }
 

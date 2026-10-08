@@ -26,6 +26,7 @@ import Tabs from './screens/Tabs';
 import Start from './screens/Start';
 import PlayerSheet from './components/PlayerSheet';
 import TeamSheet from './components/TeamSheet';
+import Intro from './components/Intro';
 import { NavContext } from './nav/context';
 import { pushBack } from './nav/back';
 import { tabAlerts } from './nav/alerts';
@@ -59,6 +60,7 @@ export default function App() {
   const [sub, setSub] = useState<Record<TabId, string>>(DEFAULT_SUB);
   const [toast, setToast] = useState<string | null>(null);
   const [panel, setPanel] = useState<'bandeja' | 'menu' | null>(null);
+  const [verIntro, setVerIntro] = useState(false);
   // fichas abiertas desde cualquier pantalla
   // se apilan: desde la ficha de un equipo se abre la de un jugador y al cerrarla se vuelve al equipo
   const [fichas, setFichas] = useState<{ kind: 'player' | 'team'; id: number }[]>([]);
@@ -284,6 +286,9 @@ export default function App() {
           <p className="small muted">
             Partida guardada en el hueco {slot}. Se guarda sola después de cada acción.
           </p>
+          <button className="btn full" onClick={() => { setPanel(null); setVerIntro(true); }}>
+            📖 Cómo se juega
+          </button>
           <button className="btn full" onClick={salirAlMenu}>
             Cambiar de partida
           </button>
@@ -299,6 +304,15 @@ export default function App() {
             Vender el club (borrar esta partida)
           </button>
         </Sheet>
+      )}
+
+      {(state.introPending || verIntro) && !state.gameOver && (
+        <Intro
+          onClose={() => {
+            setVerIntro(false);
+            if (state.introPending) update((g) => { g.introPending = false; });
+          }}
+        />
       )}
 
       <nav className="tabs">

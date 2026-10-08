@@ -1,3 +1,4 @@
+import { fansExpectationMessage } from './fans';
 import { emptyStats } from './stats';
 import { rollIdentity } from './traits';
 import {
@@ -12,7 +13,6 @@ import { refreshSponsorOffers } from './sponsor';
 import { newCup } from './cup';
 import { defaultSeasonTickets } from './tickets';
 import { emptyBank, refreshInvestorOffers } from './bank';
-import { generateOffers } from './offers';
 import { emptyRecords } from './history';
 import { defaultIdentity, ownerTitle, type Identity } from './identity';
 import type { Level, Task } from './types';
@@ -190,11 +190,12 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
       'En Instalaciones puedes construir gradas, comprar terreno y levantar nuevas instalaciones.\n\n' +
       'Puedes llevarlo todo tú o contratar un director deportivo (Dirección) y decidir qué tareas le delegas: ' +
       'fichajes, ventas, renovaciones y cantera. Cada una puede estar en Manual, Propone y apruebas, o Automático.\n\n' +
-      'Antes de empezar, firma un patrocinador de camiseta (aquí en Inicio) y contrata a tus empleados (Dirección → Empleados): sin entrenador el equipo rinde peor.',
+      'En Inicio te guiamos paso a paso por la pretemporada: patrocinador, objetivo y entrenador.',
     read: false,
   });
-  // primeras ofertas por nuestros jugadores en la pretemporada
-  generateOffers(s, 2);
+  // la primera semana es tranquila: las ofertas por nuestros jugadores empiezan a llegar en la segunda
+  fansExpectationMessage(s);
+  s.introPending = true;
 
   // director deportivo elegido al crear la partida
   if (opts.director) {

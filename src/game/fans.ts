@@ -94,6 +94,32 @@ export function setObjective(s: GameState, obj: Objective) {
   changeSatisfaction(s, ilusion, `Objetivo: ${OBJECTIVES[obj].label.toLowerCase()}`);
 }
 
+/** Al empezar la pretemporada, la peña cuenta qué espera (una vez, en el buzón; no se repite en pantalla) */
+export function fansExpectationMessage(s: GameState) {
+  const textos: Record<Objective, { title: string; body: string }> = {
+    ascenso: {
+      title: '📣 La grada sueña con subir',
+      body: 'En el bar de la peña no se habla de otra cosa: con esta plantilla, dicen, este año toca pelear por el ascenso. Prometer menos les sabría a poco.',
+    },
+    mitad: {
+      title: '📣 La peña quiere ver al equipo arriba',
+      body: 'Los socios no piden milagros, pero quieren un equipo que mire hacia arriba. Una temporada sin más les sabría a poco; hablar de ascenso les haría soñar… y te lo recordarían si fallas.',
+    },
+    salvacion: {
+      title: '📣 La grada se conforma con no sufrir',
+      body: 'Los veteranos de la peña lo tienen claro: este año lo importante es no pasar apuros. Si prometes más, ilusionarás a la grada, pero se acordarán si no llega.',
+    },
+  };
+  addMessage(s, { from: 'prensa', ...textos[expectedObjective(s)] });
+}
+
+/** Cómo ha recibido la afición el objetivo anunciado esta temporada */
+export function objectiveReaction(s: GameState) {
+  const nota = s.club.satLog.find((x) => x.season === s.season && x.text.startsWith('Objetivo'));
+  if (!nota) return null;
+  return nota.delta > 1 ? { emoji: '🤩', text: 'Ilusión en la grada' } : nota.delta < 0 ? { emoji: '😒', text: 'A la grada le sabe a poco' } : { emoji: '🙂', text: 'A la grada le parece bien' };
+}
+
 /** Satisfacción tras cada jornada: resultado, marcha respecto al objetivo y precio de las entradas */
 export function satisfactionAfterMatch(s: GameState, gf: number, gc: number, enCasa: boolean) {
   const t = myTeam(s);
