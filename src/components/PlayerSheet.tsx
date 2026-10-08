@@ -164,8 +164,12 @@ export default function PlayerSheet({ s, update, notify, id, onClose }: {
               <>
                 <p className="small muted">
                   {sel.listed
-                    ? 'Está en la lista de transferibles: los clubes lo saben y llegarán ofertas (algo más bajas).'
-                    : 'Si lo pones como transferible, otros clubes se animarán a hacer ofertas.'}
+                    ? s.club.director
+                      ? 'Está en la lista de transferibles: tu director deportivo le busca comprador y negocia las ofertas. Te pedirá el visto bueno cuando haya acuerdo.'
+                      : 'Está en la lista de transferibles: los clubes lo saben y llegarán ofertas (algo más bajas).'
+                    : s.club.director
+                      ? 'Si lo pones como transferible, tu director deportivo intentará venderlo y aceptará ofertas más ajustadas.'
+                      : 'Si lo pones como transferible, otros clubes se animarán a hacer ofertas.'}
                 </p>
                 <button className="btn full" onClick={() => run(() => update((g) => { const x = g.players.find((y) => y.id === sel.id); if (x) x.listed = !x.listed; }), sel.listed ? 'Ya no es transferible' : 'Ahora es transferible')}>
                   {sel.listed ? '🚫 Quitar de transferibles' : '🏷️ Poner como transferible'}

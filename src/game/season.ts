@@ -26,7 +26,7 @@ import {
 import { refreshSponsorOffers, sponsorFixed, sponsorPerWin, sponsorsEndSeason } from './sponsor';
 import { maybeCreateEvent } from './events';
 import { cupRoundDue, newCup, playCupRound, stillIn } from './cup';
-import { generateOffers } from './offers';
+import { directorShopsListed, generateOffers } from './offers';
 import { growFacilities } from './rivals';
 import { resetYellows } from './discipline';
 import { aiTransfers } from './aitransfers';
@@ -59,6 +59,7 @@ export function advanceWeek(s: GameState): string | undefined {
   if ((s.preWeek ?? 0) >= PRE_WEEKS - 1) return 'Es la última semana de pretemporada: toca empezar la liga.';
   s.preWeek = (s.preWeek ?? 0) + 1;
   tickNegotiations(s);
+  directorShopsListed(s);
   aiTransfers(s);
   generateOffers(s, 1);
   runDirector(s, 'pretemporada');
@@ -291,6 +292,7 @@ export function playMatchday(s: GameState) {
   // y se hace efectivo lo acordado mientras el mercado estaba cerrado
   if (s.matchday === 18) executeAgreed(s);
   tickNegotiations(s);
+  directorShopsListed(s);
   if (marketOpen(s)) {
     aiTransfers(s);
     generateOffers(s, 1);

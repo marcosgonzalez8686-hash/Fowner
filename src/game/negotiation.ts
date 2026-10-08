@@ -66,7 +66,8 @@ function nivel(s: GameState, n: Negotiation) {
   return s.club.delegation.renovaciones;
 }
 /** En "Propone y apruebo" el director negocia, pero el acuerdo final lo aprueba el dueño (salvo renovaciones, que se aprueban al empezar) */
-const necesitaVistoBueno = (s: GameState, n: Negotiation) => n.by === 'director' && n.kind !== 'renovacion' && !n.approved && nivel(s, n) === 'propone';
+// (también en manual: es lo que pasa cuando el director vende a un transferible que le has encargado)
+const necesitaVistoBueno = (s: GameState, n: Negotiation) => n.by === 'director' && n.kind !== 'renovacion' && !n.approved && nivel(s, n) !== 'auto';
 
 const turno = (s: GameState) => (s.phase === 'pretemporada' ? `Semana ${(s.preWeek ?? 0) + 1}` : `J${s.matchday}`);
 const apunta = (s: GameState, n: Negotiation, texto: string) => n.log.push(`${turno(s)} · ${texto}`);
@@ -193,7 +194,7 @@ export function newSaleOffer(s: GameState, p: Player, buyerId: number, fee: numb
   });
   apunta(s, n, `El ${nombreClub(s, n)} ofrece ${fmtMoney(fee)}`);
   // con las ventas delegadas, el director se encarga desde el primer momento
-  if (s.club.director && s.club.delegation.ventas !== 'manual') directorSale(s, n);
+  if (directorSells(s, p)) directorSale(s, n);
   return n;
 }
 
@@ -496,13 +497,17 @@ export function saleAdvice(s: GameState, n: Negotiation): { action: 'aceptar' | 
   const valor = askingPrice(s, p) / 1.2;
   const ratio = (n.counterFee ?? n.fee) / Math.max(1, valor);
   const clave = !p.listed && [...mySquad(s)].sort((a, b) => b.ovr - a.ovr).slice(0, 3).some((x) => x.id === p.id);
-  if (mySquad(s).length <= 20) return { action: 'rechazar', text: 'Nos quedaríamos cortos de plantilla.' };
+  // si el dueño lo ha puesto en la lista, solo se frena con la plantilla en los huesos
+  if (mySquad(s).length <= (p.listed ? 16 : 20)) return { action: 'rechazar', text: 'Nos quedaríamos cortos de plantilla.' };
   // a un ídolo solo se le vende si el dueño lo ha puesto en la lista
   if (hasTrait(p, 'idolo') && !p.listed) return { action: 'rechazar', text: 'Es un ídolo de la grada: venderlo nos costaría muy caro con la afición.' };
-  if (ratio >= (clave ? 1.4 : p.listed ? 0.85 : 1.1)) return { action: 'aceptar', text: 'Es una buena oferta.' };
-  if (ratio >= (clave ? 1.0 : 0.75) && n.log.length < 3) return { action: 'pedir', text: 'Pidamos un 15% más: creo que pueden subir.' };
+  if (ratio >= (clave ? 1.4 : p.listed ? 0.75 : 1.1)) return { action: 'aceptar', text: p.listed ? 'Está en la lista de transferibles y es una oferta razonable.' : 'Es una buena oferta.' };
+  if (ratio >= (clave ? 1.0 : p.listed ? 0.55 : 0.75) && n.log.length < 3) return { action: 'pedir', text: 'Pidamos un 15% más: creo que pueden subir.' };
   return { action: 'rechazar', text: clave ? 'Es de nuestros mejores: así no se vende.' : 'Se queda corta para lo que vale.' };
 }
+
+/** ¿Lleva el director la venta de este jugador? Con las ventas delegadas, o si el dueño lo ha puesto como transferible */
+export const directorSells = (s: GameState, p: Player) => Boolean(s.club.director) && (s.club.delegation.ventas !== 'manual' || Boolean(p.listed));
 
 /** El director decide sobre una oferta recibida: rechaza las que no valen, pide más o la acepta (con visto bueno si propone) */
 function directorSale(s: GameState, n: Negotiation) {
@@ -525,10 +530,10 @@ function directorSale(s: GameState, n: Negotiation) {
 function directorNegotiates(s: GameState) {
   const d = s.club.director;
   if (!d) return;
-  const ventasDelegadas = s.club.delegation.ventas !== 'manual';
   for (const n of s.negotiations.filter((x) => x.state === 'tu_turno' && !x.approval)) {
     if (n.kind === 'venta') {
-      if (ventasDelegadas) directorSale(s, n);
+      const p = jugador(s, n);
+      if (p && directorSells(s, p)) directorSale(s, n);
       continue;
     }
     if (n.by !== 'director') continue;
