@@ -1,3 +1,4 @@
+import { compressToUTF16, decompressFromUTF16 } from 'lz-string';
 import { emptyStats } from './stats';
 import { ensureFacilities } from './rivals';
 import { DIVISION_NAMES } from './economy';
@@ -138,11 +139,16 @@ function migrate(s: GameState) {
   if (c.lastLedger) c.lastLedger = { ...emptyLedger(), ...c.lastLedger };
 }
 
+/** Las partidas se guardan comprimidas; las antiguas, en JSON tal cual */
+function parse(raw: string): GameState {
+  return JSON.parse(raw.startsWith('{') ? raw : decompressFromUTF16(raw)) as GameState;
+}
+
 export function loadGame(slot: Slot): GameState | null {
   try {
     const raw = localStorage.getItem(gameKey(slot));
     if (!raw) return null;
-    const s = JSON.parse(raw) as GameState;
+    const s = parse(raw);
     if (s.version !== SAVE_VERSION) return null;
     migrate(s);
     return s;
@@ -151,11 +157,45 @@ export function loadGame(slot: Slot): GameState | null {
   }
 }
 
-/** Devuelve false si no se pudo guardar (por ejemplo, almacenamiento lleno o modo privado) */
+// guardado en segundo plano: la compresión va en un worker y solo se escribe la última versión
+let worker: Worker | null | undefined;
+let seq = 0;
+let onError: (() => void) | undefined;
+/** Qué hacer si una partida no se puede guardar (almacenamiento lleno, modo privado...) */
+export const onSaveError = (fn: () => void) => { onError = fn; };
+
+function escribe(slot: Slot, data: string) {
+  try {
+    localStorage.setItem(gameKey(slot), data);
+  } catch {
+    onError?.();
+  }
+}
+
+function getWorker() {
+  if (worker !== undefined) return worker;
+  try {
+    worker = typeof Worker === 'undefined' ? null : new Worker(new URL('./saveWorker.ts', import.meta.url), { type: 'module' });
+    worker?.addEventListener('message', (e: MessageEvent<{ slot: Slot; seq: number; data?: string; error?: boolean }>) => {
+      // si mientras tanto se pidió otro guardado, este ya está viejo
+      if (e.data.seq !== seq) return;
+      if (e.data.error || !e.data.data) onError?.();
+      else escribe(e.data.slot, e.data.data);
+    });
+  } catch {
+    worker = null;
+  }
+  return worker;
+}
+
+/** Guarda la partida (comprimida, sin bloquear). Devuelve false si falla al momento. */
 export function saveGame(slot: Slot, s: GameState): boolean {
   try {
-    localStorage.setItem(gameKey(slot), JSON.stringify(s));
     localStorage.setItem(metaKey(slot), JSON.stringify(metaOf(s)));
+    const w = getWorker();
+    seq++;
+    if (w) w.postMessage({ slot, seq, state: s });
+    else localStorage.setItem(gameKey(slot), compressToUTF16(JSON.stringify(s)));
     return true;
   } catch {
     return false;
@@ -163,6 +203,7 @@ export function saveGame(slot: Slot, s: GameState): boolean {
 }
 
 export function deleteGame(slot: Slot) {
+  seq++; // un guardado en curso ya no debe escribir
   try {
     localStorage.removeItem(gameKey(slot));
     localStorage.removeItem(metaKey(slot));

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { DIVISION_NAMES } from './game/economy';
 import { newGame } from './game/generate';
 import { marketOpen, myTeam } from './game/market';
-import { deleteGame, loadGame, saveGame, type Slot } from './game/save';
+import { deleteGame, loadGame, onSaveError, saveGame, type Slot } from './game/save';
 import type { GameState } from './game/types';
 import { Money, Sheet } from './ui';
 import Crest from './components/Crest';
@@ -64,6 +64,8 @@ export default function App() {
   // fichas abiertas desde cualquier pantalla
   // se apilan: desde la ficha de un equipo se abre la de un jugador y al cerrarla se vuelve al equipo
   const [fichas, setFichas] = useState<{ kind: 'player' | 'team'; id: number }[]>([]);
+
+  useEffect(() => onSaveError(() => setToast('⚠️ No se ha podido guardar la partida en este navegador')), []);
 
   // Todas las acciones trabajan sobre una copia y la guardan en el móvil
   const update: Update = useCallback(
