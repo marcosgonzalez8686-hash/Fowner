@@ -10,11 +10,11 @@ const ESPANA: string[][] = [
   ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Zaragoza', 'Málaga', 'Murcia', 'Palma', 'Las Palmas', 'Bilbao', 'Alicante',
     'Córdoba', 'Valladolid', 'Vigo', 'Gijón', "L'Hospitalet", 'Vitoria', 'A Coruña', 'Elche', 'Granada', 'Terrassa', 'Badalona'],
   // ciudades de 100.000 a 200.000 habitantes
-  ['Sabadell', 'Oviedo', 'Cartagena', 'Móstoles', 'Jerez', 'Pamplona', 'Santa Cruz de Tenerife', 'Almería', 'Alcalá de Henares',
+  ['Sabadell', 'Madrid', 'Barcelona', 'Oviedo', 'Cartagena', 'Móstoles', 'Jerez', 'Pamplona', 'Santa Cruz de Tenerife', 'Almería', 'Alcalá de Henares',
     'Fuenlabrada', 'Leganés', 'San Sebastián', 'Getafe', 'Burgos', 'Albacete', 'Castellón', 'Santander', 'Alcorcón', 'La Laguna',
     'Logroño', 'Badajoz', 'Marbella', 'Salamanca', 'Huelva', 'Lleida', 'Tarragona', 'Dos Hermanas', 'Torrejón', 'Parla', 'Mataró'],
   // ciudades medianas
-  ['León', 'Algeciras', 'Santa Coloma', 'Alcobendas', 'Cádiz', 'Jaén', 'Ourense', 'Reus', 'Telde', 'Barakaldo', 'Lugo', 'Girona',
+  ['León', 'Madrid', 'Valencia', 'Sevilla', 'Bilbao', 'Algeciras', 'Santa Coloma', 'Alcobendas', 'Cádiz', 'Jaén', 'Ourense', 'Reus', 'Telde', 'Barakaldo', 'Lugo', 'Girona',
     'Santiago', 'Cáceres', 'Lorca', 'Coslada', 'Talavera', 'El Puerto', 'Cornellà', 'Las Rozas', 'Orihuela', 'Avilés', 'Palencia',
     'Getxo', 'Guadalajara', 'Pozuelo', 'Torrevieja', 'Toledo', 'Pontevedra', 'Ponferrada', 'Zamora', 'Ferrol', 'Gandia',
     'Benidorm', 'Ciudad Real', 'Alcoy', 'Ávila'],
@@ -77,50 +77,63 @@ const REALES = new Set([
 /** País: sus ciudades de mayor a menor y cómo se forman los nombres de club */
 const PAISES: Record<string, { ciudades: string[]; formas: string[]; detras?: boolean }> = {
   ENG: {
-    ciudades: ['London', 'Birmingham', 'Manchester', 'Liverpool', 'Leeds', 'Sheffield', 'Bristol', 'Newcastle', 'Nottingham', 'Leicester',
-      'Coventry', 'Bradford', 'Southampton', 'Portsmouth', 'Plymouth', 'Derby', 'Brighton', 'Wolverhampton', 'Hull', 'Stoke', 'Sunderland',
-      'Reading', 'Norwich', 'Ipswich', 'Oxford', 'Cambridge', 'York', 'Exeter'],
+    ciudades: ['London', 'Birmingham', 'Manchester', 'Liverpool', 'Leeds', 'Sheffield', 'Bristol', 'Newcastle', 'London',
+      'Nottingham', 'Leicester', 'Coventry', 'Bradford', 'Manchester', 'Southampton', 'Portsmouth', 'Plymouth',
+      'London', 'Derby', 'Brighton', 'Liverpool', 'Wolverhampton', 'Hull', 'Stoke', 'Sunderland', 'Reading',
+      'Norwich', 'Ipswich', 'Oxford', 'Cambridge', 'York', 'Exeter'],
     formas: ['United', 'City', 'Rovers', 'Athletic', 'Town', 'Albion', 'Wanderers', 'County', 'FC'],
     detras: true,
   },
   ITA: {
-    ciudades: ['Roma', 'Milano', 'Napoli', 'Torino', 'Palermo', 'Genova', 'Bologna', 'Firenze', 'Bari', 'Catania', 'Venezia', 'Verona',
-      'Messina', 'Padova', 'Trieste', 'Brescia', 'Parma', 'Taranto', 'Prato', 'Modena', 'Reggio Calabria', 'Perugia', 'Livorno',
-      'Cagliari', 'Ravenna'],
+    ciudades: ['Roma', 'Milano', 'Napoli', 'Torino', 'Palermo', 'Genova', 'Bologna', 'Milano', 'Firenze', 'Bari', 'Roma',
+      'Catania', 'Venezia', 'Verona', 'Messina', 'Torino', 'Padova', 'Trieste', 'Brescia', 'Genova', 'Parma',
+      'Taranto', 'Prato', 'Modena', 'Reggio Calabria', 'Perugia', 'Livorno', 'Cagliari', 'Ravenna'],
     formas: ['AC', 'US', 'SS', 'AS', 'FC', 'Unione', 'Sporting', 'Real', 'Atletico', 'Polisportiva'],
   },
   GER: {
-    ciudades: ['Berlin', 'Hamburg', 'München', 'Köln', 'Frankfurt', 'Stuttgart', 'Düsseldorf', 'Leipzig', 'Dortmund', 'Essen', 'Bremen',
-      'Dresden', 'Hannover', 'Nürnberg', 'Duisburg', 'Bochum', 'Wuppertal', 'Bielefeld', 'Bonn', 'Münster', 'Karlsruhe', 'Mannheim',
-      'Augsburg', 'Wiesbaden', 'Kiel', 'Rostock', 'Freiburg'],
+    ciudades: ['Berlin', 'Hamburg', 'München', 'Köln', 'Frankfurt', 'Stuttgart', 'Düsseldorf', 'Leipzig', 'Dortmund',
+      'Essen', 'Berlin', 'Bremen', 'Dresden', 'Hannover', 'Nürnberg', 'München', 'Duisburg', 'Bochum', 'Wuppertal',
+      'Bielefeld', 'Hamburg', 'Bonn', 'Münster', 'Karlsruhe', 'Mannheim', 'Augsburg', 'Wiesbaden', 'Kiel',
+      'Rostock', 'Freiburg'],
     formas: ['FC', 'SV', 'TSV', 'VfB', 'VfL', 'SC', 'Sportfreunde', 'Eintracht', 'Fortuna', 'Union', 'Borussia', 'Viktoria'],
   },
   FRA: {
-    ciudades: ['Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes', 'Montpellier', 'Strasbourg', 'Bordeaux', 'Lille', 'Rennes',
-      'Reims', 'Toulon', 'Saint-Étienne', 'Le Havre', 'Grenoble', 'Dijon', 'Angers', 'Nîmes', 'Clermont', 'Le Mans', 'Aix', 'Brest',
-      'Tours', 'Amiens', 'Limoges', 'Metz', 'Perpignan'],
+    ciudades: ['Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes', 'Montpellier', 'Strasbourg', 'Bordeaux', 'Paris',
+      'Lille', 'Rennes', 'Reims', 'Toulon', 'Saint-Étienne', 'Le Havre', 'Grenoble', 'Dijon', 'Lyon', 'Angers',
+      'Nîmes', 'Clermont', 'Le Mans', 'Aix', 'Brest', 'Tours', 'Amiens', 'Limoges', 'Metz', 'Perpignan'],
     formas: ['Olympique', 'AS', 'FC', 'Racing', 'Stade', 'SC', 'US', 'AC', 'Sporting', 'Union'],
   },
   POR: {
-    ciudades: ['Lisboa', 'Porto', 'Braga', 'Setúbal', 'Coimbra', 'Funchal', 'Amadora', 'Almada', 'Guimarães', 'Aveiro', 'Viseu', 'Leiria',
-      'Faro', 'Évora', 'Barreiro', 'Póvoa de Varzim', 'Vila do Conde', 'Portimão', 'Chaves', 'Famalicão', 'Tondela', 'Covilhã', 'Beja'],
+    ciudades: ['Lisboa', 'Porto', 'Braga', 'Setúbal', 'Lisboa', 'Coimbra', 'Funchal', 'Amadora', 'Almada', 'Porto',
+      'Guimarães', 'Aveiro', 'Lisboa', 'Viseu', 'Leiria', 'Faro', 'Évora', 'Barreiro', 'Póvoa de Varzim',
+      'Vila do Conde', 'Portimão', 'Chaves', 'Famalicão', 'Tondela', 'Covilhã', 'Beja'],
     formas: ['Sporting', 'FC', 'Vitória de', 'Académica de', 'Desportivo de', 'União de', 'Atlético', 'Clube de', 'SC', 'GD'],
   },
   NED: {
-    ciudades: ['Amsterdam', 'Rotterdam', 'Den Haag', 'Utrecht', 'Eindhoven', 'Groningen', 'Tilburg', 'Almere', 'Breda', 'Nijmegen',
-      'Apeldoorn', 'Haarlem', 'Arnhem', 'Enschede', 'Amersfoort', 'Zwolle', 'Leiden', 'Maastricht', 'Dordrecht', 'Alkmaar', 'Deventer',
-      'Venlo', 'Leeuwarden', 'Heerenveen', 'Emmen'],
+    ciudades: ['Amsterdam', 'Rotterdam', 'Den Haag', 'Utrecht', 'Eindhoven', 'Groningen', 'Tilburg', 'Almere', 'Breda',
+      'Rotterdam', 'Nijmegen', 'Apeldoorn', 'Haarlem', 'Amsterdam', 'Arnhem', 'Enschede', 'Amersfoort', 'Zwolle',
+      'Leiden', 'Maastricht', 'Dordrecht', 'Alkmaar', 'Deventer', 'Venlo', 'Leeuwarden', 'Heerenveen', 'Emmen'],
     formas: ['SC', 'FC', 'VV', 'SV', 'Sparta', 'Quick', 'DOS', 'Be Quick', 'Fortuna', 'Victoria'],
   },
 };
 
 /** Nombre de club para una ciudad sin repetir un club real (prueba fórmulas hasta dar con una libre) */
-function nombreClub(ciudad: string, formas: string[], detras = false) {
+function nombreClub(ciudad: string, formas: string[], usados: Set<string>, detras = false) {
+  // una ciudad grande puede tener varios clubes: nunca con el mismo nombre
   for (const forma of shuffle([...formas])) {
     const nombre = detras ? `${ciudad} ${forma}` : `${forma} ${ciudad}`;
-    if (!REALES.has(nombre)) return nombre;
+    if (!REALES.has(nombre) && !usados.has(nombre)) {
+      usados.add(nombre);
+      return nombre;
+    }
   }
-  return detras ? `${ciudad} Sporting` : `Sporting ${ciudad}`;
+  for (let n = 2; ; n++) {
+    const nombre = detras ? `${ciudad} Sporting ${n}` : `Sporting ${ciudad} ${n}`;
+    if (!usados.has(nombre)) {
+      usados.add(nombre);
+      return nombre;
+    }
+  }
 }
 
 const sinTildes = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -128,8 +141,10 @@ const sinTildes = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '');
 /** Abreviatura de tres letras sin repetir otra ya usada */
 function abreviatura(ciudad: string, usadas: Set<string>) {
   const limpio = sinTildes(ciudad).replace(/^(L'|A |El |La |Las |Los |Den |Le |Saint-|Santa |San )\s*/i, '').replace(/[^A-Za-z]/g, '').toUpperCase();
-  const candidatas = [limpio.slice(0, 3), limpio[0] + limpio.slice(2, 4), limpio[0] + limpio[1] + limpio.at(-1), limpio[0] + limpio.slice(-2)];
-  const ab = candidatas.find((c) => c.length === 3 && !usadas.has(c)) ?? limpio.slice(0, 3);
+  // la primera letra y dos más de la ciudad, en orden (LON, LND, LOD...)
+  const candidatas = [limpio.slice(0, 3)];
+  for (let i = 1; i < limpio.length; i++) for (let j = i + 1; j < limpio.length; j++) candidatas.push(limpio[0] + limpio[i] + limpio[j]);
+  const ab = candidatas.find((c) => c.length === 3 && !usadas.has(c)) ?? limpio.slice(0, 2) + String(usadas.size % 10);
   usadas.add(ab);
   return ab;
 }
@@ -137,13 +152,14 @@ function abreviatura(ciudad: string, usadas: Set<string>) {
 /** Clubes españoles: una lista por categoría, de mayor a menor ciudad. `evitar`: el nombre de nuestro club */
 export function spanishClubs(porCategoria: number, evitar = '') {
   const usadas = new Set<string>();
+  const nombres = new Set<string>();
   const nuestro = sinTildes(evitar).toLowerCase();
   return ESPANA.map((lista) => {
     // dentro de cada categoría salen unas ciudades u otras en cada partida, pero siempre de su tamaño
-    const posibles = lista.filter((c) => !nuestro.includes(sinTildes(c).toLowerCase()));
-    const elegidas = shuffle([...posibles]).slice(0, porCategoria);
-    elegidas.sort((a, b) => lista.indexOf(a) - lista.indexOf(b));
-    return elegidas.map((c) => ({ town: c, name: nombreClub(c, FORMAS_ESP), short: abreviatura(c, usadas) }));
+    // por posiciones de la lista: una ciudad con dos clubes aparece dos veces
+    const posibles = lista.map((c, i) => [c, i] as const).filter(([c]) => !nuestro.includes(sinTildes(c).toLowerCase()));
+    const elegidas = shuffle([...posibles]).slice(0, porCategoria).sort((a, b) => a[1] - b[1]).map(([c]) => c);
+    return elegidas.map((c) => ({ town: c, name: nombreClub(c, FORMAS_ESP, nombres), short: abreviatura(c, usadas) }));
   });
 }
 
@@ -151,7 +167,7 @@ export function spanishClubs(porCategoria: number, evitar = '') {
 export function foreignClubs(country: string, n: number) {
   const d = PAISES[country];
   const usadas = new Set<string>();
-  const elegidas = shuffle(d.ciudades.slice(0, n + 5)).slice(0, n);
-  elegidas.sort((a, b) => d.ciudades.indexOf(a) - d.ciudades.indexOf(b));
-  return elegidas.map((c) => ({ name: nombreClub(c, d.formas, d.detras), short: abreviatura(c, usadas) }));
+  const nombres = new Set<string>();
+  const elegidas = shuffle(d.ciudades.slice(0, n + 5).map((c, i) => [c, i] as const)).slice(0, n).sort((a, b) => a[1] - b[1]).map(([c]) => c);
+  return elegidas.map((c) => ({ name: nombreClub(c, d.formas, nombres, d.detras), short: abreviatura(c, usadas) }));
 }
