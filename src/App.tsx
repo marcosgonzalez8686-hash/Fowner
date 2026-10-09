@@ -1,3 +1,4 @@
+import { track } from './analytics';
 import { useCallback, useEffect, useState } from 'react';
 import { DIVISION_NAMES } from './game/economy';
 import { newGame } from './game/generate';
@@ -105,6 +106,7 @@ export default function App() {
       <Start
         onNew={(n, nombre, identity, opts) => {
           const s = newGame(nombre, identity, opts);
+          track(`partida-nueva/${opts?.difficulty ?? 'normal'}`, 'Partida nueva');
           saveGame(n, s);
           entrar(n, s);
         }}

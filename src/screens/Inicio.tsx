@@ -1,7 +1,8 @@
+import { track } from '../analytics';
 import { useState } from 'react';
 import type { ScreenProps } from '../App';
 import { executeProposal } from '../game/director';
-import { MATCHDAYS } from '../game/economy';
+import { DIVISION_NAMES, MATCHDAYS } from '../game/economy';
 import { marketOpen, myTeam, mySquad, squadOf, teamById } from '../game/market';
 import { bestEleven, computeStandings, form } from '../game/match';
 import { ourPlan } from '../game/coach';
@@ -256,7 +257,15 @@ export default function Inicio({ s, update, notify, go }: ScreenProps) {
             <button
               className="btn primary big"
               onClick={() => {
-                const err = update((g) => endSeason(g));
+                const err = update((g) => {
+                  const antes = myTeam(g).division;
+                  const r = endSeason(g);
+                  if (!r) {
+                    track('temporada-cerrada', 'Temporada cerrada');
+                    if (myTeam(g).division < antes) track(`ascenso/${DIVISION_NAMES[myTeam(g).division]}`, 'Ascenso');
+                  }
+                  return r;
+                });
                 if (err) notify(err);
               }}
             >
