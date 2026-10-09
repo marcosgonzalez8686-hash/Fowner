@@ -1,7 +1,7 @@
 // Estadísticas de uso anónimas con GoatCounter: sin cookies ni datos personales.
 // Solo cuenta visitas y unos pocos eventos de juego (partida nueva, temporada cerrada, ascensos).
 
-const CUENTA = 'https://fowner.goatcounter.com/count';
+const CUENTA = 'https://marcosg.goatcounter.com/count';
 
 declare global {
   interface Window {
