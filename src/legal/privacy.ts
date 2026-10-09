@@ -2,6 +2,7 @@
 
 export const APP_VERSION = '1.0.0';
 export const PRIVACY_UPDATED = '9 de octubre de 2026';
+export const CONTACT_EMAIL = 'myl.studiosg@gmail.com';
 
 export const PRIVACY: { title: string; body: string[] }[] = [
   {
@@ -37,7 +38,7 @@ export const PRIVACY: { title: string; body: string[] }[] = [
   {
     title: 'Tus derechos y contacto',
     body: [
-      'Como no guardamos datos personales tuyos, no hay datos que consultar, corregir o borrar en nuestros sistemas. Para cualquier duda sobre privacidad, escríbenos a través de la ficha del juego en la tienda o en la página donde lo descargaste.',
+      `Como no guardamos datos personales tuyos, no hay datos que consultar, corregir o borrar en nuestros sistemas. Para cualquier duda sobre privacidad o sobre el juego, escríbenos a ${CONTACT_EMAIL}.`,
     ],
   },
 ];
@@ -45,4 +46,5 @@ export const PRIVACY: { title: string; body: string[] }[] = [
 export const ABOUT = [
   'Fowner es un juego de gestión en el que eres el dueño de un club de fútbol.',
   'Todos los clubes, jugadores, entrenadores y competiciones son inventados. Las ciudades reales se usan solo como nombres de lugar: el juego no tiene relación con ningún club, liga o federación real.',
+  `Contacto: ${CONTACT_EMAIL}`,
 ];
