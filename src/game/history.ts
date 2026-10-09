@@ -55,9 +55,19 @@ export function recordMatch(s: GameState, r: MatchReport, titulares: Player[]) {
   // los cambios: también juegan (y cuentan como partido) los que salen del banquillo
   const xi = [...titulares, ...applySubs(s, r, titulares, lado)];
   const rival = teamById(s, lado === 'home' ? r.away : r.home)?.name ?? 'rival';
+  const debutan: string[] = [];
   for (const p of xi) {
     const x = (rec.players[p.id] ??= { name: p.name, goals: 0, apps: 0 });
     x.apps++;
+    if (p.filial && x.apps === 1) debutan.push(p.name);
+  }
+  // un chaval del filial que se estrena con el primer equipo
+  if (debutan.length) {
+    addMessage(s, {
+      from: 'club',
+      title: `🅱️ Debut${debutan.length > 1 ? 's' : ''} del filial: ${debutan.join(', ')}`,
+      body: `El entrenador ha tirado del filial y ${debutan.length > 1 ? 'se estrenan' : 'se estrena'} con el primer equipo (${r.label ?? `jornada ${r.matchday}`}).`,
+    });
   }
   for (const e of r.events) {
     if (e.type !== 'gol' || e.side !== lado || e.pid === undefined) continue;

@@ -40,9 +40,10 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
   const youth = myYouth(s);
   const filial = myFilial(s);
   const nivel = DIV_LEVEL[myTeam(s).division];
-  const { xi, strength, formation, style } = ourPlan(s, squad);
+  // el entrenador cuenta también con el filial
+  const { xi, strength, formation, style } = ourPlan(s, [...squad, ...filial]);
   const forma = ourShape(s);
-  const faltan = (Object.keys(forma) as Pos[]).filter((pos) => squad.filter((p) => p.pos === pos && !p.youth).length < forma[pos]);
+  const faltan = (Object.keys(forma) as Pos[]).filter((pos) => [...squad, ...filial].filter((p) => p.pos === pos && !p.youth).length < forma[pos]);
   const titulares = new Set(xi.map((p) => p.id));
 
   const run = (fn: () => string | undefined | void, ok: string) => {
@@ -128,7 +129,7 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
           <>
             {filial.sort((a, b) => b.ovr - a.ovr).map((p) => (
               <button key={p.id} className="player as-btn" onClick={() => openPlayer(p.id)}>
-                <span className="pos">{p.pos}</span>
+                <span className="pos">{titulares.has(p.id) ? '⭐' : p.pos}</span>
                 <span className="name">
                   {p.name}
                   <small>
@@ -141,7 +142,7 @@ export default function Plantilla({ s, update, notify, go }: ScreenProps) {
                 <Ovr v={p.ovr} base={nivel} />
               </button>
             ))}
-            <p className="small muted">Con {FILIAL_GROWTH_APPS} partidos o más (✅), en verano crecen un extra. Al cumplir {FILIAL_AGE + 1} años suben al primer equipo. Coste: {fmtMoney(filialSeasonCost(s))}/temp. más sus sueldos.</p>
+            <p className="small muted">El entrenador cuenta con ellos como uno más: si son mejores o hacen falta, juegan con el primer equipo (⭐ = titular ahora). Con {FILIAL_GROWTH_APPS} partidos o más (✅), en verano crecen un extra. Al cumplir {FILIAL_AGE + 1} años suben al primer equipo. Coste: {fmtMoney(filialSeasonCost(s))}/temp. más sus sueldos.</p>
           </>
         )}
       </Card>

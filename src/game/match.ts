@@ -59,8 +59,8 @@ export const fatiguePenalty = (p: Player) => Math.max(0, (p.fatigue ?? 0) - FATI
 /** Once titular en una formación: los mejores de cada posición; si faltan, se cubre con otros con penalización */
 export function elevenFor(squad: Player[], formation: Formation, rate: (p: Player) => number = (p) => p.ovr - fatiguePenalty(p)): { xi: Player[]; strength: number } {
   const forma = FORMATIONS[formation];
-  // los juveniles sin decidir, los lesionados y los sancionados no juegan
-  const disponibles = squad.filter((p) => !p.youth && !p.filial && !(p.injury && p.injury > 0) && !(p.suspended && p.suspended > 0)).sort((a, b) => rate(b) - rate(a));
+  // los juveniles sin decidir, los lesionados y los sancionados no juegan (los del filial sí, como uno más)
+  const disponibles = squad.filter((p) => !p.youth && !(p.injury && p.injury > 0) && !(p.suspended && p.suspended > 0)).sort((a, b) => rate(b) - rate(a));
   const usados = new Set<number>();
   const xi: Player[] = [];
   let total = 0;

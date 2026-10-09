@@ -119,7 +119,7 @@ export function cupRotation(s: GameState, plantilla: Player[], rivalId: number) 
   const rival = teamById(s, rivalId);
   if (!rival || rival.division < myTeam(s).division) return plantilla;
   const porteros = plantilla
-    .filter((p) => p.pos === 'POR' && !p.youth && !p.filial && !(p.injury && p.injury > 0) && !(p.suspended && p.suspended > 0))
+    .filter((p) => p.pos === 'POR' && !p.youth && !(p.injury && p.injury > 0) && !(p.suspended && p.suspended > 0))
     .sort((a, b) => b.ovr - a.ovr);
   return porteros.length >= 2 ? plantilla.filter((p) => p.id !== porteros[0].id) : plantilla;
 }

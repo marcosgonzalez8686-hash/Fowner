@@ -14,7 +14,9 @@ export const teamById = (s: GameState, id: number | null) =>
   s.teams.find((t) => t.id === id) ?? s.world?.leagues.find((l) => l.teams.some((t) => t.id === id))?.teams.find((t) => t.id === id);
 export const squadOf = (s: GameState, teamId: number) => s.players.filter((p) => p.teamId === teamId);
 export const mySquad = (s: GameState) => squadOf(s, s.club.teamId).filter((p) => !p.youth && !p.filial);
-/** Jugadores en el filial (son nuestros: cobran, pero no juegan con el primer equipo) */
+/** Los que el entrenador puede convocar: el primer equipo y el filial (los juveniles sin decidir, no) */
+export const matchSquad = (s: GameState) => squadOf(s, s.club.teamId).filter((p) => !p.youth);
+/** Jugadores en el filial (son nuestros: juegan en el filial y, si el entrenador los necesita, con el primer equipo) */
 export const myFilial = (s: GameState) => squadOf(s, s.club.teamId).filter((p) => p.filial);
 export const myYouth = (s: GameState) => squadOf(s, s.club.teamId).filter((p) => p.youth);
 export const wageBill = (s: GameState) => squadOf(s, s.club.teamId).filter((p) => !p.youth).reduce((a, p) => a + p.salary, 0);

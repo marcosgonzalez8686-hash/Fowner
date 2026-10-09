@@ -1,5 +1,5 @@
 import { fatiguePenalty } from './match';
-import { mySquad } from './market';
+import { matchSquad } from './market';
 import type { LineupPlayer, MatchReport } from './report';
 import { chance, clamp, gauss, randInt } from './rng';
 import type { GameState, Player } from './types';
@@ -12,7 +12,8 @@ export function applySubs(s: GameState, r: MatchReport, xi: Player[], lado: 'hom
   const linea = r.lineups?.[lado];
   if (!linea?.length) return [];
   const enXi = new Set(xi.map((p) => p.id));
-  const banquillo = mySquad(s).filter((p) => !enXi.has(p.id) && !(p.injury && p.injury > 0) && !(p.suspended && p.suspended > 0));
+  // el filial también se sienta en el banquillo
+  const banquillo = matchSquad(s).filter((p) => !enXi.has(p.id) && !(p.injury && p.injury > 0) && !(p.suspended && p.suspended > 0));
   if (!banquillo.length) return [];
   const gf = lado === 'home' ? r.hg : r.ag;
   const gc = lado === 'home' ? r.ag : r.hg;

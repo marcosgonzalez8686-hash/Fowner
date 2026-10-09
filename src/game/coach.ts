@@ -1,6 +1,6 @@
 import { MATCHDAYS, fmtMoney } from './economy';
 import { changeSatisfaction, currentPosition, objectiveTarget } from './fans';
-import { addMessage, myTeam, mySquad } from './market';
+import { addMessage, matchSquad, myTeam } from './market';
 import { FORMATIONS, STYLES, elevenFor, fatiguePenalty, type Formation, type Style } from './match';
 import { coachSeverance, refusesRenewal, renewalSalary, ROLES, staffPay, type Staff } from './staff';
 import { pick } from './rng';
@@ -29,7 +29,7 @@ export function ourTactics(s: GameState) {
 }
 
 /** Once que pone nuestro entrenador con su sistema */
-export function ourPlan(s: GameState, squad: Player[] = mySquad(s)) {
+export function ourPlan(s: GameState, squad: Player[] = matchSquad(s)) {
   const t = ourTactics(s);
   const coach = coachOf(s)?.id ?? 0;
   // el entrenador alinea por rendimiento real: nivel más encaje en su sistema
@@ -37,7 +37,7 @@ export function ourPlan(s: GameState, squad: Player[] = mySquad(s)) {
   const rate = (p: Player) => p.ovr + fitBonus(p, t.formation, t.style, coach) - fatiguePenalty(p);
   const plan = { ...elevenFor(squad, t.formation, rate), ...t };
   // a quien le prometimos minutos, el entrenador lo pone en lugar del peor titular de su puesto
-  const prometidos = squad.filter((p) => (p.promiseUntil ?? -1) >= s.matchday && s.phase === 'temporada' && !plan.xi.includes(p) && !p.youth && !p.filial && !(p.injury && p.injury > 0) && !(p.suspended && p.suspended > 0));
+  const prometidos = squad.filter((p) => (p.promiseUntil ?? -1) >= s.matchday && s.phase === 'temporada' && !plan.xi.includes(p) && !p.youth && !(p.injury && p.injury > 0) && !(p.suspended && p.suspended > 0));
   for (const p of prometidos) {
     const sale = plan.xi.filter((x) => x.pos === p.pos && (x.promiseUntil ?? -1) < s.matchday).sort((a, b) => rate(a) - rate(b))[0];
     if (!sale) continue;
