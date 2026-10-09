@@ -9,6 +9,7 @@ import Crest from './Crest';
 import { PlayerTags } from './Traits';
 import { useNav } from '../nav/context';
 import { facilitiesOf } from '../game/rivals';
+import { clubHonours } from '../game/honours';
 import { BUILDINGS, buildingLevel, type BuildingKind } from '../game/land';
 
 const LINEAS: { pos: Pos; name: string }[] = [
@@ -66,6 +67,24 @@ export default function TeamSheet({ s, id, onClose }: { s: GameState; id: number
         <div><b className={plan.strength > nuestro ? 'neg' : 'pos'}>{plan.strength > nuestro ? '+' : ''}{(plan.strength - nuestro).toFixed(1)}</b><span>respecto a nuestro once</span></div>
         <div><b>{squad.length}</b><span>jugadores</span></div>
       </div>
+      {(() => {
+        const titulos = clubHonours(s, t.id);
+        if (!titulos.length) return null;
+        return (
+          <>
+            <h4>Palmarés</h4>
+            <div className="trophies">
+              {titulos.map((c) => (
+                <div key={c.key} className="trophy">
+                  <span className="trophy-ico">{c.icon}</span>
+                  <b>{c.seasons.length > 1 ? `${c.seasons.length}× ` : ''}{c.name}</b>
+                  <small>{c.seasons.map((x) => `T${x}`).join(', ')}</small>
+                </div>
+              ))}
+            </div>
+          </>
+        );
+      })()}
       {(() => {
         const f = facilitiesOf(t);
         const kinds = Object.keys(BUILDINGS) as BuildingKind[];

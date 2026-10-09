@@ -1,5 +1,6 @@
 import { DIV_FANS } from './economy';
 import { diff } from './difficulty';
+import { addHonour } from './honours';
 import { makePlayer } from './generate';
 import { bestEleven, chooseStyle, computeStandings, roundRobin, simulate } from './match';
 import { foreignClubs } from './places';
@@ -107,6 +108,7 @@ export function playWorldMatchday(s: GameState, md: number, porEquipo: Map<numbe
 export function worldEndSeason(s: GameState) {
   for (const l of s.world?.leagues ?? []) {
     l.lastTable = leagueTable(l).map((r) => r.teamId);
+    addHonour(s, `liga-${l.country}`, l.lastTable[0], l.lastTable[1]);
     const nivel = COUNTRIES[l.country].level! + diff(s).rival;
     l.lastTable.forEach((id, puesto) => {
       const t = l.teams.find((x) => x.id === id)!;

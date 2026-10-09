@@ -1,3 +1,4 @@
+import { addHonour } from './honours';
 import { fmtMoney } from './economy';
 import { changeSatisfaction } from './fans';
 import { addMessage, squadOf, teamById } from './market';
@@ -268,6 +269,8 @@ function avanza(s: GameState, c: EuroComp) {
     c.ko.push([{ a: g[0], b: g[1], home: null }]);
   } else if (c.stage === EURO_STAGES.length) {
     c.champion = c.ko[c.ko.length - 1][0].winner;
+    const final = c.ko[c.ko.length - 1][0];
+    addHonour(s, c.key, c.champion, final.a === c.champion ? final.b : final.a);
     if (c.champion !== mio && c.champion !== undefined) {
       const t = teamById(s, c.champion);
       if (c.teams.includes(mio) || c.key === 'ucl') {

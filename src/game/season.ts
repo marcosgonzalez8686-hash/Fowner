@@ -34,6 +34,7 @@ import { growFacilities, homeAdvantage, rivalDevelopment, rivalYouthChance } fro
 import { resetYellows } from './discipline';
 import { aiTransfers } from './aitransfers';
 import { diff } from './difficulty';
+import { addHonour } from './honours';
 import { STADIUM_MODELS } from './stadium';
 import { filialEndSeason, filialMatchday, filialSeasonCost } from './filial';
 import { warnContracts } from './contracts';
@@ -400,6 +401,7 @@ export function endSeason(s: GameState) {
     const ids = s.teams.filter((t) => t.division === d).map((t) => t.id);
     const tabla = computeStandings(ids, s.fixtures[d]);
     if (d === 0) primera = tabla.map((r) => r.teamId);
+    addHonour(s, `liga${d}`, tabla[0]?.teamId, tabla[1]?.teamId);
     tabla.forEach((row, i) => {
       const t = teamById(s, row.teamId)!;
       if (t.id === mio.id) {

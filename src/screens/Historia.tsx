@@ -6,6 +6,8 @@ import { pyramidRank, type SeasonRecord } from '../game/history';
 import { LEGEND_APPS } from '../game/aging';
 import { Card } from '../ui';
 import { PlayerLink } from '../nav/context';
+import Palmares from '../components/Palmares';
+import { honoursRanking } from '../game/honours';
 
 const MEDALLA = (nombre: string) => (nombre.startsWith('Liga') ? '🥇' : '🏆');
 
@@ -71,6 +73,8 @@ export default function Historia({ s }: ScreenProps) {
   const mejor = rec.seasons.length ? [...rec.seasons].sort((a, b) => pyramidRank(a) - pyramidRank(b))[0] : null;
   const masPuntos = rec.seasons.filter((x) => x.points !== undefined).sort((a, b) => (b.points ?? 0) - (a.points ?? 0))[0];
   const ascensos = rec.seasons.filter((x) => x.promoted).length;
+  const [palmares, setPalmares] = useState(false);
+  const puestoMundial = honoursRanking(s).findIndex((x) => x.teamId === c.teamId);
 
   return (
     <>
@@ -106,6 +110,15 @@ export default function Historia({ s }: ScreenProps) {
           </div>
         )}
       </Card>
+
+      <Card title="🌍 Palmarés mundial">
+        <p className="small muted">
+          Campeones de todas las ligas, copas y competiciones europeas, y la clasificación de los clubes más laureados.
+          {puestoMundial >= 0 ? ` Tu club es ${puestoMundial + 1}º del mundo en títulos.` : ''}
+        </p>
+        <button className="btn full" onClick={() => setPalmares(true)}>Ver el palmarés ›</button>
+      </Card>
+      {palmares && <Palmares s={s} onClose={() => setPalmares(false)} />}
 
       {rec.seasons.length > 0 && (
         <Card title="📈 Trayectoria">

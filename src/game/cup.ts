@@ -1,3 +1,4 @@
+import { addHonour } from './honours';
 import { fmtMoney, roundMoney } from './economy';
 import { changeSatisfaction } from './fans';
 import { addMessage, myTeam, teamById } from './market';
@@ -172,6 +173,8 @@ export function playCupRound(s: GameState) {
   const ganadores = s.cup.rounds[ronda].map((t) => t.winner!);
   if (ronda === lastRound()) {
     s.cup.champion = ganadores[0];
+    const final = s.cup.rounds[ronda][0];
+    addHonour(s, 'copa', ganadores[0], final.a === ganadores[0] ? final.b : final.a);
     s.cup.current++;
     const campeon = teamById(s, ganadores[0])!;
     if (campeon.id !== mio.id) {

@@ -1,3 +1,4 @@
+import { addHonour } from './honours';
 import { fmtMoney } from './economy';
 import { changeSatisfaction } from './fans';
 import { recordMatch } from './history';
@@ -56,6 +57,7 @@ export function playSupercopa(s: GameState) {
   const tie: CupTie = { a: sc.a, b: sc.b, home: null };
   playTie(s, tie, SUPER_NAME, 1.3);
   Object.assign(sc, { ga: tie.ga, gb: tie.gb, pens: tie.pens, winner: tie.winner });
+  addHonour(s, 'super', sc.winner, sc.winner === sc.a ? sc.b : sc.a);
   const mio = s.club.teamId;
   if (sc.a !== mio && sc.b !== mio) {
     addMessage(s, { from: 'liga', title: `🏅 ${teamById(s, sc.winner!)!.name} gana la ${SUPER_NAME}`, body: `${teamById(s, sc.a)!.name} ${sc.ga}-${sc.gb} ${teamById(s, sc.b)!.name}${sc.pens ? ` (penaltis ${sc.pens})` : ''}.` });
