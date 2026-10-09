@@ -5,7 +5,9 @@ import type { Identity } from '../game/identity';
 import type { NewGameOptions } from '../game/generate';
 import NewGame from './NewGame';
 import { fmtMoney } from '../game/economy';
-import { deleteGame, listSlots, type Slot } from '../game/save';
+import { backupFileName, deleteGame, exportSave, importSave, listSlots, loadGame, saveGame, type Slot } from '../game/save';
+import { downloadText, pickTextFile } from '../backup';
+import Privacidad from '../components/Privacidad';
 
 interface Props {
   onLoad: (slot: Slot) => void;
@@ -19,6 +21,25 @@ function fecha(ms: number) {
 export default function Start({ onLoad, onNew }: Props) {
   const [slots, setSlots] = useState(listSlots);
   const [creando, setCreando] = useState<Slot | null>(null);
+  const [privacidad, setPrivacidad] = useState(false);
+
+  const exportar = (slot: Slot) => {
+    const s = loadGame(slot);
+    if (!s) return alert('No se ha podido leer esta partida.');
+    downloadText(backupFileName(s), exportSave(s));
+  };
+
+  const importar = async () => {
+    const libre = slots.find((x) => !x.meta)?.slot;
+    if (!libre) return alert('Los 3 huecos están ocupados: borra una partida para importar la copia.');
+    const texto = await pickTextFile();
+    if (!texto) return;
+    const s = importSave(texto);
+    if (typeof s === 'string') return alert(s);
+    if (!saveGame(libre, s)) return alert('No hay espacio para guardar la partida en este dispositivo.');
+    setSlots(listSlots());
+    alert(`Partida importada en el hueco ${libre}.`);
+  };
 
   const borrar = (slot: Slot, club: string) => {
     if (!confirm(`¿Borrar la partida del ${club}? No se puede deshacer.`)) return;
@@ -54,6 +75,9 @@ export default function Start({ onLoad, onNew }: Props) {
               </span>
               <span className="slot-go">Cargar ›</span>
             </button>
+            <button className="icon-btn" onClick={() => exportar(slot)} aria-label={`Guardar una copia de la partida ${slot}`} title="Guardar una copia en un archivo">
+              💾
+            </button>
             <button className="icon-btn" onClick={() => borrar(slot, meta.club)} aria-label={`Borrar partida ${slot}`}>
               🗑️
             </button>
@@ -77,6 +101,15 @@ export default function Start({ onLoad, onNew }: Props) {
       {slots.every((x) => x.meta) && (
         <p className="small muted center">Tienes los 3 huecos ocupados. Borra una partida para empezar otra.</p>
       )}
+
+      <div className="start-extra">
+        <button className="btn full" onClick={importar}>📂 Importar una partida desde un archivo</button>
+        <p className="small muted center">
+          Las partidas se guardan solo en este dispositivo. Con 💾 guardas una copia en un archivo para no perderla o seguir en otro móvil.
+        </p>
+        <button className="link small" onClick={() => setPrivacidad(true)}>Privacidad y acerca de Fowner</button>
+      </div>
+      {privacidad && <Privacidad onClose={() => setPrivacidad(false)} />}
     </div>
   );
 }

@@ -624,3 +624,10 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .hon-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .hon-main small { color: var(--muted); }
 .field select { font: inherit; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+
+/* privacidad y copias */
+.legal h3 { margin: 14px 0 4px; }
+.legal h4 { margin: 12px 0 2px; }
+.legal p { margin: 4px 0; line-height: 1.45; }
+.start-extra { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; align-items: stretch; }
+.start-extra .link { align-self: center; }

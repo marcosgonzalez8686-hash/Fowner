@@ -1,9 +1,11 @@
+import Privacidad from './components/Privacidad';
+import { downloadText } from './backup';
 import { track } from './analytics';
 import { useCallback, useEffect, useState } from 'react';
 import { DIVISION_NAMES } from './game/economy';
 import { newGame } from './game/generate';
 import { marketOpen, myTeam } from './game/market';
-import { deleteGame, loadGame, onSaveError, saveGame, type Slot } from './game/save';
+import { backupFileName, deleteGame, exportSave, loadGame, onSaveError, saveGame, type Slot } from './game/save';
 import type { GameState } from './game/types';
 import { Money, Sheet } from './ui';
 import Crest from './components/Crest';
@@ -60,7 +62,7 @@ export default function App() {
   const [tab, setTab] = useState<TabId>('inicio');
   const [sub, setSub] = useState<Record<TabId, string>>(DEFAULT_SUB);
   const [toast, setToast] = useState<string | null>(null);
-  const [panel, setPanel] = useState<'bandeja' | 'menu' | null>(null);
+  const [panel, setPanel] = useState<'bandeja' | 'menu' | 'privacidad' | null>(null);
   const [verIntro, setVerIntro] = useState(false);
   // fichas abiertas desde cualquier pantalla
   // se apilan: desde la ficha de un equipo se abre la de un jugador y al cerrarla se vuelve al equipo
@@ -293,6 +295,13 @@ export default function App() {
           <button className="btn full" onClick={() => { setPanel(null); setVerIntro(true); }}>
             📖 Cómo se juega
           </button>
+          <button className="btn full" onClick={() => downloadText(backupFileName(state), exportSave(state))}>
+            💾 Guardar una copia en un archivo
+          </button>
+          <p className="small muted">La partida solo está en este dispositivo: guarda una copia de vez en cuando por si cambias de móvil o borras los datos del navegador. Se recupera desde el menú de partidas → «Importar».</p>
+          <button className="btn full" onClick={() => setPanel('privacidad')}>
+            🔒 Privacidad y acerca de
+          </button>
           <button className="btn full" onClick={salirAlMenu}>
             Cambiar de partida
           </button>
@@ -309,6 +318,8 @@ export default function App() {
           </button>
         </Sheet>
       )}
+
+      {panel === 'privacidad' && <Privacidad onClose={() => setPanel(null)} />}
 
       {(state.introPending || verIntro) && !state.gameOver && (
         <Intro

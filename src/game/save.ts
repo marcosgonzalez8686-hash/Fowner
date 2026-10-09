@@ -1,6 +1,6 @@
 import LZString from 'lz-string';
 
-const { compressToUTF16, decompressFromUTF16 } = LZString;
+const { compressToUTF16, decompressFromUTF16, compressToBase64, decompressFromBase64 } = LZString;
 import { emptyStats } from './stats';
 import { ensureFacilities } from './rivals';
 import { createWorld } from './world';
@@ -220,6 +220,50 @@ export function saveGame(slot: Slot, s: GameState): boolean {
   } catch {
     return false;
   }
+}
+
+// ---------- copias de seguridad en archivo ----------
+
+/** Contenido del archivo de copia: una cabecera legible y la partida comprimida */
+interface BackupFile {
+  app: 'fowner';
+  format: 1;
+  exportedAt: number;
+  meta: SlotMeta;
+  data: string;
+}
+
+/** Copia de una partida en texto, para guardarla como archivo */
+export function exportSave(s: GameState): string {
+  const copia: BackupFile = { app: 'fowner', format: 1, exportedAt: Date.now(), meta: metaOf(s), data: compressToBase64(JSON.stringify(s)) };
+  return JSON.stringify(copia);
+}
+
+/** Nombre del archivo de copia: fowner-cd-laredo-t3-2026-10-09.json */
+export function backupFileName(s: GameState) {
+  const club = metaOf(s).club.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return `fowner-${club || 'partida'}-t${s.season}-${new Date().toISOString().slice(0, 10)}.json`;
+}
+
+/** Lee una copia: devuelve la partida o un texto con el problema */
+export function importSave(texto: string): GameState | string {
+  let copia: Partial<BackupFile>;
+  try {
+    copia = JSON.parse(texto) as Partial<BackupFile>;
+  } catch {
+    return 'El archivo no es una copia de Fowner.';
+  }
+  if (copia.app !== 'fowner' || typeof copia.data !== 'string') return 'El archivo no es una copia de Fowner.';
+  let s: GameState;
+  try {
+    s = JSON.parse(decompressFromBase64(copia.data) ?? '') as GameState;
+  } catch {
+    return 'La copia está dañada y no se puede leer.';
+  }
+  if (!s?.club || !Array.isArray(s.teams)) return 'La copia está dañada y no se puede leer.';
+  if (s.version !== SAVE_VERSION) return 'La copia es de una versión del juego que no es compatible con esta.';
+  migrate(s);
+  return s;
 }
 
 export function deleteGame(slot: Slot) {
