@@ -25,7 +25,14 @@ export interface Parcel {
   owned: boolean;
   stadium?: boolean;
   building?: BuildingKind;
+  /** alquilada a un vecino: da dinero pero no se puede usar */
+  rent?: { tenant: Tenant; perSeason: number; ending?: boolean };
+  /** decoración: se quita sola si se construye encima */
+  decor?: Decor;
 }
+
+export type Tenant = 'huerto' | 'mercadillo' | 'aparcamiento' | 'vivero';
+export type Decor = 'jardin' | 'fuente' | 'plaza';
 
 export interface Land {
   parcels: Parcel[];
@@ -142,7 +149,7 @@ export function placementFor(s: GameState, k: BuildingKind, x: number, y: number
   const formas = w === h ? [[w, h]] : [[w, h], [h, w]];
   const libre = (px: number, py: number) => {
     const p = parcelAt(s, px, py);
-    return p && p.owned && !p.stadium && !p.building ? p : null;
+    return p && isFree(p) ? p : null;
   };
   for (const [fw, fh] of formas) {
     // primero con la parcela tocada como esquina; luego desplazando el hueco
@@ -263,7 +270,10 @@ export function construct(s: GameState, k: BuildingKind, x: number, y: number): 
   if (s.club.cash < coste) return 'No hay dinero suficiente.';
   s.club.cash -= coste;
   s.club.ledger.obras += coste;
-  for (const q of sitio) q.building = k;
+  for (const q of sitio) {
+    q.building = k;
+    delete q.decor;
+  }
   if (k === 'entrenamiento') s.club.training = Math.max(1, s.club.training);
   else if (k === 'cantera') s.club.academy = Math.max(1, s.club.academy);
   else s.club.land.levels[k] = 1;
@@ -282,6 +292,101 @@ export function upgrade(s: GameState, k: BuildingKind): string | undefined {
   if (k === 'entrenamiento') s.club.training++;
   else if (k === 'cantera') s.club.academy++;
   else s.club.land.levels[k] = (s.club.land.levels[k] ?? 0) + 1;
+}
+
+/** Parcela propia sin nada que estorbe (la decoración no cuenta: se quita al construir) */
+export const isFree = (p: Parcel) => p.owned && !p.stadium && !p.building && !p.rent;
+
+// ---------- alquiler de parcelas ----------
+
+export const TENANTS: Record<Tenant, { name: string; icon: string }> = {
+  huerto: { name: 'Huertos vecinales', icon: '🥬' },
+  mercadillo: { name: 'Mercadillo de los domingos', icon: '🛍️' },
+  aparcamiento: { name: 'Aparcamiento de un vecino', icon: '🚗' },
+  vivero: { name: 'Vivero de plantas', icon: '🌳' },
+};
+/** Lo que paga un inquilino por una parcela y temporada, según la categoría */
+const RENTA_DIV = [36_000, 16_000, 7_000, 3_500, 1_800];
+
+export function rentOffer(s: GameState, p: Parcel) {
+  const t = s.teams.find((x) => x.id === s.club.teamId)!;
+  // cuanto más cerca del estadio, más vale
+  const centro = stadiumCenter(s);
+  const dist = Math.abs(p.x - centro.x) + Math.abs(p.y - centro.y);
+  return roundMoney(RENTA_DIV[t.division] * (1.2 - Math.min(0.5, dist * 0.06)) * diff(s).income);
+}
+
+/** Lo que cobramos de alquileres por temporada */
+export const rentPerSeason = (s: GameState) => s.club.land.parcels.reduce((a, p) => a + (p.rent?.perSeason ?? 0), 0);
+
+export function rentParcel(s: GameState, x: number, y: number): string | undefined {
+  const p = parcelAt(s, x, y);
+  if (!p || !isFree(p)) return 'Solo se pueden alquilar parcelas propias y libres.';
+  const inquilinos = Object.keys(TENANTS) as Tenant[];
+  const tenant = inquilinos[(x * 3 + y * 5 + s.season) % inquilinos.length];
+  p.rent = { tenant, perSeason: rentOffer(s, p) };
+  delete p.decor;
+  addMessage(s, {
+    from: 'club',
+    title: `${TENANTS[tenant].icon} Parcela alquilada`,
+    body: `${TENANTS[tenant].name} pagará ${fmtMoney(p.rent.perSeason)} por temporada, repartidos jornada a jornada. El contrato se renueva solo cada verano.`,
+  });
+}
+
+/** No renovar: el inquilino se va al acabar la temporada */
+export function endRent(s: GameState, x: number, y: number, now = false): string | undefined {
+  const p = parcelAt(s, x, y);
+  if (!p?.rent) return 'Esa parcela no está alquilada.';
+  if (!now) {
+    p.rent.ending = !p.rent.ending;
+    return;
+  }
+  // recuperarla ya tiene una indemnización: la cuarta parte del alquiler anual
+  const pago = roundMoney(p.rent.perSeason * 0.25);
+  if (s.club.cash < pago) return 'No hay dinero para la indemnización.';
+  s.club.cash -= pago;
+  s.club.ledger.alquileres = (s.club.ledger.alquileres ?? 0) - pago;
+  delete p.rent;
+}
+
+/** Fin de temporada: se van los que no renuevan y los demás actualizan el precio a la nueva categoría */
+export function rentsEndSeason(s: GameState) {
+  for (const p of s.club.land.parcels) {
+    if (!p.rent) continue;
+    if (p.rent.ending) delete p.rent;
+    else p.rent.perSeason = rentOffer(s, p);
+  }
+}
+
+// ---------- decoración ----------
+
+export const DECOR: Record<Decor, { name: string; icon: string; cost: number; help: string }> = {
+  jardin: { name: 'Jardín', icon: '🌷', cost: 6_000, help: 'Césped, flores, árboles y bancos.' },
+  fuente: { name: 'Fuente', icon: '⛲', cost: 18_000, help: 'Una fuente con los colores del club.' },
+  plaza: { name: 'Plaza de las leyendas', icon: '🗿', cost: 35_000, help: 'Una estatua por cada leyenda retirada con partido homenaje (hasta 4).' },
+};
+
+/** Leyendas del club (retirados con partido homenaje): las de la plaza */
+export const legends = (s: GameState) => (s.club.records.retired ?? []).filter((r) => r.tribute).map((r) => r.name);
+
+export const decorCost = (s: GameState, d: Decor) => roundMoney(DECOR[d].cost * diff(s).works);
+
+export function decorate(s: GameState, x: number, y: number, d: Decor): string | undefined {
+  const p = parcelAt(s, x, y);
+  if (!p || !isFree(p)) return 'Necesitas una parcela propia y libre.';
+  if (d === 'plaza' && s.club.land.parcels.some((q) => q.decor === 'plaza')) return 'Ya tienes la plaza de las leyendas.';
+  const coste = decorCost(s, d);
+  if (s.club.cash < coste) return 'No hay dinero suficiente.';
+  s.club.cash -= coste;
+  s.club.ledger.obras += coste;
+  // solo la primera vez que se pone cada tipo gusta a la afición
+  if (!s.club.land.parcels.some((q) => q.decor === d)) changeSatisfaction(s, d === 'plaza' && legends(s).length ? 2 : 1, `${DECOR[d].name} en los terrenos del club`);
+  p.decor = d;
+}
+
+export function removeDecor(s: GameState, x: number, y: number) {
+  const p = parcelAt(s, x, y);
+  if (p) delete p.decor;
 }
 
 /** Coste anual de mantener todas las instalaciones */

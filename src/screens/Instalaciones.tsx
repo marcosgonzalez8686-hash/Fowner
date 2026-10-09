@@ -10,7 +10,7 @@ import { fmtMoney } from '../game/economy';
 import { myTeam } from '../game/market';
 import {
   BUILDINGS, LAND_SIZE, STANDING, buildingLevel, buyParcel, canBuyParcel, construct, isBuilt, maintenancePerSeason,
-  buildCost, buildingParcels, nextLevelCost, parcelCost, placementFor, sizeLabel, upgrade, type BuildingKind,
+  DECOR, TENANTS, buildCost, decorCost, buildingParcels, decorate, endRent, isFree, legends, removeDecor, rentOffer, rentParcel, type Decor, nextLevelCost, parcelCost, placementFor, sizeLabel, upgrade, type BuildingKind,
 } from '../game/land';
 import { Card } from '../ui';
 
@@ -39,6 +39,8 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
       standColor: c.identity.home.shirt,
       accentColor: c.identity.home.shirt2,
       selected: sel,
+      seed: c.teamId,
+      statues: Math.min(4, legends(s).length),
       highlight: hueco?.map((p) => ({ x: p.x, y: p.y })),
       tiles: c.land.parcels.map((p) => ({
         x: p.x,
@@ -46,16 +48,18 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
         state: p.owned ? 'owned' : canBuyParcel(s, p) ? 'buyable' : 'locked',
         stadium: p.stadium,
         building: p.building,
+        rent: p.rent?.tenant,
+        decor: p.decor,
         level: p.building ? buildingLevel(s, p.building) : undefined,
       })),
     }),
     // se rehace cuando cambia el terreno, el estadio, los colores o la selección
-    [c.land, c.capacity, c.stadiumModel, c.identity.home, c.training, c.academy, sel, hueco],
+    [c.land, c.records, c.capacity, c.stadiumModel, c.identity.home, c.training, c.academy, c.teamId, sel, hueco],
   );
 
   const run = (fn: () => string | undefined | void, ok: string) => notify(fn() ?? ok);
   const propias = c.land.parcels.filter((p) => p.owned).length;
-  const libres = c.land.parcels.filter((p) => p.owned && !p.stadium && !p.building).length;
+  const libres = c.land.parcels.filter(isFree).length;
   const porConstruir = KINDS.filter((k) => !isBuilt(s, k));
 
   return (
@@ -73,7 +77,7 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
       </Card>
 
       {parcela && (
-        <Card title={parcela.stadium ? `🏟️ ${c.identity.stadium}` : parcela.building ? `${BUILDINGS[parcela.building].icon} ${BUILDINGS[parcela.building].name}` : `Parcela ${parcela.x + 1}-${parcela.y + 1}`}>
+        <Card title={parcela.stadium ? `🏟️ ${c.identity.stadium}` : parcela.building ? `${BUILDINGS[parcela.building].icon} ${BUILDINGS[parcela.building].name}` : parcela.rent ? `${TENANTS[parcela.rent.tenant].icon} ${TENANTS[parcela.rent.tenant].name}` : parcela.decor ? `${DECOR[parcela.decor].icon} ${DECOR[parcela.decor].name}` : `Parcela ${parcela.x + 1}-${parcela.y + 1}`}>
           {parcela.stadium && (
             <>
               <p>Aforo: <b>{c.capacity.toLocaleString('es-ES')}</b> espectadores.</p>
@@ -201,7 +205,63 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
             )
           )}
 
-          {parcela.owned && !parcela.stadium && !parcela.building && (
+          {parcela.rent && (() => {
+            const r = parcela.rent;
+            return (
+              <>
+                <p>Alquilada por <b>{fmtMoney(r.perSeason)}</b> por temporada.</p>
+                <p className="small muted">
+                  {r.ending
+                    ? 'No renovará: queda libre al acabar la temporada.'
+                    : 'El contrato se renueva solo cada verano (con el precio de tu nueva categoría). Mientras esté alquilada no puedes construir en ella ni usarla para ampliar.'}
+                </p>
+                <div className="row">
+                  <button className="btn grow" onClick={() => run(() => update((g) => endRent(g, parcela.x, parcela.y)), r.ending ? 'Se renovará' : 'No se renovará')}>
+                    {r.ending ? 'Renovar' : 'No renovar'}
+                  </button>
+                  <button className="btn grow" disabled={c.cash < r.perSeason * 0.25} onClick={() => run(() => update((g) => endRent(g, parcela.x, parcela.y, true)), 'Parcela recuperada')}>
+                    Recuperar ya · {fmtMoney(Math.round(r.perSeason * 0.25))}
+                  </button>
+                </div>
+              </>
+            );
+          })()}
+
+          {isFree(parcela) && (
+            <>
+              {parcela.decor && (
+                <p className="small">
+                  {DECOR[parcela.decor].help}
+                  {parcela.decor === 'plaza' && (legends(s).length ? ` Estatuas: ${legends(s).slice(-4).join(', ')}.` : ' Aún no hay leyendas: las estatuas llegarán con los partidos homenaje.')}{' '}
+                  <button className="link small" onClick={() => run(() => update((g) => removeDecor(g, parcela.x, parcela.y)), 'Decoración quitada')}>Quitar</button>
+                </p>
+              )}
+              <details className="remodel">
+                <summary>💰 Alquilarla · {fmtMoney(rentOffer(s, parcela))}/temporada</summary>
+                <p className="small muted">
+                  Un vecino te paga cada temporada por usarla (más cuanto más cerca del estadio y más alta tu categoría). Mientras esté alquilada no podrás construir en ella ni usarla para ampliar.
+                </p>
+                <button className="btn full" onClick={() => run(() => update((g) => rentParcel(g, parcela.x, parcela.y)), 'Parcela alquilada')}>Alquilar</button>
+              </details>
+              <details className="remodel">
+                <summary>🌷 Decorar</summary>
+                <p className="small muted">La decoración se quita sola si luego construyes encima.</p>
+                {(Object.keys(DECOR) as Decor[]).filter((d) => d !== parcela.decor && !(d === 'plaza' && c.land.parcels.some((q) => q.decor === 'plaza'))).map((d) => (
+                  <div key={d} className="facility">
+                    <div>
+                      <b>{DECOR[d].icon} {DECOR[d].name}</b>
+                      <div className="small muted">{DECOR[d].help}</div>
+                    </div>
+                    <button className="btn small" disabled={c.cash < decorCost(s, d)} onClick={() => run(() => update((g) => decorate(g, parcela.x, parcela.y, d)), `${DECOR[d].name} listo`)}>
+                      {fmtMoney(decorCost(s, d))}
+                    </button>
+                  </div>
+                ))}
+              </details>
+            </>
+          )}
+
+          {isFree(parcela) && (
             porConstruir.length ? (
               <>
                 <p className="small muted">

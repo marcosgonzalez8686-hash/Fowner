@@ -44,7 +44,7 @@ import { leagueAttendance, seasonTicketFansGrowth, seasonTicketLoyalty, seasonTi
 import { changeMorale, healOneMatchday, injuryName, isInjured, moraleAfterMatch, moraleBonus, resetSeasonMorale, rollInjuries } from './morale';
 import { changeSatisfaction, fansExpectationMessage, fansGrowthSatisfaction, objectiveMet, satisfactionAfterMatch, satisfactionEndSeason } from './fans';
 import {
-  agingFactor, commercialPerMatch, fansGrowthBonus, maintenancePerSeason,
+  agingFactor, commercialPerMatch, fansGrowthBonus, maintenancePerSeason, rentPerSeason, rentsEndSeason,
 } from './land';
 
 export const creditLimit = (s: GameState) => {
@@ -251,7 +251,10 @@ export function playMatchday(s: GameState) {
   const pers = Math.round((staffWages(s) + filialSeasonCost(s)) / MATCHDAYS);
   filialMatchday(s);
   const comp = Math.round(competitionPerMatchday(mio.division));
-  c.cash += tv + patro - sal - dd - mant - pers - comp;
+  // alquiler de parcelas
+  const renta = Math.round(rentPerSeason(s) / MATCHDAYS);
+  c.cash += tv + patro + renta - sal - dd - mant - pers - comp;
+  c.ledger.alquileres = (c.ledger.alquileres ?? 0) + renta;
   c.ledger.competicion += comp;
   c.ledger.mantenimiento += mant;
   c.ledger.personal += pers;
@@ -447,6 +450,7 @@ export function endSeason(s: GameState) {
   resetSeasonMorale(s);
   coachEndSeason(s);
   staffEndSeason(s);
+  rentsEndSeason(s);
   directorEndSeason(s);
   newIdols(s, (title, body) => addMessage(s, { from: 'club', title, body }));
 

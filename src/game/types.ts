@@ -135,6 +135,7 @@ export interface Ledger {
   multas: number; // multas de la liga
   impuestos: number; // impuesto sobre beneficios
   agentes: number; // comisiones de agentes y primas de fichaje
+  alquileres: number; // alquiler de parcelas
 }
 
 export interface Club {

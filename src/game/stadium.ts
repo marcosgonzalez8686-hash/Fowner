@@ -110,7 +110,7 @@ export function findStadiumBlock(s: GameState, n: number) {
       for (let i = 0; i < n && ok; i++) {
         for (let j = 0; j < n && ok; j++) {
           const p = parcela(x + i, y + j);
-          ok = Boolean(p && p.owned && !p.building);
+          ok = Boolean(p && p.owned && !p.building && !p.rent);
         }
       }
       const d = Math.abs(x - centro) + Math.abs(y - centro);
@@ -145,6 +145,7 @@ export function expandStadium(s: GameState, seats: number): string | undefined {
   if (need.grows && need.block) {
     for (const p of s.club.land.parcels) {
       p.stadium = p.x >= need.block.x && p.x < need.block.x + need.n && p.y >= need.block.y && p.y < need.block.y + need.n;
+      if (p.stadium) delete p.decor;
     }
   }
   s.club.works = { kind: 'estadio', matchdaysLeft: ESTADIO_JORNADAS_OBRA, amount: seats };

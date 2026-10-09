@@ -2,7 +2,7 @@ import { filialSeasonCost } from './filial';
 import { DIV_TV, MATCHDAYS, TV_FIXED, emptyLedger, tvMeritFactor } from './economy';
 import { computeStandings } from './match';
 import { diff } from './difficulty';
-import { commercialPerMatch, maintenancePerSeason } from './land';
+import { commercialPerMatch, maintenancePerSeason, rentPerSeason } from './land';
 import { myTeam, wageBill } from './market';
 import { staffWages } from './staff';
 import { TAX_RATE, competitionPerMatchday, stadiumFine } from './costs';
@@ -39,6 +39,7 @@ export function projectSeason(s: GameState): Projection {
     mantenimiento: maintenancePerSeason(s) / MATCHDAYS,
     personal: (staffWages(s) + filialSeasonCost(s)) / MATCHDAYS,
     competicion: competitionPerMatchday(t.division),
+    alquileres: rentPerSeason(s) / MATCHDAYS,
   };
   // préstamos: cuotas pendientes jornada a jornada
   const prestamos = s.club.bank.loans.map((l) => ({ ...l }));
@@ -52,7 +53,8 @@ export function projectSeason(s: GameState): Projection {
   let homeMatches = 0;
   for (let md = desde; md < MATCHDAYS; md++) {
     const enCasa = s.fixtures[t.division][md].some((f) => f.home === t.id);
-    let delta = porJornada.tv + porJornada.patrocinio - porJornada.salarios - porJornada.director - porJornada.mantenimiento - porJornada.personal - porJornada.competicion;
+    pending.alquileres += porJornada.alquileres;
+    let delta = porJornada.alquileres + porJornada.tv + porJornada.patrocinio - porJornada.salarios - porJornada.director - porJornada.mantenimiento - porJornada.personal - porJornada.competicion;
     pending.competicion += porJornada.competicion;
     pending.tv += porJornada.tv;
     pending.patrocinio += porJornada.patrocinio;

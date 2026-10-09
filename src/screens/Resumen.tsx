@@ -18,6 +18,7 @@ const LINEAS: { k: keyof Ledger; label: string; gasto?: boolean }[] = [
   { k: 'patrocinio', label: 'Patrocinio' },
   { k: 'traspasosIn', label: 'Ventas' },
   { k: 'copa', label: 'Premios de Copa' },
+  { k: 'alquileres', label: 'Alquiler de parcelas' },
   { k: 'salarios', label: 'Salarios', gasto: true },
   { k: 'director', label: 'Director dep.', gasto: true },
   { k: 'mantenimiento', label: 'Mantenimiento', gasto: true },
@@ -73,7 +74,7 @@ export default function Resumen({ s }: ScreenProps) {
   const c = s.club;
   const prev = projectSeason(s);
   const p = prev.pending;
-  const ingresosPrev = p.taquilla + p.comercial + p.tv + p.patrocinio + p.abonos;
+  const ingresosPrev = p.taquilla + p.comercial + p.tv + p.patrocinio + p.abonos + p.alquileres;
   const gastosPrev = p.salarios + p.director + p.mantenimiento + p.personal + p.cuotas + p.intereses + p.competicion + p.multas + p.impuestos;
   const restantes = s.phase === 'fin' ? 0 : MATCHDAYS - s.matchday;
   const ocupacion = expectedAttendance(s);
@@ -117,6 +118,7 @@ export default function Resumen({ s }: ScreenProps) {
             <tr><td className="left">Tienda y bar</td><td><Money v={p.comercial} /></td></tr>
             <tr><td className="left">Televisión (parte fija) y patrocinio</td><td><Money v={p.tv - prev.tvMerit + p.patrocinio} /></td></tr>
             <tr><td className="left">📺 Reparto de TV por clasificación{prev.tvPos ? ` (si acabas ${prev.tvPos}º)` : ' (a mitad de tabla)'}</td><td><Money v={prev.tvMerit} /></td></tr>
+            {p.alquileres > 0 && <tr><td className="left">Alquiler de parcelas</td><td><Money v={p.alquileres} /></td></tr>}
             <tr><td className="left">Salarios</td><td><Money v={-p.salarios} /></td></tr>
             <tr><td className="left">Director deportivo</td><td><Money v={-p.director} /></td></tr>
             <tr><td className="left">Mantenimiento</td><td><Money v={-p.mantenimiento} /></td></tr>
