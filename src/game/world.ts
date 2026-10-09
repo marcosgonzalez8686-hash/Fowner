@@ -2,7 +2,7 @@ import { DIV_FANS } from './economy';
 import { diff } from './difficulty';
 import { makePlayer } from './generate';
 import { bestEleven, chooseStyle, computeStandings, roundRobin, simulate } from './match';
-import { foreignClubs } from './names';
+import { foreignClubs } from './places';
 import { ensureFacilities } from './rivals';
 import { gauss, pick, rand, randInt } from './rng';
 import { tire } from './fatigue';

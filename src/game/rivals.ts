@@ -30,16 +30,30 @@ function hash(id: number, k: number) {
 }
 const entre = (id: number, k: number, a: number, b: number) => a + (hash(id, k) % 1000) / 1000 * (b - a);
 
-/** "CD Alto Nogalejo" → "Alto Nogalejo" */
+/** "CD Laredo" → "Laredo", "Leeds Rovers" → "Leeds" */
 function lugar(name: string) {
-  return name.replace(/^(Real Club|Club Deportivo|Atlético|Deportivo|Sporting|Racing|Unión|Real|CD|SD|UD|CF|AD|AC|FC|SC|AS|SV|VV)\s+/, '').trim() || name;
+  return (
+    name
+      .replace(/^(Real Club|Club Deportivo|Atlético|Atletico|Deportivo|Sporting|Racing|Unión|Unione|Union|Real|Recreativo|Juventud|Club|Arenas|Polisportiva|Olympique|Stade|Eintracht|Fortuna|Borussia|Viktoria|Sportfreunde|Sparta|Quick|Be Quick|Victoria|Vitória de|Académica de|Desportivo de|União de|Clube de|CD|SD|UD|CF|CP|AD|AC|FC|SC|AS|SV|VV|US|SS|TSV|VfB|VfL|GD|DOS)\s+/, '')
+      .replace(/\s+(United|City|Rovers|Athletic|Town|Albion|Wanderers|County|FC)$/, '')
+      .trim() || name
+  );
 }
 
 function stadiumName(t: Team) {
   const l = lugar(t.name);
   const humildes = [`Campo Municipal de ${l}`, `Campo de ${l}`, `Campo Municipal ${l}`, `Campo de Deportes de ${l}`];
   const grandes = [`Estadio de ${l}`, `Estadio Municipal de ${l}`, `Nuevo Estadio de ${l}`, `Estadio ${l}`];
-  const lista = t.country ? [`Stadium ${l}`, `Arena ${l}`, `Stade ${l}`] : t.division >= 3 ? humildes : grandes;
+  // fuera de España, a la manera de cada país
+  const fuera: Record<string, string[]> = {
+    ENG: [`${l} Park`, `${l} Road`, `${l} Stadium`, `${l} Lane`],
+    ITA: [`Stadio di ${l}`, `Stadio Comunale di ${l}`, `Stadio ${l}`],
+    GER: [`${l} Arena`, `Stadion ${l}`, `Waldstadion ${l}`, `Volksparkstadion ${l}`],
+    FRA: [`Stade de ${l}`, `Stade Municipal de ${l}`, `Parc de ${l}`],
+    POR: [`Estádio de ${l}`, `Estádio Municipal de ${l}`, `Estádio da Cidade de ${l}`],
+    NED: [`${l} Stadion`, `Sportpark ${l}`, `Stadion ${l}`],
+  };
+  const lista = t.country ? fuera[t.country] ?? [`Stadium ${l}`] : t.division >= 3 ? humildes : grandes;
   return lista[hash(t.id, 1) % lista.length];
 }
 

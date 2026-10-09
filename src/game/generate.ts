@@ -9,7 +9,8 @@ import {
   DIV_FANS, DIV_LEVEL, DIV_PRICE, DIVISIONS, TEAMS_PER_DIV, emptyLedger, fairSalary,
 } from './economy';
 import { bestEleven, roundRobin } from './match';
-import { clubName, personName, shortName, townNames } from './names';
+import { personName } from './names';
+import { spanishClubs } from './places';
 import { clamp, gauss, pick, rand, randInt } from './rng';
 import { STANDING, newLand } from './land';
 import { DIRECTOR_PAY, candidateStars, clubMaxStars, makeStaffCandidates, maxStarsFor } from './staff';
@@ -115,17 +116,18 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
     nextId: 1,
   };
 
-  const pueblos = townNames(DIVISIONS * TEAMS_PER_DIV);
-  let t = 0;
+  // ciudades reales: las más grandes en Primera y los pueblos en la última categoría
+  const clubes = spanishClubs(TEAMS_PER_DIV, clubNameInput);
   for (let d = 0; d < DIVISIONS; d++) {
     for (let i = 0; i < TEAMS_PER_DIV; i++) {
-      const pueblo = pueblos[t++];
+      const c = clubes[d][i];
       const team: Team = {
         id: newId(s),
-        name: clubName(pueblo),
-        short: shortName(pueblo),
+        name: c.name,
+        short: c.short,
         division: d,
-        fans: Math.round(DIV_FANS[d] * rand(0.6, 1.6)),
+        // dentro de la categoría, cuanto más grande la ciudad, más afición
+        fans: Math.round(DIV_FANS[d] * (1.5 - (i / (TEAMS_PER_DIV - 1)) * 0.9) * rand(0.85, 1.15)),
       };
       s.teams.push(team);
       // cada club con un nivel algo distinto dentro de su división
@@ -139,7 +141,7 @@ export function newGame(clubNameInput: string, identityInput?: Identity, opts: N
   const mio = s.teams.filter((x) => x.division === ultima)[0];
   const nombre = clubNameInput.trim() || 'CD Fowner';
   mio.name = nombre;
-  mio.short = nombre.replace(/^(CD|UD|SD|CF|Atlético|Racing|Real Club|Sporting|Unión|Deportivo)\s+/i, '').slice(0, 3).toUpperCase();
+  mio.short = nombre.replace(/^(CD|UD|SD|CF|CP|Atlético|Racing|Real Club|Real|Sporting|Unión|Deportivo|Recreativo|Juventud|Club|Arenas)\s+/i, '').slice(0, 3).toUpperCase();
   mio.fans = DIV_FANS[ultima];
   s.players = s.players.filter((p) => p.teamId !== mio.id);
   makeSquad(s, mio.id, DIV_LEVEL[ultima] - 1);
