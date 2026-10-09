@@ -10,7 +10,7 @@ import { fmtMoney } from '../game/economy';
 import { myTeam } from '../game/market';
 import {
   BUILDINGS, LAND_SIZE, STANDING, buildingLevel, buyParcel, canBuyParcel, construct, isBuilt, maintenancePerSeason,
-  buildCost, nextLevelCost, parcelCost, upgrade, type BuildingKind,
+  buildCost, buildingParcels, nextLevelCost, parcelCost, placementFor, sizeLabel, upgrade, type BuildingKind,
 } from '../game/land';
 import { Card } from '../ui';
 
@@ -27,6 +27,9 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
     return p ? { x: p.x, y: p.y } : null;
   });
   const parcela = sel ? c.land.parcels.find((p) => p.x === sel.x && p.y === sel.y) : undefined;
+  // edificio cuyo hueco se está enseñando en el mapa antes de construirlo
+  const [previa, setPrevia] = useState<BuildingKind | null>(null);
+  const hueco = previa && parcela ? placementFor(s, previa, parcela.x, parcela.y) : null;
 
   const model: MapModel = useMemo(
     () => ({
@@ -36,6 +39,7 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
       standColor: c.identity.home.shirt,
       accentColor: c.identity.home.shirt2,
       selected: sel,
+      highlight: hueco?.map((p) => ({ x: p.x, y: p.y })),
       tiles: c.land.parcels.map((p) => ({
         x: p.x,
         y: p.y,
@@ -46,7 +50,7 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
       })),
     }),
     // se rehace cuando cambia el terreno, el estadio, los colores o la selección
-    [c.land, c.capacity, c.stadiumModel, c.identity.home, c.training, c.academy, sel],
+    [c.land, c.capacity, c.stadiumModel, c.identity.home, c.training, c.academy, sel, hueco],
   );
 
   const run = (fn: () => string | undefined | void, ok: string) => notify(fn() ?? ok);
@@ -58,7 +62,7 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
     <>
       <Card title="🗺️ Terreno del club" right={<span className="small muted">{propias} de {LAND_SIZE * LAND_SIZE} parcelas</span>}>
         <Suspense fallback={<div className="map3d map3d-error">Cargando mapa 3D…</div>}>
-          <Map3D model={model} onSelect={(x, y) => setSel({ x, y })} />
+          <Map3D model={model} onSelect={(x, y) => { setSel({ x, y }); setPrevia(null); }} />
         </Suspense>
         <div className="legend-row map-legend">
           <span><i className="sw tile-owned" /> Tuyas</span>
@@ -162,6 +166,13 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
               <>
                 <p>Nivel <b>{n}</b> de {info.maxLevel}</p>
                 <p className="small muted">{info.help}</p>
+                {info.size[0] * info.size[1] > 1 && (
+                  <p className="small muted">
+                    📐 {buildingParcels(s, k).length >= info.size[0] * info.size[1]
+                      ? `Ocupa ${sizeLabel(k)}, ya reservadas para cuando crezca. ${info.grows ?? ''}`
+                      : `Se construyó en una sola parcela: cuando tengas libres las de al lado, ocupará ${sizeLabel(k)}. ${info.grows ?? ''}`}
+                  </p>
+                )}
                 {coste !== null ? (
                   <button className="btn primary full" disabled={c.cash < coste} onClick={() => run(() => update((g) => upgrade(g, k)), `${info.name}: nivel ${n + 1}`)}>
                     Mejorar a nivel {n + 1} · {fmtMoney(coste)}
@@ -193,22 +204,39 @@ export default function Instalaciones({ s, update, notify }: ScreenProps) {
           {parcela.owned && !parcela.stadium && !parcela.building && (
             porConstruir.length ? (
               <>
-                <p className="small muted">Parcela libre. ¿Qué quieres construir?</p>
-                {porConstruir.map((k) => (
-                  <div key={k} className="facility">
-                    <div>
-                      <b>{BUILDINGS[k].icon} {BUILDINGS[k].name}</b>
-                      <div className="small muted">{BUILDINGS[k].help}</div>
+                <p className="small muted">
+                  Parcela libre. ¿Qué quieres construir? Cada edificio reserva desde el principio todo el terreno que ocupará al máximo nivel.
+                  Toca 📐 para ver en el mapa dónde iría.
+                </p>
+                {porConstruir.map((k) => {
+                  const sitio = placementFor(s, k, parcela.x, parcela.y);
+                  const grande = BUILDINGS[k].size[0] * BUILDINGS[k].size[1] > 1;
+                  return (
+                    <div key={k} className={`facility ${previa === k ? 'previa' : ''}`}>
+                      <div>
+                        <b>{BUILDINGS[k].icon} {BUILDINGS[k].name}</b>
+                        <div className="small muted">{BUILDINGS[k].help}</div>
+                        <div className={`small ${sitio ? 'muted' : 'neg'}`}>
+                          {grande && sitio && (
+                            <button className="link small" onClick={() => setPrevia(previa === k ? null : k)}>
+                              📐 {previa === k ? 'Ocultar' : 'Ver dónde'}
+                            </button>
+                          )}{' '}
+                          Ocupa {sizeLabel(k)}
+                          {sitio ? (grande ? '' : '.') : ': aquí no cabe. Necesitas parcelas propias y libres juntas.'}
+                          {grande && sitio && <> · {BUILDINGS[k].grows}</>}
+                        </div>
+                      </div>
+                      <button
+                        className="btn small primary"
+                        disabled={!sitio || c.cash < buildCost(s, k, 1)}
+                        onClick={() => { setPrevia(null); run(() => update((g) => construct(g, k, parcela.x, parcela.y)), `${BUILDINGS[k].name} construido`); }}
+                      >
+                        {fmtMoney(buildCost(s, k, 1))}
+                      </button>
                     </div>
-                    <button
-                      className="btn small primary"
-                      disabled={c.cash < buildCost(s, k, 1)}
-                      onClick={() => run(() => update((g) => construct(g, k, parcela.x, parcela.y)), `${BUILDINGS[k].name} construido`)}
-                    >
-                      {fmtMoney(buildCost(s, k, 1))}
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </>
             ) : (
               <p className="muted">Ya tienes todos los edificios disponibles.</p>

@@ -9,7 +9,7 @@ import { DIVISION_NAMES } from './economy';
 import { SAVE_VERSION } from './generate';
 import { emptyLedger } from './economy';
 import { defaultIdentity, type Crest } from './identity';
-import { newLand } from './land';
+import { claimFullSize, newLand } from './land';
 import { makeStaffCandidates } from './staff';
 import { ensureCoach } from './coach';
 import { newSaleOffer } from './negotiation';
@@ -94,6 +94,8 @@ function migrate(s: GameState) {
   const c = s.club;
   if (!c.identity) c.identity = defaultIdentity(s.teams.find((t) => t.id === c.teamId)?.name);
   if (!c.land) c.land = newLand();
+  // edificios grandes construidos antes de que ocupasen varias parcelas
+  claimFullSize(s);
   if (!c.cashLog) c.cashLog = [c.cash];
   if (!c.seasonLog) c.seasonLog = [];
   if (!c.staff) c.staff = {};

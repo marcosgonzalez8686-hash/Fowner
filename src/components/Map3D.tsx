@@ -26,6 +26,8 @@ export interface MapModel {
   standColor: string;
   accentColor: string;
   selected: { x: number; y: number } | null;
+  /** parcelas que ocuparía un edificio antes de construirlo */
+  highlight?: { x: number; y: number }[];
 }
 
 const TILE = 1;
@@ -340,7 +342,7 @@ function stadium(capacity: number, modelo: string, lado: number, standColor: str
   return exterior;
 }
 
-function building(kind: BuildingKind, level: number, accent: string) {
+function edificioBase(kind: BuildingKind, level: number, accent: string) {
   const g = new THREE.Group();
   const n = Math.max(1, level);
   const alto = 0.1 + n * 0.07;
@@ -364,6 +366,15 @@ function building(kind: BuildingKind, level: number, accent: string) {
       const suelo = box(0.8, 0.012, 0.8, mat(0x55585c));
       suelo.castShadow = false;
       g.add(suelo);
+      // nivel 3: edificio de plantas
+      if (n >= 3) {
+        for (let i = 0; i < 3; i++) {
+          g.add(box(0.7, 0.012, 0.6, mat(0x8a8d91), 0, 0.012 + i * 0.07, -0.05));
+          for (const x of [-0.33, 0.33]) g.add(box(0.03, 0.07, 0.03, mat(0x6b6e72), x, 0.012 + i * 0.07, -0.05));
+        }
+        g.add(box(0.7, 0.02, 0.6, mat(accent), 0, 0.22, -0.05));
+        break;
+      }
       const coches = [0xc8102e, 0x1d4ed8, 0xf5f5f5, 0xf5c542, 0x111111, 0x0f8a3c];
       for (let i = 0; i < n * 2; i++) {
         g.add(box(0.12, 0.07, 0.2, mat(coches[i % coches.length]), -0.27 + (i % 4) * 0.18, 0.012, i < 4 ? -0.18 : 0.18));
@@ -389,6 +400,51 @@ function building(kind: BuildingKind, level: number, accent: string) {
       g.add(box(0.3, alto + 0.15, 0.3, mat(0x6fb6e8, { metalness: 0.4, roughness: 0.3 })));
       g.add(box(0.5, 0.12, 0.45, mat(0xdddddd)));
       break;
+    case 'hotel': {
+      const altoH = 0.25 + n * 0.15;
+      g.add(box(0.42, altoH, 0.36, mat(0xf0ece4)));
+      const ventana = mat(0xfff2c0, { emissive: 0xffe08a, emissiveIntensity: 0.4 });
+      for (let i = 0; i < Math.floor(altoH / 0.07); i++) g.add(box(0.36, 0.022, 0.01, ventana, 0, 0.04 + i * 0.07, 0.181));
+      g.add(box(0.44, 0.03, 0.38, mat(accent), 0, altoH));
+      g.add(box(0.5, 0.012, 0.15, mat(0x9a9a9a), 0, 0, 0.3));
+      break;
+    }
+    case 'fanzone': {
+      const suelo = box(0.8, 0.008, 0.8, mat(0xcab98f));
+      suelo.castShadow = false;
+      g.add(suelo);
+      const lonas = [accent, 0xffffff, 0xf26a21];
+      for (let i = 0; i < n + 1; i++) {
+        const carpa = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.14, 4), mat(lonas[i % lonas.length]));
+        carpa.rotation.y = Math.PI / 4;
+        carpa.position.set(-0.25 + i * 0.17, 0.1, 0.18);
+        carpa.castShadow = true;
+        g.add(carpa, box(0.17, 0.03, 0.17, mat(0xe9e2d0), -0.25 + i * 0.17, 0, 0.18));
+      }
+      // pantalla gigante
+      g.add(box(0.03, 0.2, 0.03, mat(0x444444), -0.15, 0, -0.25), box(0.03, 0.2, 0.03, mat(0x444444), 0.15, 0, -0.25));
+      g.add(box(0.38, 0.16 + n * 0.02, 0.02, mat(0x2a6df4, { emissive: 0x2a6df4, emissiveIntensity: 0.5 }), 0, 0.2, -0.25));
+      break;
+    }
+    case 'sede': {
+      const altoS = 0.2 + n * 0.1;
+      g.add(box(0.45, altoS, 0.4, mat(0x7fb4d8, { metalness: 0.5, roughness: 0.25 })));
+      g.add(box(0.47, 0.04, 0.42, mat(accent), 0, altoS));
+      g.add(box(0.012, altoS + 0.25, 0.012, mat(0xdddddd), 0.3, 0, 0.25));
+      g.add(box(0.012, 0.07, 0.11, mat(accent), 0.3, altoS + 0.17, 0.31));
+      break;
+    }
+    case 'solar': {
+      const panel = mat(0x1d3557, { metalness: 0.6, roughness: 0.25 });
+      for (let i = 0; i < n + 1; i++) {
+        const fila = box(0.75, 0.012, 0.15, panel);
+        fila.position.set(0, 0.07, -0.3 + i * 0.2);
+        fila.rotation.x = -0.45;
+        g.add(fila);
+        for (const x of [-0.3, 0.3]) g.add(box(0.015, 0.07, 0.015, mat(0x888888), x, 0, -0.3 + i * 0.2));
+      }
+      break;
+    }
     case 'museo': {
       g.add(box(0.6, 0.05, 0.45, mat(0xd8d2c4)));
       for (let i = 0; i < 4; i++) {
@@ -406,6 +462,88 @@ function building(kind: BuildingKind, level: number, accent: string) {
       g.add(techo);
       break;
     }
+  }
+  return g;
+}
+
+/** Campo de fútbol pequeño (entrenamiento, juveniles, filial) */
+function campoPequeno(largo: number, ancho: number, giro: boolean, focos: boolean) {
+  const g = new THREE.Group();
+  const campo = new THREE.Mesh(new THREE.PlaneGeometry(largo, ancho), new THREE.MeshStandardMaterial({ map: pitchTexture() }));
+  campo.rotation.x = -Math.PI / 2;
+  campo.position.y = 0.012;
+  campo.receiveShadow = true;
+  g.add(campo);
+  if (focos) {
+    for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      g.add(box(0.02, 0.3, 0.02, mat(0x777777), x * (largo / 2 + 0.03), 0, z * (ancho / 2 + 0.03)));
+      g.add(box(0.07, 0.035, 0.03, mat(0xfff7c2, { emissive: 0xfff2a0, emissiveIntensity: 0.6 }), x * (largo / 2 + 0.03), 0.3, z * (ancho / 2 + 0.03)));
+    }
+  }
+  if (giro) g.rotation.y = Math.PI / 2;
+  return g;
+}
+
+/** Terreno reservado para que el edificio crezca: césped claro con estacas en las esquinas */
+function reservado() {
+  const g = new THREE.Group();
+  const suelo = box(0.9, 0.004, 0.9, mat(0x93c172));
+  suelo.castShadow = false;
+  g.add(suelo);
+  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) g.add(box(0.02, 0.06, 0.02, mat(0xf26a21), x * 0.42, 0, z * 0.42));
+  return g;
+}
+
+/** Un edificio con todas sus parcelas: lo principal en la primera y el resto según el nivel */
+function building(kind: BuildingKind, level: number, accent: string, w: number, h: number) {
+  const g = new THREE.Group();
+  const n = Math.max(1, level);
+  const huecos: THREE.Vector3[] = [];
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) huecos.push(new THREE.Vector3((i - (w - 1) / 2) * TILE, 0, (j - (h - 1) / 2) * TILE));
+  const en = (i: number, o: THREE.Object3D) => {
+    o.position.add(huecos[i]);
+    g.add(o);
+  };
+  if (kind === 'campoFilial') {
+    // el campo ocupa las dos parcelas; las gradas crecen con el nivel
+    const doble = huecos.length >= 2;
+    const vertical = h > w;
+    const largo = doble ? 1.5 : 0.75;
+    const ancho = doble ? 0.75 : 0.5;
+    g.add(campoPequeno(largo, ancho, vertical, n >= 2));
+    const grada = mat(accent);
+    for (let i = 0; i < n; i++) {
+      const tribuna = box(largo * 0.8, 0.05 + i * 0.03, 0.06, grada, 0, 0, -(ancho / 2 + 0.05 + i * 0.06));
+      if (vertical) {
+        tribuna.position.set(tribuna.position.z, tribuna.position.y, 0);
+        tribuna.rotation.y = Math.PI / 2;
+      }
+      g.add(tribuna);
+    }
+    if (n >= 3) {
+      const otra = box(largo * 0.8, 0.06, 0.06, grada, 0, 0, ancho / 2 + 0.05);
+      if (vertical) {
+        otra.position.set(otra.position.z, otra.position.y, 0);
+        otra.rotation.y = Math.PI / 2;
+      }
+      g.add(otra);
+    }
+    return g;
+  }
+  en(0, edificioBase(kind, level, accent));
+  for (let i = 1; i < huecos.length; i++) {
+    if (kind === 'entrenamiento') {
+      // un campo más en los niveles 2, 3 y 5; con focos desde el 4
+      const desde = [2, 3, 5][i - 1];
+      en(i, n >= desde ? campoPequeno(0.8, 0.55, false, n >= 4) : reservado());
+    } else if (kind === 'cantera') {
+      en(i, n >= 3 ? campoPequeno(0.7, 0.5, w < h, false) : reservado());
+    } else if (kind === 'parking') {
+      if (n >= 2) {
+        const lote = edificioBase('parking', 2, accent);
+        en(i, lote);
+      } else en(i, reservado());
+    } else en(i, reservado());
   }
   return g;
 }
@@ -447,13 +585,29 @@ function buildWorld(m: MapModel) {
       root.add(arboles);
       pickables.push(arboles);
     }
-    if (t.building) {
-      const b = building(t.building, t.level ?? 1, m.accentColor);
-      b.position.copy(world(t.x, t.y, m.size));
-      b.traverse((o) => (o.userData = { x: t.x, y: t.y }));
-      root.add(b);
-      pickables.push(b);
-    }
+  }
+
+  // edificios: cada uno ocupa un bloque de parcelas
+  const porEdificio = new Map<BuildingKind, MapTile[]>();
+  for (const t of m.tiles) if (t.building) porEdificio.set(t.building, [...(porEdificio.get(t.building) ?? []), t]);
+  for (const [kind, ts] of porEdificio) {
+    const x0 = Math.min(...ts.map((t) => t.x));
+    const y0 = Math.min(...ts.map((t) => t.y));
+    const w = Math.max(...ts.map((t) => t.x)) - x0 + 1;
+    const h = Math.max(...ts.map((t) => t.y)) - y0 + 1;
+    const b = building(kind, ts[0].level ?? 1, m.accentColor, w, h);
+    b.position.copy(world(x0 + (w - 1) / 2, y0 + (h - 1) / 2, m.size));
+    b.traverse((o) => (o.userData = { x: x0, y: y0 }));
+    root.add(b);
+    pickables.push(b);
+  }
+
+  // hueco que ocuparía un edificio antes de construirlo
+  for (const p of m.highlight ?? []) {
+    const marca = box(TILE * 0.95, 0.01, TILE * 0.95, new THREE.MeshBasicMaterial({ color: 0x4ea8ff, transparent: true, opacity: 0.45 }));
+    marca.castShadow = false;
+    marca.position.add(world(p.x, p.y, m.size));
+    root.add(marca);
   }
 
   // el estadio ocupa un bloque de 2x2, 3x3 o 4x4 parcelas
@@ -473,19 +627,17 @@ function buildWorld(m: MapModel) {
   // marco de la parcela seleccionada
   if (m.selected) {
     const sel = m.tiles.find((t) => t.x === m.selected!.x && t.y === m.selected!.y);
-    const esEstadio = sel?.stadium;
-    const lado = esEstadio ? TILE * Math.round(Math.sqrt(m.tiles.filter((t) => t.stadium).length)) : TILE;
-    const geo = new THREE.EdgesGeometry(new THREE.BoxGeometry(lado * 0.98, 0.02, lado * 0.98));
+    const bloque = sel?.stadium ? m.tiles.filter((t) => t.stadium) : sel?.building ? m.tiles.filter((t) => t.building === sel.building) : sel ? [sel] : [];
+    const x0 = Math.min(...bloque.map((t) => t.x));
+    const y0 = Math.min(...bloque.map((t) => t.y));
+    const w = (Math.max(...bloque.map((t) => t.x)) - x0 + 1) * TILE;
+    const d = (Math.max(...bloque.map((t) => t.y)) - y0 + 1) * TILE;
+    const geo = new THREE.EdgesGeometry(new THREE.BoxGeometry(w - 0.02, 0.02, d - 0.02));
     const marco = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: COLORS.select }));
-    const pos = esEstadio
-      ? (() => {
-          const c = m.tiles.filter((t) => t.stadium);
-          return world(c.reduce((a, t) => a + t.x, 0) / c.length, c.reduce((a, t) => a + t.y, 0) / c.length, m.size);
-        })()
-      : world(m.selected.x, m.selected.y, m.size);
+    const pos = world(x0 + (w / TILE - 1) / 2, y0 + (d / TILE - 1) / 2, m.size);
     marco.position.set(pos.x, 0.02, pos.z);
     root.add(marco);
-    const brillo = box(lado * 0.97, 0.004, lado * 0.97, new THREE.MeshBasicMaterial({ color: COLORS.select, transparent: true, opacity: 0.28 }), pos.x, 0.005, pos.z);
+    const brillo = box(w - 0.03, 0.004, d - 0.03, new THREE.MeshBasicMaterial({ color: COLORS.select, transparent: true, opacity: 0.28 }), pos.x, 0.005, pos.z);
     brillo.castShadow = false;
     root.add(brillo);
   }

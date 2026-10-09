@@ -15,7 +15,9 @@ export { STANDING };
 export const DEFAULT_STADIUM = { x: 3, y: 3 };
 
 /** Edificios que se pueden construir en una parcela (uno de cada tipo) */
-export type BuildingKind = 'entrenamiento' | 'cantera' | 'parking' | 'tienda' | 'bar' | 'medico' | 'ojeadores' | 'museo';
+export type BuildingKind =
+  | 'entrenamiento' | 'cantera' | 'parking' | 'tienda' | 'bar' | 'medico' | 'ojeadores' | 'museo'
+  | 'hotel' | 'fanzone' | 'sede' | 'solar' | 'campoFilial';
 
 export interface Parcel {
   x: number;
@@ -38,6 +40,10 @@ export interface BuildingInfo {
   maxLevel: number;
   /** coste de construir el nivel 1, 2, 3... */
   cost: number[];
+  /** parcelas que ocupa (ancho x fondo): se reservan todas desde el nivel 1 */
+  size: [number, number];
+  /** para qué sirven las parcelas de más (si ocupa más de una) */
+  grows?: string;
 }
 
 export const BUILDINGS: Record<BuildingKind, BuildingInfo> = {
@@ -45,43 +51,129 @@ export const BUILDINGS: Record<BuildingKind, BuildingInfo> = {
     name: 'Ciudad deportiva', icon: '🏋️', maxLevel: NIVEL_MAX,
     help: 'Los jugadores jóvenes mejoran más rápido.',
     cost: [0, 40_000, ...COSTE_INSTALACION.slice(2)],
+    size: [2, 2], grows: 'Nuevos campos de entrenamiento en los niveles 2, 3 y 5.',
   },
   cantera: {
     name: 'Residencia de cantera', icon: '🌱', maxLevel: NIVEL_MAX,
     help: 'Salen más juveniles, mejores y con más potencial.',
     cost: [0, 35_000, ...COSTE_INSTALACION.slice(2)],
+    size: [2, 1], grows: 'Un campo para los juveniles desde el nivel 3.',
   },
   parking: {
     name: 'Aparcamiento', icon: '🅿️', maxLevel: 3,
     help: 'Más facilidades para venir: +6% de asistencia por nivel.',
     cost: [0, 30_000, 120_000, 450_000],
+    size: [2, 1], grows: 'Más plazas en el nivel 2 y un edificio de plantas en el 3.',
   },
   tienda: {
     name: 'Tienda oficial', icon: '👕', maxLevel: 3,
     help: 'Venta de camisetas: ingresos en cada partido en casa según tu afición.',
     cost: [0, 25_000, 110_000, 400_000],
+    size: [1, 1],
   },
   bar: {
     name: 'Bar del estadio', icon: '🍺', maxLevel: 3,
     help: 'Cada espectador gasta algo más: ingresos por partido en casa.',
     cost: [0, 20_000, 90_000, 320_000],
+    size: [1, 1],
   },
   medico: {
     name: 'Centro médico', icon: '🩺', maxLevel: 3,
     help: 'Los veteranos pierden nivel más despacio con la edad.',
     cost: [0, 60_000, 220_000, 750_000],
+    size: [1, 1],
   },
   ojeadores: {
     name: 'Oficina de ojeadores', icon: '🔭', maxLevel: 3,
     help: 'Tu director deportivo valora mejor a los jugadores.',
     cost: [0, 50_000, 190_000, 650_000],
+    size: [1, 1],
   },
   museo: {
     name: 'Museo del club', icon: '🏛️', maxLevel: 3,
     help: 'Aumenta la afición cada temporada y los ingresos de patrocinio.',
     cost: [0, 80_000, 300_000, 1_000_000],
+    size: [1, 1],
+  },
+  hotel: {
+    name: 'Hotel del club', icon: '🏨', maxLevel: 3,
+    help: 'Aficionados visitantes y concentraciones: ingresos en cada partido en casa según tu afición.',
+    cost: [0, 120_000, 400_000, 1_200_000],
+    size: [1, 1],
+  },
+  fanzone: {
+    name: 'Zona de aficionados', icon: '🎪', maxLevel: 3,
+    help: 'Música, pantallas y comida antes del partido: +3% de asistencia y algo más de gasto por espectador por nivel.',
+    cost: [0, 45_000, 160_000, 500_000],
+    size: [1, 1],
+  },
+  sede: {
+    name: 'Sede del club', icon: '🏢', maxLevel: 3,
+    help: 'Oficinas para el área comercial: +4% en los patrocinios por nivel.',
+    cost: [0, 90_000, 300_000, 900_000],
+    size: [1, 1],
+  },
+  solar: {
+    name: 'Placas solares', icon: '☀️', maxLevel: 3,
+    help: 'Energía propia: el mantenimiento de las instalaciones baja un 6% por nivel.',
+    cost: [0, 70_000, 220_000, 600_000],
+    size: [1, 1],
+  },
+  campoFilial: {
+    name: 'Estadio del filial', icon: '🥅', maxLevel: 3,
+    help: 'Si tienes filial, sus jugadores crecen algo más cada temporada.',
+    cost: [0, 100_000, 350_000, 1_000_000],
+    size: [2, 1], grows: 'Campo y gradas que crecen con el nivel.',
   },
 };
+
+/** Texto con lo que ocupa un edificio: "1 parcela" o "2×2 parcelas" */
+export const sizeLabel = (k: BuildingKind) => {
+  const [w, h] = BUILDINGS[k].size;
+  return w * h === 1 ? '1 parcela' : `${w}×${h} parcelas`;
+};
+
+/** Parcelas que ocupa un edificio ya construido */
+export const buildingParcels = (s: GameState, k: BuildingKind) => s.club.land.parcels.filter((p) => p.building === k);
+
+/** Dónde cabría un edificio usando la parcela (x, y): busca un hueco de su tamaño (en cualquier orientación) que la incluya */
+export function placementFor(s: GameState, k: BuildingKind, x: number, y: number): Parcel[] | null {
+  const [w, h] = BUILDINGS[k].size;
+  const formas = w === h ? [[w, h]] : [[w, h], [h, w]];
+  const libre = (px: number, py: number) => {
+    const p = parcelAt(s, px, py);
+    return p && p.owned && !p.stadium && !p.building ? p : null;
+  };
+  for (const [fw, fh] of formas) {
+    // primero con la parcela tocada como esquina; luego desplazando el hueco
+    for (let dy = 0; dy < fh; dy++) {
+      for (let dx = 0; dx < fw; dx++) {
+        const x0 = x - dx;
+        const y0 = y - dy;
+        const ps: Parcel[] = [];
+        for (let j = 0; j < fh; j++) for (let i = 0; i < fw; i++) {
+          const p = libre(x0 + i, y0 + j);
+          if (p) ps.push(p);
+        }
+        if (ps.length === fw * fh) return ps;
+      }
+    }
+  }
+  return null;
+}
+
+/** Partidas antiguas: los edificios grandes intentan ocupar ya su tamaño completo si hay sitio libre al lado */
+export function claimFullSize(s: GameState) {
+  for (const k of Object.keys(BUILDINGS) as BuildingKind[]) {
+    const ps = buildingParcels(s, k);
+    const [w, h] = BUILDINGS[k].size;
+    if (ps.length !== 1 || w * h === 1) continue;
+    const p = ps[0];
+    p.building = undefined;
+    const sitio = placementFor(s, k, p.x, p.y);
+    for (const q of sitio ?? [p]) q.building = k;
+  }
+}
 
 /** Mantenimiento anual: 6% de lo invertido en cada edificio */
 /** Mantenimiento anual: parte de lo invertido en instalaciones */
@@ -164,11 +256,14 @@ export function construct(s: GameState, k: BuildingKind, x: number, y: number): 
   const p = parcelAt(s, x, y);
   if (!p || !p.owned || p.stadium || p.building) return 'Necesitas una parcela propia y libre.';
   if (isBuilt(s, k)) return 'Ya tienes ese edificio.';
+  // se reserva desde ya todo el terreno que ocupará al máximo nivel
+  const sitio = placementFor(s, k, x, y);
+  if (!sitio) return `No cabe: necesita ${sizeLabel(k)} propias y libres juntas.`;
   const coste = buildCost(s, k, 1);
   if (s.club.cash < coste) return 'No hay dinero suficiente.';
   s.club.cash -= coste;
   s.club.ledger.obras += coste;
-  p.building = k;
+  for (const q of sitio) q.building = k;
   if (k === 'entrenamiento') s.club.training = Math.max(1, s.club.training);
   else if (k === 'cantera') s.club.academy = Math.max(1, s.club.academy);
   else s.club.land.levels[k] = 1;
@@ -199,7 +294,8 @@ export function maintenancePerSeason(s: GameState) {
   }
   // las gradas también hay que mantenerlas
   total += Math.max(0, s.club.capacity - STANDING) * MANTENIMIENTO_ASIENTO * modelInfo(s).upkeep;
-  return roundMoney(total);
+  // las placas solares abaratan la factura
+  return roundMoney(total * (1 - 0.06 * lvl(s, 'solar')));
 }
 
 /** Ingresos comerciales de un partido en casa (tienda + bar) */
@@ -208,11 +304,14 @@ const lvl = buildingLevel;
 export function commercialPerMatch(s: GameState, attendance: number, fans: number) {
   // los ídolos de la grada venden camisetas aunque no haya tienda
   const idolos = s.players.filter((p) => p.teamId === s.club.teamId && p.traits?.includes('idolo')).length;
-  return Math.round(((fans * 0.45 * lvl(s, 'tienda') + attendance * 1.2 * lvl(s, 'bar')) * (1 + 0.08 * idolos) + fans * 0.1 * idolos) * modelInfo(s).commercial);
+  const base = (fans * 0.45 * lvl(s, 'tienda') + attendance * 1.2 * lvl(s, 'bar')) * (1 + 0.08 * idolos) + fans * 0.1 * idolos;
+  // hotel (visitantes y concentraciones) y zona de aficionados
+  const extra = fans * 0.3 * lvl(s, 'hotel') + attendance * 0.5 * lvl(s, 'fanzone');
+  return Math.round((base + extra) * modelInfo(s).commercial);
 }
 
-export const attendanceBonus = (s: GameState) => (1 + 0.06 * lvl(s, 'parking')) * modelInfo(s).attendance;
-export const sponsorBonus = (s: GameState) => 1 + 0.05 * lvl(s, 'museo');
+export const attendanceBonus = (s: GameState) => (1 + 0.06 * lvl(s, 'parking') + 0.03 * lvl(s, 'fanzone')) * modelInfo(s).attendance;
+export const sponsorBonus = (s: GameState) => 1 + 0.05 * lvl(s, 'museo') + 0.04 * lvl(s, 'sede');
 export const fansGrowthBonus = (s: GameState) => 1 + 0.025 * lvl(s, 'museo');
 export const scoutingFactor = (s: GameState) => 1 - 0.18 * lvl(s, 'ojeadores');
 export const agingFactor = (s: GameState) => 1 - 0.18 * lvl(s, 'medico');

@@ -1,6 +1,7 @@
 import { DIV_LEVEL, fmtMoney, roundMoney } from './economy';
 import { addMessage, myFilial, mySquad, myTeam } from './market';
-import { clamp, rand, randInt } from './rng';
+import { chance, clamp, rand, randInt } from './rng';
+import { buildingLevel } from './land';
 import type { GameState, Player } from './types';
 
 // Filial (equipo B): los jóvenes juegan cada semana en su propia liga y crecen más.
@@ -77,7 +78,8 @@ export function filialEndSeason(s: GameState) {
   for (const p of jugadores) {
     const tope = p.pot + (p.potHidden ?? 0);
     if ((p.filialApps ?? 0) >= FILIAL_GROWTH_APPS && p.ovr < tope) {
-      const extra = Math.min(tope - p.ovr, randInt(1, 3));
+      // con estadio propio para el filial crecen algo más
+      const extra = Math.min(tope - p.ovr, randInt(1, 3) + (chance(0.3 * buildingLevel(s, 'campoFilial')) ? 1 : 0));
       p.ovr += extra;
       if (p.ovr > p.pot) p.pot = p.ovr;
       crecen.push(`${p.name} (+${extra})`);

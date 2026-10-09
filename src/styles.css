@@ -614,3 +614,4 @@ details summary { cursor: pointer; color: var(--brand-2); font-weight: 600; marg
 .model-pick button { width: 100%; text-align: left; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: inherit; }
 .model-pick button.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 .model-pick small { display: block; color: var(--muted); }
+.facility.previa { background: rgba(80, 160, 255, 0.08); border-radius: 8px; }
